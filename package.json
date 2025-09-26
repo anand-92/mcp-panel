@@ -44,7 +44,7 @@
     },
     "mac": {
       "category": "public.app-category.developer-tools",
-      "icon": "assets/icon.png",
+      "icon": "assets/icon.icns",
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
       "entitlements": null,
