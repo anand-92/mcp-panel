@@ -4,57 +4,84 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCP Server Manager</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style-dark.css">
 </head>
 <body>
     <div class="container">
         <header>
             <h1>MCP Server Manager</h1>
             <div class="header-actions">
-                <button id="settingsBtn" class="btn btn-secondary">⚙️ Settings</button>
-                <button id="refreshBtn" class="btn btn-secondary">🔄 Refresh</button>
+                <button id="settingsBtn" class="btn btn-icon" title="Settings">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                    </svg>
+                </button>
+                <button id="refreshBtn" class="btn btn-icon" title="Refresh">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                    </svg>
+                </button>
             </div>
         </header>
 
-        <div class="profiles-section">
-            <h2>Profiles</h2>
-            <div class="profile-controls">
-                <select id="profileSelect">
-                    <option value="">Select a profile...</option>
-                </select>
-                <button id="loadProfileBtn" class="btn btn-primary">Load Profile</button>
-                <button id="saveProfileBtn" class="btn btn-success">Save Current as Profile</button>
-                <button id="deleteProfileBtn" class="btn btn-danger">Delete Profile</button>
-            </div>
-            <div id="saveProfileForm" class="hidden">
-                <input type="text" id="profileName" placeholder="Enter profile name">
-                <button id="confirmSaveProfile" class="btn btn-success">Save</button>
-                <button id="cancelSaveProfile" class="btn btn-secondary">Cancel</button>
-            </div>
-        </div>
-
-        <div class="servers-section">
-            <div class="section-header">
-                <h2>Active MCP Servers</h2>
-                <button id="addServerBtn" class="btn btn-primary">+ Add Server</button>
-            </div>
-
-            <div id="serversList" class="servers-list">
-            </div>
-
-            <div id="addServerForm" class="add-server-form hidden">
-                <h3>Add New Server</h3>
-                <div class="form-group">
-                    <label for="serverName">Server Name:</label>
-                    <input type="text" id="serverName" placeholder="e.g., my-server">
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="profiles-section">
+                    <h2>Profiles</h2>
+                    <div class="profile-controls">
+                        <select id="profileSelect">
+                            <option value="">Select a profile...</option>
+                        </select>
+                        <div class="profile-buttons">
+                            <button id="loadProfileBtn" class="btn btn-primary btn-sm">Load</button>
+                            <button id="saveProfileBtn" class="btn btn-success btn-sm">Save As</button>
+                        </div>
+                        <button id="deleteProfileBtn" class="btn btn-danger btn-sm hidden">Delete Profile</button>
+                    </div>
+                    <div id="saveProfileForm" class="hidden">
+                        <input type="text" id="profileName" placeholder="Profile name...">
+                        <div class="profile-buttons">
+                            <button id="confirmSaveProfile" class="btn btn-success btn-sm">Save</button>
+                            <button id="cancelSaveProfile" class="btn btn-sm">Cancel</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="serverConfig">Configuration (JSON):</label>
-                    <textarea id="serverConfig" placeholder='{"command": "npx", "args": ["@example/server"]}'></textarea>
-                </div>
-                <div class="form-actions">
-                    <button id="saveServerBtn" class="btn btn-success">Save Server</button>
-                    <button id="cancelServerBtn" class="btn btn-secondary">Cancel</button>
+            </div>
+
+            <div class="content-area">
+                <div class="servers-section">
+                    <div class="section-header">
+                        <h2>Active MCP Servers</h2>
+                        <button id="addServerBtn" class="btn btn-primary">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                            </svg>
+                            Add Server
+                        </button>
+                    </div>
+
+                    <div id="serversList" class="servers-list">
+                    </div>
+
+                    <div id="addServerForm" class="add-server-form hidden">
+                        <h3>Add New Server</h3>
+                        <div class="form-group">
+                            <label for="serverName">Server Name</label>
+                            <input type="text" id="serverName" placeholder="e.g., docker-mcp, filesystem, github">
+                            <small>Unique identifier for this server</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="serverConfig">Configuration (JSON)</label>
+                            <textarea id="serverConfig" placeholder='{"command": "docker", "args": ["run", "mcp-server"]}'></textarea>
+                            <small>Valid JSON configuration object</small>
+                        </div>
+                        <div class="form-actions">
+                            <button id="cancelServerBtn" class="btn">Cancel</button>
+                            <button id="saveServerBtn" class="btn btn-success">Save Server</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -66,6 +66,29 @@ function renderServers() {
     }
 }
 
+function syntaxHighlightJSON(json) {
+    if (typeof json !== 'string') {
+        json = JSON.stringify(json, null, 2);
+    }
+
+    return json.replace(/("(\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+        function (match) {
+            let cls = 'json-number';
+            if (/^"/.test(match)) {
+                if (/:$/.test(match)) {
+                    cls = 'json-key';
+                } else {
+                    cls = 'json-string';
+                }
+            } else if (/true|false/.test(match)) {
+                cls = 'json-boolean';
+            } else if (/null/.test(match)) {
+                cls = 'json-null';
+            }
+            return '<span class="' + cls + '">' + match + '</span>';
+        });
+}
+
 function createServerCard(name, config) {
     const card = document.createElement('div');
     card.className = 'server-card';
@@ -76,16 +99,19 @@ function createServerCard(name, config) {
     card.innerHTML = `
         <div class="server-header">
             <h3>${name}</h3>
-            <label class="toggle">
-                <input type="checkbox" ${isEnabled ? 'checked' : ''} data-server="${name}">
-                <span class="toggle-slider"></span>
-            </label>
+            <div class="server-status">
+                <span class="status-indicator ${isEnabled ? 'active' : ''}"></span>
+                <label class="toggle">
+                    <input type="checkbox" ${isEnabled ? 'checked' : ''} data-server="${name}">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
         </div>
         <div class="server-details">
-            <pre>${JSON.stringify(config, null, 2)}</pre>
+            <pre>${syntaxHighlightJSON(config)}</pre>
         </div>
         <div class="server-actions">
-            <button class="btn btn-sm btn-secondary" onclick="editServer('${name}')">Edit</button>
+            <button class="btn btn-sm" onclick="editServer('${name}')">Edit</button>
             <button class="btn btn-sm btn-danger" onclick="deleteServer('${name}')">Delete</button>
         </div>
     `;
@@ -438,6 +464,16 @@ function setupEventListeners() {
     });
 
     document.getElementById('deleteProfileBtn').addEventListener('click', deleteProfile);
+
+    // Show/hide delete button based on profile selection
+    document.getElementById('profileSelect').addEventListener('change', (e) => {
+        const deleteBtn = document.getElementById('deleteProfileBtn');
+        if (e.target.value) {
+            deleteBtn.classList.remove('hidden');
+        } else {
+            deleteBtn.classList.add('hidden');
+        }
+    });
 
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal')) {

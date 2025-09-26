@@ -23,6 +23,11 @@ app.get('/app-electron.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'app.js'));
 });
 
+// Redirect style-dark.css to style.css for now (or serve dark CSS)
+app.get('/style-dark.css', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'style-dark.css'));
+});
+
 const getDefaultConfigPath = () => {
     return path.join(os.homedir(), '.claude.json');
 };
