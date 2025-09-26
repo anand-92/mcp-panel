@@ -410,19 +410,13 @@ const servers = {
                             <path d="M12.146.146a.5.5 0 01.708 0l3 3a.5.5 0 010 .708l-10 10a.5.5 0 01-.168.11l-5 2a.5.5 0 01-.65-.65l2-5a.5.5 0 01.11-.168l10-10z"/>
                         </svg>
                     </button>
-                    <button class="btn-icon" data-action="duplicate" data-tooltip="Duplicate">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M4 2a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H4z"/>
-                        </svg>
-                    </button>
-                    <button class="btn-icon" data-action="toggle" data-tooltip="${config === null ? 'Enable' : 'Disable'}">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M${config === null ? '8 5v6M5 8h6' : '11 8H5'}"/>
-                        </svg>
+                    <button class="toggle-switch ${config !== null ? 'active' : ''}" data-action="toggle" data-tooltip="${config === null ? 'Enable' : 'Disable'}">
+                        <span class="toggle-switch-track"></span>
+                        <span class="toggle-switch-thumb"></span>
                     </button>
                     <button class="btn-icon" data-action="delete" data-tooltip="Delete">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/>
+                            <path d="M2 0a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V2a2 2 0 00-2-2H2zm3.354 4.646L8 7.293l2.646-2.647a.5.5 0 01.708.708L8.707 8l2.647 2.646a.5.5 0 01-.708.708L8 8.707l-2.646 2.647a.5.5 0 01-.708-.708L7.293 8 4.646 5.354a.5.5 0 11.708-.708z"/>
                         </svg>
                     </button>
                 </div>
@@ -513,9 +507,6 @@ const servers = {
         switch (action) {
             case 'edit':
                 this.showEditModal(name);
-                break;
-            case 'duplicate':
-                this.duplicate(name);
                 break;
             case 'toggle':
                 this.toggle(name);

@@ -1042,6 +1042,64 @@ body {
     background: var(--border-focus);
 }
 
+/* Toggle Switch Styles */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.toggle-switch-track {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    border-radius: 24px;
+    transition: all var(--transition-normal);
+}
+
+.toggle-switch.active .toggle-switch-track {
+    background: var(--accent-success);
+    border-color: var(--accent-success);
+}
+
+.toggle-switch-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background: var(--text-secondary);
+    border-radius: 50%;
+    transition: all var(--transition-normal);
+    box-shadow: var(--shadow-sm);
+}
+
+.toggle-switch.active .toggle-switch-thumb {
+    transform: translateX(20px);
+    background: white;
+}
+
+.toggle-switch:hover .toggle-switch-track {
+    opacity: 0.8;
+}
+
+.toggle-switch:focus {
+    outline: none;
+}
+
+.toggle-switch:focus-visible .toggle-switch-track {
+    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent-primary);
+}
+
 /* JSON Syntax Highlighting */
 .json-key {
     color: #ff79c6;
