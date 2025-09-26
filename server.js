@@ -36,6 +36,10 @@ const getProfilesDir = () => {
     return path.join(os.homedir(), '.mcp-manager', 'profiles');
 };
 
+const getGlobalConfigsPath = () => {
+    return path.join(os.homedir(), '.mcp-manager', 'global-configs.json');
+};
+
 const ensureProfilesDir = async () => {
     const dir = getProfilesDir();
     try {
@@ -185,8 +189,8 @@ app.get('/api/profile/:name', async (req, res) => {
 
     try {
         const data = await fs.readFile(profilePath, 'utf8');
-        const profile = JSON.parse(data);
-        res.json({ success: true, servers: profile });
+        const enabledServerNames = JSON.parse(data);
+        res.json({ success: true, enabledServerNames });
     } catch (error) {
         res.status(404).json({
             success: false,
@@ -196,12 +200,13 @@ app.get('/api/profile/:name', async (req, res) => {
 });
 
 app.post('/api/profile', async (req, res) => {
-    const { name, servers } = req.body;
+    const { name, enabledServerNames } = req.body;
     await ensureProfilesDir();
     const profilePath = path.join(getProfilesDir(), `${name}.json`);
 
     try {
-        await fs.writeFile(profilePath, JSON.stringify(servers, null, 2));
+        // Profile now just stores array of enabled server names
+        await fs.writeFile(profilePath, JSON.stringify(enabledServerNames, null, 2));
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({
@@ -223,6 +228,36 @@ app.delete('/api/profile/:name', async (req, res) => {
             success: false,
             error: error.message
         });
+    }
+});
+
+// Global configs routes
+app.get('/api/global-configs', async (req, res) => {
+    const globalPath = getGlobalConfigsPath();
+
+    try {
+        const data = await fs.readFile(globalPath, 'utf8');
+        res.json({ success: true, configs: JSON.parse(data) });
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            res.json({ success: true, configs: {} });
+        } else {
+            res.status(500).json({ success: false, error: error.message });
+        }
+    }
+});
+
+app.post('/api/global-configs', async (req, res) => {
+    const { configs } = req.body;
+    const globalPath = getGlobalConfigsPath();
+
+    try {
+        // Ensure the .mcp-manager directory exists
+        await fs.mkdir(path.dirname(globalPath), { recursive: true });
+        await fs.writeFile(globalPath, JSON.stringify(configs, null, 2));
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 

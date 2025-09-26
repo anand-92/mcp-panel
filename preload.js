@@ -18,6 +18,10 @@ contextBridge.exposeInMainWorld('api', {
     saveProfile: (name, servers) => ipcRenderer.invoke('save-profile', name, servers),
     deleteProfile: (name) => ipcRenderer.invoke('delete-profile', name),
 
+    // Global configs operations
+    getGlobalConfigs: () => ipcRenderer.invoke('get-global-configs'),
+    saveGlobalConfigs: (configs) => ipcRenderer.invoke('save-global-configs', configs),
+
     // Platform info
     getPlatform: () => process.platform
 });

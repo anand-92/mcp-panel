@@ -1,0 +1,73 @@
+name: Build DMG
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-dmg:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build macOS app and DMG
+      env:
+        # Skip code signing for now - can be added later with certificates
+        CSC_IDENTITY_AUTO_DISCOVERY: false
+        # Disable auto-update and other features that require signing
+        ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+      run: |
+        npm run build-mac
+
+    - name: List build artifacts
+      run: |
+        echo "Build directory contents:"
+        ls -la dist/ || echo "No dist directory"
+        find . -name "*.dmg" -type f || echo "No DMG files found"
+        find . -name "*.app" -type f || echo "No APP files found"
+
+    - name: Upload DMG artifact
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: mcp-server-manager-${{ github.sha }}
+        path: |
+          dist/*.dmg
+          dist/*.zip
+        retention-days: 30
+
+    - name: Upload APP artifact (for debugging)
+      uses: actions/upload-artifact@v4
+      if: failure() || success()
+      with:
+        name: mcp-server-manager-app-${{ github.sha }}
+        path: |
+          dist/mac/*.app
+        retention-days: 7
+
+    - name: Create GitHub Release (on tag)
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: |
+          dist/*.dmg
+          dist/*.zip
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,98 +1,66 @@
 let currentConfigPath = '';
-let globalServerConfigs = {}; // All server configurations
-let currentProfile = []; // Array of enabled server names for current profile
-let currentProfileName = ''; // Name of currently loaded profile
-
-// Check if running in Electron
-const isElectron = window.api !== undefined;
+let currentServers = {};
+let disabledServerConfigs = {}; // Store configurations of disabled servers
 
 async function init() {
     await loadConfigPath();
-    await loadGlobalConfigs();
-    await loadCurrentServers(); // Load from Claude config to populate global configs
+    await loadDisabledConfigs();
+    await loadServers();
     await loadProfiles();
     setupEventListeners();
 }
 
 async function loadConfigPath() {
     try {
-        if (isElectron) {
-            currentConfigPath = await window.api.getConfigPath();
-        } else {
-            const response = await fetch('/api/config-path');
-            const data = await response.json();
-            currentConfigPath = data.path;
-        }
+        const response = await fetch('/api/config-path');
+        const data = await response.json();
+        currentConfigPath = data.path;
         document.getElementById('configPath').value = currentConfigPath;
     } catch (error) {
         showToast('Error loading config path', 'error');
     }
 }
 
-async function loadGlobalConfigs() {
+async function loadDisabledConfigs() {
     try {
-        let data;
-        if (isElectron) {
-            data = await window.api.getGlobalConfigs();
-        } else {
-            const response = await fetch('/api/global-configs');
-            data = await response.json();
-        }
+        const response = await fetch('/api/disabled-configs');
+        const data = await response.json();
 
         if (data.success) {
-            globalServerConfigs = data.configs || {};
+            disabledServerConfigs = data.configs || {};
         }
     } catch (error) {
-        console.error('Error loading global configs:', error);
-        globalServerConfigs = {};
+        console.error('Error loading disabled configs:', error);
+        disabledServerConfigs = {};
     }
 }
 
-async function saveGlobalConfigs() {
+async function saveDisabledConfigs() {
     try {
-        let data;
-        if (isElectron) {
-            data = await window.api.saveGlobalConfigs(globalServerConfigs);
-        } else {
-            const response = await fetch('/api/global-configs', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ configs: globalServerConfigs })
-            });
-            data = await response.json();
-        }
+        const response = await fetch('/api/disabled-configs', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ configs: disabledServerConfigs })
+        });
+        const data = await response.json();
 
         if (!data.success) {
-            console.error('Error saving global configs:', data.error);
+            console.error('Error saving disabled configs:', data.error);
         }
     } catch (error) {
-        console.error('Error saving global configs:', error);
+        console.error('Error saving disabled configs:', error);
     }
 }
 
-async function loadCurrentServers() {
+async function loadServers() {
     try {
-        let data;
-        if (isElectron) {
-            data = await window.api.getConfig(currentConfigPath);
-        } else {
-            const response = await fetch(`/api/config?path=${encodeURIComponent(currentConfigPath)}`);
-            data = await response.json();
-        }
+        const response = await fetch(`/api/config?path=${encodeURIComponent(currentConfigPath)}`);
+        const data = await response.json();
 
         if (data.success) {
-            // Merge any servers from Claude config into global configs
-            for (const [name, config] of Object.entries(data.servers)) {
-                if (!globalServerConfigs[name]) {
-                    globalServerConfigs[name] = config;
-                }
-            }
-
-            // Set current profile to enabled servers from Claude config
-            currentProfile = Object.keys(data.servers);
-            await saveGlobalConfigs();
+            currentServers = data.servers;
             renderServers();
 
             if (data.isNew) {
@@ -110,15 +78,19 @@ function renderServers() {
     const serversList = document.getElementById('serversList');
     serversList.innerHTML = '';
 
-    if (Object.keys(globalServerConfigs).length === 0) {
+    // Combine enabled and disabled servers for display
+    const allServers = { ...currentServers };
+    for (const [name, config] of Object.entries(disabledServerConfigs)) {
+        allServers[name] = null; // Show as disabled in UI
+    }
+
+    if (Object.keys(allServers).length === 0) {
         serversList.innerHTML = '<p class="no-servers">No servers configured. Click "+ Add Server" to get started.</p>';
         return;
     }
 
-    // Show all servers from global configs, with enablement based on current profile
-    for (const [name, config] of Object.entries(globalServerConfigs)) {
-        const isEnabled = currentProfile.includes(name);
-        const serverCard = createServerCard(name, config, isEnabled);
+    for (const [name, config] of Object.entries(allServers)) {
+        const serverCard = createServerCard(name, config);
         serversList.appendChild(serverCard);
     }
 }
@@ -146,10 +118,12 @@ function syntaxHighlightJSON(json) {
         });
 }
 
-function createServerCard(name, config, isEnabled = false) {
+function createServerCard(name, config) {
     const card = document.createElement('div');
     card.className = 'server-card';
     card.dataset.serverName = name;
+
+    const isEnabled = config !== null && config !== undefined;
 
     card.innerHTML = `
         <div class="server-header">
@@ -181,60 +155,69 @@ function createServerCard(name, config, isEnabled = false) {
 
 async function toggleServer(name, enabled) {
     if (enabled) {
-        // Add server to current profile
-        if (!currentProfile.includes(name)) {
-            currentProfile.push(name);
+        // Restore from disabled configs and add back to active servers
+        if (disabledServerConfigs[name]) {
+            currentServers[name] = disabledServerConfigs[name];
+            delete disabledServerConfigs[name];
+
+            try {
+                await saveAllServers();
+                await saveDisabledConfigs();
+                renderServers();
+                showToast(`Server "${name}" enabled`, 'success');
+            } catch (error) {
+                // If save failed, move config back to disabled
+                disabledServerConfigs[name] = currentServers[name];
+                delete currentServers[name];
+                renderServers();
+                showToast('Error enabling server', 'error');
+            }
+        } else {
+            showToast('Cannot enable server without configuration', 'error');
         }
     } else {
-        // Remove server from current profile
-        currentProfile = currentProfile.filter(serverName => serverName !== name);
-    }
+        // Store the configuration in disabled configs and remove from active servers
+        if (currentServers[name] && currentServers[name] !== null) {
+            disabledServerConfigs[name] = currentServers[name];
+            delete currentServers[name];
 
-    try {
-        await saveCurrentProfile();
-        renderServers();
-        showToast(`Server "${name}" ${enabled ? 'enabled' : 'disabled'}`, 'success');
-    } catch (error) {
-        // Revert the change on error
-        if (enabled) {
-            currentProfile = currentProfile.filter(serverName => serverName !== name);
-        } else {
-            if (!currentProfile.includes(name)) {
-                currentProfile.push(name);
+            try {
+                await saveAllServers();
+                await saveDisabledConfigs();
+                renderServers();
+                showToast(`Server "${name}" disabled`, 'success');
+            } catch (error) {
+                // Restore the config if save failed
+                currentServers[name] = disabledServerConfigs[name];
+                delete disabledServerConfigs[name];
+                renderServers();
+                showToast('Error disabling server', 'error');
             }
         }
-        renderServers();
-        showToast(`Error ${enabled ? 'enabling' : 'disabling'} server`, 'error');
     }
 }
 
-async function saveCurrentProfile() {
-    // Save current profile to Claude config (only enabled servers)
-    const serversToSave = {};
-    for (const serverName of currentProfile) {
-        if (globalServerConfigs[serverName]) {
-            serversToSave[serverName] = globalServerConfigs[serverName];
+async function saveAllServers() {
+    const cleanServers = {};
+    for (const [name, config] of Object.entries(currentServers)) {
+        if (config !== null && config !== undefined) {
+            cleanServers[name] = config;
         }
     }
 
     try {
-        let data;
-        if (isElectron) {
-            data = await window.api.saveConfig(serversToSave, currentConfigPath);
-        } else {
-            const response = await fetch('/api/config', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    servers: serversToSave,
-                    configPath: currentConfigPath
-                })
-            });
-            data = await response.json();
-        }
+        const response = await fetch('/api/config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                servers: cleanServers,
+                configPath: currentConfigPath
+            })
+        });
 
+        const data = await response.json();
         if (!data.success) {
             throw new Error(data.error);
         }
@@ -243,13 +226,8 @@ async function saveCurrentProfile() {
     }
 }
 
-async function saveAllServers() {
-    // Deprecated - use saveCurrentProfile instead
-    await saveCurrentProfile();
-}
-
 function editServer(name) {
-    const config = globalServerConfigs[name];
+    const config = currentServers[name];
     document.getElementById('editServerName').value = name;
     document.getElementById('editServerConfig').value = JSON.stringify(config, null, 2);
     document.getElementById('editServerModal').classList.remove('hidden');
@@ -261,17 +239,18 @@ async function deleteServer(name) {
     }
 
     try {
-        // Remove from global configs
-        delete globalServerConfigs[name];
+        const response = await fetch(`/api/server/${encodeURIComponent(name)}?path=${encodeURIComponent(currentConfigPath)}`, {
+            method: 'DELETE'
+        });
 
-        // Remove from current profile if present
-        currentProfile = currentProfile.filter(serverName => serverName !== name);
-
-        // Save both global configs and current profile
-        await saveGlobalConfigs();
-        await saveCurrentProfile();
-        renderServers();
-        showToast(`Server "${name}" deleted`, 'success');
+        const data = await response.json();
+        if (data.success) {
+            delete currentServers[name];
+            renderServers();
+            showToast(`Server "${name}" deleted`, 'success');
+        } else {
+            showToast('Error deleting server: ' + data.error, 'error');
+        }
     } catch (error) {
         showToast('Error deleting server', 'error');
     }
@@ -279,13 +258,8 @@ async function deleteServer(name) {
 
 async function loadProfiles() {
     try {
-        let data;
-        if (isElectron) {
-            data = await window.api.getProfiles();
-        } else {
-            const response = await fetch('/api/profiles');
-            data = await response.json();
-        }
+        const response = await fetch('/api/profiles');
+        const data = await response.json();
 
         if (data.success) {
             const select = document.getElementById('profileSelect');
@@ -313,13 +287,8 @@ async function loadProfile() {
     }
 
     try {
-        let data;
-        if (isElectron) {
-            data = await window.api.getProfile(profileName);
-        } else {
-            const response = await fetch(`/api/profile/${encodeURIComponent(profileName)}`);
-            data = await response.json();
-        }
+        const response = await fetch(`/api/profile/${encodeURIComponent(profileName)}`);
+        const data = await response.json();
 
         if (data.success) {
             currentServers = data.servers;
@@ -343,23 +312,18 @@ async function saveProfile() {
     }
 
     try {
-        let data;
-        if (isElectron) {
-            data = await window.api.saveProfile(profileName, currentServers);
-        } else {
-            const response = await fetch('/api/profile', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    name: profileName,
-                    servers: currentServers
-                })
-            });
-            data = await response.json();
-        }
+        const response = await fetch('/api/profile', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: profileName,
+                servers: currentServers
+            })
+        });
 
+        const data = await response.json();
         if (data.success) {
             showToast(`Profile "${profileName}" saved`, 'success');
             document.getElementById('saveProfileForm').classList.add('hidden');
@@ -387,16 +351,11 @@ async function deleteProfile() {
     }
 
     try {
-        let data;
-        if (isElectron) {
-            data = await window.api.deleteProfile(profileName);
-        } else {
-            const response = await fetch(`/api/profile/${encodeURIComponent(profileName)}`, {
-                method: 'DELETE'
-            });
-            data = await response.json();
-        }
+        const response = await fetch(`/api/profile/${encodeURIComponent(profileName)}`, {
+            method: 'DELETE'
+        });
 
+        const data = await response.json();
         if (data.success) {
             showToast(`Profile "${profileName}" deleted`, 'success');
             await loadProfiles();
@@ -442,24 +401,19 @@ function setupEventListeners() {
         }
 
         try {
-            let data;
-            if (isElectron) {
-                data = await window.api.addServer(name, config, currentConfigPath);
-            } else {
-                const response = await fetch('/api/server', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        name,
-                        config,
-                        configPath: currentConfigPath
-                    })
-                });
-                data = await response.json();
-            }
+            const response = await fetch('/api/server', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name,
+                    config,
+                    configPath: currentConfigPath
+                })
+            });
 
+            const data = await response.json();
             if (data.success) {
                 currentServers[name] = config;
                 renderServers();

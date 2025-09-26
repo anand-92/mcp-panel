@@ -14,6 +14,10 @@ const getProfilesDir = () => {
     return path.join(os.homedir(), '.mcp-manager', 'profiles');
 };
 
+const getGlobalConfigsPath = () => {
+    return path.join(os.homedir(), '.mcp-manager', 'global-configs.json');
+};
+
 const ensureProfilesDir = async () => {
     const dir = getProfilesDir();
     try {
@@ -167,12 +171,13 @@ ipcMain.handle('get-profile', async (event, name) => {
     }
 });
 
-ipcMain.handle('save-profile', async (event, name, servers) => {
+ipcMain.handle('save-profile', async (event, name, enabledServerNames) => {
     await ensureProfilesDir();
     const profilePath = path.join(getProfilesDir(), `${name}.json`);
 
     try {
-        await fs.writeFile(profilePath, JSON.stringify(servers, null, 2));
+        // Profile now just stores array of enabled server names
+        await fs.writeFile(profilePath, JSON.stringify(enabledServerNames, null, 2));
         return { success: true };
     } catch (error) {
         return {
@@ -193,6 +198,34 @@ ipcMain.handle('delete-profile', async (event, name) => {
             success: false,
             error: error.message
         };
+    }
+});
+
+// Global configs handlers
+ipcMain.handle('get-global-configs', async () => {
+    const globalPath = getGlobalConfigsPath();
+
+    try {
+        const data = await fs.readFile(globalPath, 'utf8');
+        return { success: true, configs: JSON.parse(data) };
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            return { success: true, configs: {} };
+        }
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('save-global-configs', async (event, configs) => {
+    const globalPath = getGlobalConfigsPath();
+
+    try {
+        // Ensure the .mcp-manager directory exists
+        await fs.mkdir(path.dirname(globalPath), { recursive: true });
+        await fs.writeFile(globalPath, JSON.stringify(configs, null, 2));
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
     }
 });
 
