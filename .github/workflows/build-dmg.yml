@@ -30,6 +30,8 @@ jobs:
         CSC_IDENTITY_AUTO_DISCOVERY: false
         # Disable auto-update and other features that require signing
         ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+        # GitHub token for auto-publishing
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         npm run build-mac
 
