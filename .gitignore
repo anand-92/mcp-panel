@@ -66,3 +66,8 @@ Thumbs.db
 # Testing
 test-results/
 *.test.js.snap
+
+# Credentials - NEVER commit
+creds.md
+*.p12
+Certificates.p12

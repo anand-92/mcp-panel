@@ -1,5 +1,15 @@
 # MCP Server Manager
 
+<div align="center">
+
+[![Download Latest DMG](https://img.shields.io/badge/Download-Latest%20DMG-blue?style=for-the-badge&logo=apple)](https://github.com/nikhilanand/mcp-panel/releases/download/latest/MCP-Server-Manager.dmg)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/nikhilanand/mcp-panel?style=for-the-badge)](https://github.com/nikhilanand/mcp-panel/releases)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/nikhilanand/mcp-panel/build-dmg.yml?branch=main&style=for-the-badge)](https://github.com/nikhilanand/mcp-panel/actions)
+
+**[⬇️ Download MCP Server Manager for macOS](https://github.com/nikhilanand/mcp-panel/releases/download/latest/MCP-Server-Manager.dmg)**
+
+</div>
+
 A lightweight local desktop application for managing MCP (Model Context Protocol) servers in your Claude configuration file.
 
 ## Features
