@@ -1,11 +1,13 @@
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
-const { spawn } = require('child_process');
+const { startServer } = require('./electron-server');
 
 let mainWindow;
-let serverProcess;
 
-function createWindow() {
+async function createWindow() {
+    // Start the Express server internally
+    await startServer();
+
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
@@ -17,23 +19,8 @@ function createWindow() {
         title: 'MCP Server Manager'
     });
 
-    // Start the Express server
-    serverProcess = spawn('node', [path.join(__dirname, 'server.js')], {
-        env: { ...process.env, ELECTRON_APP: 'true' }
-    });
-
-    serverProcess.stdout.on('data', (data) => {
-        console.log(`Server: ${data}`);
-    });
-
-    serverProcess.stderr.on('data', (data) => {
-        console.error(`Server Error: ${data}`);
-    });
-
-    // Wait a moment for server to start, then load the URL
-    setTimeout(() => {
-        mainWindow.loadURL('http://localhost:3000');
-    }, 1500);
+    // Load the app
+    mainWindow.loadURL('http://localhost:3000');
 
     // Create application menu
     const template = [
@@ -77,9 +64,6 @@ function createWindow() {
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
-    if (serverProcess) {
-        serverProcess.kill();
-    }
     if (process.platform !== 'darwin') {
         app.quit();
     }
@@ -88,12 +72,5 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
     if (mainWindow === null) {
         createWindow();
-    }
-});
-
-// Clean up server process on quit
-app.on('before-quit', () => {
-    if (serverProcess) {
-        serverProcess.kill();
     }
 });
