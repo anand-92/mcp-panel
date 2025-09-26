@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Server Manager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>MCP Server Manager</h1>
+            <div class="header-actions">
+                <button id="settingsBtn" class="btn btn-secondary">⚙️ Settings</button>
+                <button id="refreshBtn" class="btn btn-secondary">🔄 Refresh</button>
+            </div>
+        </header>
+
+        <div class="profiles-section">
+            <h2>Profiles</h2>
+            <div class="profile-controls">
+                <select id="profileSelect">
+                    <option value="">Select a profile...</option>
+                </select>
+                <button id="loadProfileBtn" class="btn btn-primary">Load Profile</button>
+                <button id="saveProfileBtn" class="btn btn-success">Save Current as Profile</button>
+                <button id="deleteProfileBtn" class="btn btn-danger">Delete Profile</button>
+            </div>
+            <div id="saveProfileForm" class="hidden">
+                <input type="text" id="profileName" placeholder="Enter profile name">
+                <button id="confirmSaveProfile" class="btn btn-success">Save</button>
+                <button id="cancelSaveProfile" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+
+        <div class="servers-section">
+            <div class="section-header">
+                <h2>Active MCP Servers</h2>
+                <button id="addServerBtn" class="btn btn-primary">+ Add Server</button>
+            </div>
+
+            <div id="serversList" class="servers-list">
+            </div>
+
+            <div id="addServerForm" class="add-server-form hidden">
+                <h3>Add New Server</h3>
+                <div class="form-group">
+                    <label for="serverName">Server Name:</label>
+                    <input type="text" id="serverName" placeholder="e.g., my-server">
+                </div>
+                <div class="form-group">
+                    <label for="serverConfig">Configuration (JSON):</label>
+                    <textarea id="serverConfig" placeholder='{"command": "npx", "args": ["@example/server"]}'></textarea>
+                </div>
+                <div class="form-actions">
+                    <button id="saveServerBtn" class="btn btn-success">Save Server</button>
+                    <button id="cancelServerBtn" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="settingsModal" class="modal hidden">
+            <div class="modal-content">
+                <h2>Settings</h2>
+                <div class="form-group">
+                    <label for="configPath">Config File Path:</label>
+                    <input type="text" id="configPath" placeholder="~/.claude.json">
+                    <small>Default: ~/.claude.json</small>
+                </div>
+                <div class="modal-actions">
+                    <button id="saveSettingsBtn" class="btn btn-primary">Save</button>
+                    <button id="closeSettingsBtn" class="btn btn-secondary">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="editServerModal" class="modal hidden">
+            <div class="modal-content">
+                <h2>Edit Server Configuration</h2>
+                <div class="form-group">
+                    <label for="editServerName">Server Name:</label>
+                    <input type="text" id="editServerName" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="editServerConfig">Configuration (JSON):</label>
+                    <textarea id="editServerConfig"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button id="saveEditBtn" class="btn btn-success">Save Changes</button>
+                    <button id="cancelEditBtn" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
