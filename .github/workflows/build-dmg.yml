@@ -26,7 +26,10 @@ jobs:
 
     - name: Build macOS app and DMG
       env:
-        # Skip code signing for now - can be added later with certificates
+        # NOTE: Apps built by GitHub Actions will be quarantined by macOS when downloaded
+        # Users will need to right-click and select "Open" on first run, or run:
+        # xattr -cr "/Applications/MCP Server Manager.app"
+        # To avoid this, the app needs to be code-signed with an Apple Developer certificate
         CSC_IDENTITY_AUTO_DISCOVERY: false
         # Disable auto-update and other features that require signing
         ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true

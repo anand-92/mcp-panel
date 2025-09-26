@@ -49,9 +49,15 @@
       "gatekeeperAssess": false,
       "entitlements": null,
       "entitlementsInherit": null,
+      "identity": null,
+      "notarize": false,
       "target": [
         {
           "target": "dmg",
+          "arch": ["arm64"]
+        },
+        {
+          "target": "zip",
           "arch": ["arm64"]
         }
       ]
