@@ -4,124 +4,387 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCP Server Manager</title>
-    <link rel="stylesheet" href="style-dark.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="style-modern.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>MCP Server Manager</h1>
-            <div class="header-actions">
-                <button id="settingsBtn" class="btn btn-icon" title="Settings">
-                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
-                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
-                    </svg>
-                </button>
-                <button id="refreshBtn" class="btn btn-icon" title="Refresh">
-                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
-                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
-                    </svg>
-                </button>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-logo">
+                <svg width="64" height="64" viewBox="0 0 64 64" class="loading-spinner">
+                    <circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="175" stroke-dashoffset="175" stroke-linecap="round">
+                        <animate attributeName="stroke-dashoffset" dur="1.5s" values="175;0" repeatCount="indefinite"/>
+                    </circle>
+                </svg>
             </div>
-        </header>
+            <h2 class="loading-text">MCP Server Manager</h2>
+            <p class="loading-subtitle">Initializing...</p>
+        </div>
+    </div>
 
-        <div class="main-content">
-            <div class="sidebar">
-                <div class="profiles-section">
-                    <h2>Profiles</h2>
-                    <div class="profile-controls">
-                        <select id="profileSelect">
-                            <option value="">Select a profile...</option>
-                        </select>
-                        <div class="profile-buttons">
-                            <button id="loadProfileBtn" class="btn btn-primary btn-sm">Load</button>
-                            <button id="saveProfileBtn" class="btn btn-success btn-sm">Save As</button>
-                        </div>
-                        <button id="deleteProfileBtn" class="btn btn-danger btn-sm hidden">Delete Profile</button>
-                    </div>
-                    <div id="saveProfileForm" class="hidden">
-                        <input type="text" id="profileName" placeholder="Profile name...">
-                        <div class="profile-buttons">
-                            <button id="confirmSaveProfile" class="btn btn-success btn-sm">Save</button>
-                            <button id="cancelSaveProfile" class="btn btn-sm">Cancel</button>
-                        </div>
-                    </div>
+    <!-- Main Application -->
+    <div class="app-container" id="appContainer">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <button id="sidebarToggle" class="btn-icon sidebar-toggle" aria-label="Toggle sidebar">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/>
+                    </svg>
+                </button>
+                <div class="app-logo">
+                    <span class="logo-icon">⚡</span>
+                    <h1 class="app-title">MCP Server Manager</h1>
                 </div>
             </div>
 
-            <div class="content-area">
-                <div class="servers-section">
+            <div class="header-center">
+                <div class="search-box">
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="Search servers... (⌘K)" class="search-input">
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="status-indicator" id="statusIndicator">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Connected</span>
+                </div>
+
+                <button id="notificationsBtn" class="btn-icon" aria-label="Notifications" data-tooltip="Notifications">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/>
+                    </svg>
+                    <span class="notification-badge hidden" id="notificationBadge">0</span>
+                </button>
+
+                <button id="settingsBtn" class="btn-icon" aria-label="Settings" data-tooltip="Settings">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"/>
+                    </svg>
+                </button>
+
+                <div class="user-menu">
+                    <button id="userMenuBtn" class="user-menu-btn" aria-label="User menu">
+                        <div class="user-avatar">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/>
+                            </svg>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Layout -->
+        <div class="app-body">
+            <!-- Sidebar -->
+            <aside class="app-sidebar" id="appSidebar">
+                <div class="sidebar-section">
                     <div class="section-header">
-                        <h2>Active MCP Servers</h2>
-                        <button id="addServerBtn" class="btn btn-primary">
-                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                        <h2 class="section-title">Quick Actions</h2>
+                    </div>
+                    <div class="quick-actions">
+                        <button id="newServerBtn" class="btn btn-primary btn-block">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M8 4a.5.5 0 01.5.5v3h3a.5.5 0 010 1h-3v3a.5.5 0 01-1 0v-3h-3a.5.5 0 010-1h3v-3A.5.5 0 018 4z"/>
+                            </svg>
+                            New Server
+                        </button>
+                        <button id="importBtn" class="btn btn-secondary btn-block">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M.5 9.9a.5.5 0 01.5.5v2.5a1 1 0 001 1h12a1 1 0 001-1v-2.5a.5.5 0 011 0v2.5a2 2 0 01-2 2H2a2 2 0 01-2-2v-2.5a.5.5 0 01.5-.5z"/>
+                                <path d="M7.646 1.146a.5.5 0 01.708 0l3 3a.5.5 0 01-.708.708L8.5 2.707V11.5a.5.5 0 01-1 0V2.707L5.354 4.854a.5.5 0 11-.708-.708l3-3z"/>
+                            </svg>
+                            Import Config
+                        </button>
+                        <button id="exportBtn" class="btn btn-secondary btn-block">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M.5 9.9a.5.5 0 01.5.5v2.5a1 1 0 001 1h12a1 1 0 001-1v-2.5a.5.5 0 011 0v2.5a2 2 0 01-2 2H2a2 2 0 01-2-2v-2.5a.5.5 0 01.5-.5z"/>
+                                <path d="M7.646 11.854a.5.5 0 00.708 0l3-3a.5.5 0 00-.708-.708L8.5 10.293V1.5a.5.5 0 00-1 0v8.793L5.354 8.146a.5.5 0 10-.708.708l3 3z"/>
+                            </svg>
+                            Export Config
+                        </button>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Profiles</h2>
+                        <button id="newProfileBtn" class="btn-icon btn-sm" data-tooltip="New profile">
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                                <path d="M7 3.5a.5.5 0 01.5.5v2.5H10a.5.5 0 010 1H7.5V10a.5.5 0 01-1 0V7.5H4a.5.5 0 010-1h2.5V4a.5.5 0 01.5-.5z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="profiles-list" id="profilesList">
+                        <!-- Profiles will be loaded here -->
+                    </div>
+                </div>
+
+            </aside>
+
+            <!-- Main Content -->
+            <main class="app-main">
+                <!-- Toolbar -->
+                <div class="toolbar">
+                    <div class="toolbar-left">
+                        <div class="view-toggle" role="group">
+                            <button id="gridViewBtn" class="btn-icon active" data-view="grid" data-tooltip="Grid view">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M1 2.5A1.5 1.5 0 012.5 1h3A1.5 1.5 0 017 2.5v3A1.5 1.5 0 015.5 7h-3A1.5 1.5 0 011 5.5v-3zM2.5 2a.5.5 0 00-.5.5v3a.5.5 0 00.5.5h3a.5.5 0 00.5-.5v-3a.5.5 0 00-.5-.5h-3zm6.5.5A1.5 1.5 0 0110.5 1h3A1.5 1.5 0 0115 2.5v3A1.5 1.5 0 0113.5 7h-3A1.5 1.5 0 019 5.5v-3zm1.5-.5a.5.5 0 00-.5.5v3a.5.5 0 00.5.5h3a.5.5 0 00.5-.5v-3a.5.5 0 00-.5-.5h-3zM1 10.5A1.5 1.5 0 012.5 9h3A1.5 1.5 0 017 10.5v3A1.5 1.5 0 015.5 15h-3A1.5 1.5 0 011 13.5v-3zm1.5-.5a.5.5 0 00-.5.5v3a.5.5 0 00.5.5h3a.5.5 0 00.5-.5v-3a.5.5 0 00-.5-.5h-3zm6.5.5A1.5 1.5 0 0110.5 9h3a1.5 1.5 0 011.5 1.5v3a1.5 1.5 0 01-1.5 1.5h-3A1.5 1.5 0 019 13.5v-3zm1.5-.5a.5.5 0 00-.5.5v3a.5.5 0 00.5.5h3a.5.5 0 00.5-.5v-3a.5.5 0 00-.5-.5h-3z"/>
+                                </svg>
+                            </button>
+                            <button id="listViewBtn" class="btn-icon" data-view="list" data-tooltip="List view">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M2.5 12a.5.5 0 01.5-.5h10a.5.5 0 010 1H3a.5.5 0 01-.5-.5zm0-4a.5.5 0 01.5-.5h10a.5.5 0 010 1H3a.5.5 0 01-.5-.5zm0-4a.5.5 0 01.5-.5h10a.5.5 0 010 1H3a.5.5 0 01-.5-.5z"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="filter-group">
+                            <select id="filterSelect" class="filter-select">
+                                <option value="all">All Servers</option>
+                                <option value="active">Active Only</option>
+                                <option value="disabled">Disabled Only</option>
+                                <option value="recent">Recently Modified</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="toolbar-right">
+                        <button id="refreshBtn" class="btn-icon" data-tooltip="Refresh (⌘R)">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path fill-rule="evenodd" d="M8 3a5 5 0 104.546 2.914.5.5 0 01.908-.417A6 6 0 118 2v1z"/>
+                                <path d="M8 4.466V.534a.25.25 0 01.41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 018 4.466z"/>
+                            </svg>
+                        </button>
+
+                        <button id="bulkActionsBtn" class="btn btn-secondary" disabled>
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M2.5 1a1 1 0 00-1 1v1a1 1 0 001 1H3v9a2 2 0 002 2h6a2 2 0 002-2V4h.5a1 1 0 001-1V2a1 1 0 00-1-1H10a1 1 0 00-1-1H7a1 1 0 00-1 1H2.5zm3 4a.5.5 0 01.5.5v7a.5.5 0 01-1 0v-7a.5.5 0 01.5-.5zM8 5a.5.5 0 01.5.5v7a.5.5 0 01-1 0v-7A.5.5 0 018 5zm3 .5v7a.5.5 0 01-1 0v-7a.5.5 0 011 0z"/>
+                            </svg>
+                            Bulk Actions
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Server Grid/List -->
+                <div class="servers-container" id="serversContainer">
+                    <div class="empty-state" id="emptyState">
+                        <svg width="64" height="64" viewBox="0 0 64 64" fill="currentColor" opacity="0.2">
+                            <path d="M32 16a4 4 0 100-8 4 4 0 000 8zm0 16a4 4 0 100-8 4 4 0 000 8zm0 16a4 4 0 100-8 4 4 0 000 8zm0 16a4 4 0 100-8 4 4 0 000 8z"/>
+                        </svg>
+                        <h3>No servers configured</h3>
+                        <p>Add your first MCP server to get started</p>
+                        <button id="emptyStateBtn" class="btn btn-primary">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M8 4a.5.5 0 01.5.5v3h3a.5.5 0 010 1h-3v3a.5.5 0 01-1 0v-3h-3a.5.5 0 010-1h3v-3A.5.5 0 018 4z"/>
                             </svg>
                             Add Server
                         </button>
                     </div>
 
-                    <div id="serversList" class="servers-list">
+                    <div class="servers-grid hidden" id="serversGrid">
+                        <!-- Server cards will be rendered here -->
                     </div>
 
-                    <div id="addServerForm" class="add-server-form hidden">
-                        <h3>Add New Server</h3>
-                        <div class="form-group">
-                            <label for="serverName">Server Name</label>
-                            <input type="text" id="serverName" placeholder="e.g., docker-mcp, filesystem, github">
-                            <small>Unique identifier for this server</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="serverConfig">Configuration (JSON)</label>
-                            <textarea id="serverConfig" placeholder='{"command": "docker", "args": ["run", "mcp-server"]}'></textarea>
-                            <small>Valid JSON configuration object</small>
-                        </div>
-                        <div class="form-actions">
-                            <button id="cancelServerBtn" class="btn">Cancel</button>
-                            <button id="saveServerBtn" class="btn btn-success">Save Server</button>
-                        </div>
+                    <div class="servers-list hidden" id="serversList">
+                        <!-- Server list items will be rendered here -->
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
+    </div>
 
-        <div id="settingsModal" class="modal hidden">
-            <div class="modal-content">
-                <h2>Settings</h2>
-                <div class="form-group">
-                    <label for="configPath">Config File Path:</label>
-                    <input type="text" id="configPath" placeholder="~/.claude.json">
-                    <small>Default: ~/.claude.json</small>
-                </div>
-                <div class="modal-actions">
-                    <button id="saveSettingsBtn" class="btn btn-primary">Save</button>
-                    <button id="closeSettingsBtn" class="btn btn-secondary">Close</button>
-                </div>
+    <!-- Modals -->
+    <div id="modalOverlay" class="modal-overlay hidden"></div>
+
+    <!-- Add/Edit Server Modal -->
+    <div id="serverModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Add New Server</h2>
+                <button class="modal-close" id="modalClose">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>
+                    </svg>
+                </button>
             </div>
-        </div>
+            <div class="modal-body">
+                <form id="serverForm">
+                    <div class="form-group">
+                        <label for="serverName">Server Name</label>
+                        <input type="text" id="serverName" class="form-input" placeholder="e.g., docker-mcp, filesystem" required>
+                        <small class="form-help">Unique identifier for this server</small>
+                    </div>
 
-        <div id="editServerModal" class="modal hidden">
-            <div class="modal-content">
-                <h2>Edit Server Configuration</h2>
-                <div class="form-group">
-                    <label for="editServerName">Server Name:</label>
-                    <input type="text" id="editServerName" readonly>
-                </div>
-                <div class="form-group">
-                    <label for="editServerConfig">Configuration (JSON):</label>
-                    <textarea id="editServerConfig"></textarea>
-                </div>
-                <div class="modal-actions">
-                    <button id="saveEditBtn" class="btn btn-success">Save Changes</button>
-                    <button id="cancelEditBtn" class="btn btn-secondary">Cancel</button>
-                </div>
+
+                    <div class="form-group">
+                        <label for="serverConfig">Configuration</label>
+                        <div class="code-editor">
+                            <textarea id="serverConfig" class="form-textarea code-input" rows="10" placeholder='{"command": "npx", "args": ["@modelcontextprotocol/server-filesystem", "/path"]}' required></textarea>
+                            <div class="code-toolbar">
+                                <button type="button" id="formatJsonBtn" class="btn-text">Format JSON</button>
+                                <button type="button" id="validateJsonBtn" class="btn-text">Validate</button>
+                            </div>
+                        </div>
+                        <small class="form-help">Enter valid JSON configuration for the server</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="serverTags">Tags (optional)</label>
+                        <input type="text" id="serverTags" class="form-input" placeholder="development, production, testing">
+                        <small class="form-help">Comma-separated tags for organization</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="cancelServerBtn" class="btn btn-secondary">Cancel</button>
+                <button type="submit" form="serverForm" id="saveServerBtn" class="btn btn-primary">Save Server</button>
             </div>
         </div>
     </div>
 
-    <div id="toast" class="toast"></div>
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Settings</h2>
+                <button class="modal-close" id="settingsClose">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-tabs">
+                    <button class="tab-button active" data-tab="general">General</button>
+                    <button class="tab-button" data-tab="appearance">Appearance</button>
+                    <button class="tab-button" data-tab="advanced">Advanced</button>
+                </div>
 
+                <div class="tab-content active" id="generalTab">
+                    <div class="form-group">
+                        <label for="configPath">Configuration File Path</label>
+                        <input type="text" id="configPath" class="form-input" placeholder="~/.claude.json">
+                        <small class="form-help">Path to Claude configuration file</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="autoSave" class="form-checkbox">
+                            Auto-save changes
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="confirmDelete" class="form-checkbox" checked>
+                            Confirm before deleting servers
+                        </label>
+                    </div>
+                </div>
+
+                <div class="tab-content hidden" id="appearanceTab">
+                    <div class="form-group">
+                        <label for="theme">Theme</label>
+                        <select id="theme" class="form-select">
+                            <option value="dark">Dark</option>
+                            <option value="light">Light</option>
+                            <option value="auto">System</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="accentColor">Accent Color</label>
+                        <div class="color-picker">
+                            <button class="color-option" data-color="blue" style="background: #58a6ff"></button>
+                            <button class="color-option" data-color="green" style="background: #3fb950"></button>
+                            <button class="color-option" data-color="purple" style="background: #a371f7"></button>
+                            <button class="color-option" data-color="orange" style="background: #f0883e"></button>
+                            <button class="color-option" data-color="red" style="background: #f85149"></button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="animations" class="form-checkbox" checked>
+                            Enable animations
+                        </label>
+                    </div>
+                </div>
+
+                <div class="tab-content hidden" id="advancedTab">
+                    <div class="form-group">
+                        <label for="backupLocation">Backup Location</label>
+                        <input type="text" id="backupLocation" class="form-input" placeholder="~/.mcp-manager/backups">
+                        <small class="form-help">Directory for configuration backups</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="debugMode" class="form-checkbox">
+                            Enable debug mode
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <button id="resetBtn" class="btn btn-danger">Reset All Settings</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="contextMenu" class="context-menu hidden">
+        <button class="context-menu-item" data-action="edit">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M12.146.146a.5.5 0 01.708 0l3 3a.5.5 0 010 .708l-10 10a.5.5 0 01-.168.11l-5 2a.5.5 0 01-.65-.65l2-5a.5.5 0 01.11-.168l10-10zM11.207 2.5L13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 01.5.5v.5h.5a.5.5 0 01.5.5v.5h.293l6.5-6.5zm-9.761 5.175l-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 015 12.5V12h-.5a.5.5 0 01-.5-.5V11h-.5a.5.5 0 01-.468-.325z"/>
+            </svg>
+            Edit
+        </button>
+        <button class="context-menu-item" data-action="duplicate">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M4 2a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H4zm0 1h8a1 1 0 011 1v8a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/>
+                <path d="M4 0a2 2 0 00-2 2H1a3 3 0 013-3h8a3 3 0 013 3v8a3 3 0 01-3 3v-1a2 2 0 002-2V2a2 2 0 00-2-2H4z"/>
+            </svg>
+            Duplicate
+        </button>
+        <button class="context-menu-item" data-action="toggle">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M11.5 1a.5.5 0 01.5.5V4h-1V1.5a.5.5 0 01.5-.5zm-7 0a.5.5 0 01.5.5V4H4V1.5a.5.5 0 01.5-.5zm8 14a.5.5 0 01-.5-.5V12h1v2.5a.5.5 0 01-.5.5zm-8 0a.5.5 0 01-.5-.5V12h1v2.5a.5.5 0 01-.5.5z"/>
+                <path d="M2 5.5A1.5 1.5 0 013.5 4h9A1.5 1.5 0 0114 5.5v5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 10.5v-5zM3.5 5a.5.5 0 00-.5.5v5a.5.5 0 00.5.5h9a.5.5 0 00.5-.5v-5a.5.5 0 00-.5-.5h-9z"/>
+            </svg>
+            Toggle
+        </button>
+        <div class="context-menu-divider"></div>
+        <button class="context-menu-item context-menu-danger" data-action="delete">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/>
+                <path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+            </svg>
+            Delete
+        </button>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
     <script src="app-electron.js"></script>
 </body>
 </html>

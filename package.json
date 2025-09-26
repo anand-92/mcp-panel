@@ -19,15 +19,21 @@
   ],
   "author": "",
   "license": "MIT",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "open": "^8.4.2"
-  },
+  "dependencies": {},
   "devDependencies": {
     "electron": "^27.3.11",
     "electron-builder": "^24.13.3",
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "@floating-ui/dom": "^1.7.4",
+    "animate.css": "^4.1.1",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "fuse.js": "^7.1.0",
+    "notyf": "^3.10.0",
+    "open": "^8.4.2",
+    "prismjs": "^1.30.0",
+    "sortablejs": "^1.15.6",
+    "tippy.js": "^6.3.7"
   },
   "build": {
     "appId": "com.mcpmanager.app",
@@ -41,14 +47,48 @@
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
       "entitlements": null,
-      "entitlementsInherit": null
+      "entitlementsInherit": null,
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["arm64", "x64"]
+        }
+      ]
+    },
+    "dmg": {
+      "format": "UDBZ",
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 410,
+          "y": 150,
+          "type": "link",
+          "path": "/Applications"
+        },
+        {
+          "x": 130,
+          "y": 150,
+          "type": "file"
+        }
+      ]
     },
     "files": [
       "electron-main-ipc.js",
       "preload.js",
       "public/**/*",
-      "assets/**/*"
+      "assets/**/*",
+      "!public/**/*.backup",
+      "!public/**/*-original.*",
+      "!public/**/*-modern.*",
+      "!public/app.js.backup",
+      "!**/*.map",
+      "!**/node_modules/**"
     ],
+    "asar": true,
+    "compression": "maximum",
     "publish": {
       "provider": "github",
       "releaseType": "release"

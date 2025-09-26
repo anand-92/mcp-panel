@@ -1,156 +1,182 @@
-let currentConfigPath = '';
-let globalServerConfigs = {}; // All server configurations
-let currentProfile = []; // Array of enabled server names for current profile
-let currentProfileName = ''; // Name of currently loaded profile
+// Modern MCP Server Manager Application
+// Enhanced version with improved UX, animations, and features
 
-// Check if running in Electron
-const isElectron = window.api !== undefined;
+// Initialize Notyf for notifications
+const notyf = new Notyf({
+    duration: 3000,
+    position: { x: 'right', y: 'bottom' },
+    ripple: true,
+    dismissible: true
+});
 
-async function init() {
-    await loadConfigPath();
-    await loadGlobalConfigs();
-    await loadCurrentServers(); // Load from Claude config to populate global configs (respects manual changes)
-    await loadProfiles();
-    setupEventListeners();
-
-    // Auto-refresh every 30 seconds to detect manual changes
-    setInterval(async () => {
-        const oldProfileLength = currentProfile.length;
-        const oldGlobalCount = Object.keys(globalServerConfigs).length;
-        await loadCurrentServers();
-
-        // Only show notification if there were actual changes
-        if (currentProfile.length !== oldProfileLength || Object.keys(globalServerConfigs).length !== oldGlobalCount) {
-            console.log('Auto-refresh detected changes in Claude config');
-        }
-    }, 30000);
-}
-
-async function loadConfigPath() {
-    try {
-        if (isElectron) {
-            currentConfigPath = await window.api.getConfigPath();
-        } else {
-            const response = await fetch('/api/config-path');
-            const data = await response.json();
-            currentConfigPath = data.path;
-        }
-        document.getElementById('configPath').value = currentConfigPath;
-    } catch (error) {
-        showToast('Error loading config path', 'error');
+// State Management
+const state = {
+    servers: {},
+    profiles: [],
+    currentProfile: null,
+    configPath: '~/.claude.json',
+    viewMode: 'grid',
+    filter: 'all',
+    searchQuery: '',
+    selectedServers: new Set(),
+    isLoading: false,
+    settings: {
+        autoSave: false,
+        confirmDelete: true,
+        animations: true,
+        theme: 'dark',
+        accentColor: 'blue'
     }
-}
+};
 
-async function loadGlobalConfigs() {
-    try {
-        let data;
-        if (isElectron) {
-            data = await window.api.getGlobalConfigs();
-        } else {
-            const response = await fetch('/api/global-configs');
-            data = await response.json();
+// Fuse.js for fuzzy search
+let fuseInstance = null;
+
+// API Helper Functions
+const api = {
+    async getServers() {
+        try {
+            const response = window.api ?
+                await window.api.getServers(state.configPath) :
+                await fetch('/api/servers').then(r => r.json());
+
+            if (response.error) throw new Error(response.error);
+            return response.servers || {};
+        } catch (error) {
+            console.error('Failed to fetch servers:', error);
+            throw error;
+        }
+    },
+
+    async saveServers(servers) {
+        try {
+            const response = window.api ?
+                await window.api.saveServers(state.configPath, servers) :
+                await fetch('/api/servers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ configPath: state.configPath, servers })
+                }).then(r => r.json());
+
+            if (response.error) throw new Error(response.error);
+            return response;
+        } catch (error) {
+            console.error('Failed to save servers:', error);
+            throw error;
+        }
+    },
+
+    async getProfiles() {
+        try {
+            const response = window.api ?
+                await window.api.getProfiles() :
+                await fetch('/api/profiles').then(r => r.json());
+
+            if (response.error) throw new Error(response.error);
+            return response.profiles || [];
+        } catch (error) {
+            console.error('Failed to fetch profiles:', error);
+            return [];
+        }
+    },
+
+    async saveProfile(name, servers) {
+        try {
+            const response = window.api ?
+                await window.api.saveProfile(name, servers) :
+                await fetch('/api/profiles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, servers })
+                }).then(r => r.json());
+
+            if (response.error) throw new Error(response.error);
+            return response;
+        } catch (error) {
+            console.error('Failed to save profile:', error);
+            throw error;
+        }
+    },
+
+    async loadProfile(name) {
+        try {
+            const response = window.api ?
+                await window.api.loadProfile(name) :
+                await fetch(`/api/profiles/${encodeURIComponent(name)}`).then(r => r.json());
+
+            if (response.error) throw new Error(response.error);
+            return response.servers || {};
+        } catch (error) {
+            console.error('Failed to load profile:', error);
+            throw error;
+        }
+    },
+
+    async deleteProfile(name) {
+        try {
+            const response = window.api ?
+                await window.api.deleteProfile(name) :
+                await fetch(`/api/profiles/${encodeURIComponent(name)}`, {
+                    method: 'DELETE'
+                }).then(r => r.json());
+
+            if (response.error) throw new Error(response.error);
+            return response;
+        } catch (error) {
+            console.error('Failed to delete profile:', error);
+            throw error;
+        }
+    }
+};
+
+// UI Helper Functions
+const ui = {
+    showLoading() {
+        state.isLoading = true;
+        document.getElementById('loadingScreen').classList.remove('hidden');
+    },
+
+    hideLoading() {
+        state.isLoading = false;
+        setTimeout(() => {
+            document.getElementById('loadingScreen').classList.add('hidden');
+        }, 500);
+    },
+
+    showModal(modalId) {
+        document.getElementById('modalOverlay').classList.remove('hidden');
+        document.getElementById(modalId).classList.remove('hidden');
+
+        // Focus first input in modal
+        setTimeout(() => {
+            const firstInput = document.querySelector(`#${modalId} input, #${modalId} textarea`);
+            if (firstInput) firstInput.focus();
+        }, 100);
+    },
+
+    hideModal(modalId) {
+        document.getElementById('modalOverlay').classList.add('hidden');
+        document.getElementById(modalId).classList.add('hidden');
+    },
+
+
+    formatJSON(json) {
+        try {
+            const obj = typeof json === 'string' ? JSON.parse(json) : json;
+            return JSON.stringify(obj, null, 2);
+        } catch (e) {
+            return json;
+        }
+    },
+
+    syntaxHighlight(json) {
+        if (typeof json !== 'string') {
+            json = JSON.stringify(json, null, 2);
         }
 
-        if (data.success) {
-            globalServerConfigs = data.configs || {};
-        }
-    } catch (error) {
-        console.error('Error loading global configs:', error);
-        globalServerConfigs = {};
-    }
-}
+        json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-async function saveGlobalConfigs() {
-    try {
-        let data;
-        if (isElectron) {
-            data = await window.api.saveGlobalConfigs(globalServerConfigs);
-        } else {
-            const response = await fetch('/api/global-configs', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ configs: globalServerConfigs })
-            });
-            data = await response.json();
-        }
-
-        if (!data.success) {
-            console.error('Error saving global configs:', data.error);
-        }
-    } catch (error) {
-        console.error('Error saving global configs:', error);
-    }
-}
-
-async function loadCurrentServers() {
-    try {
-        let data;
-        if (isElectron) {
-            data = await window.api.getConfig(currentConfigPath);
-        } else {
-            const response = await fetch(`/api/config?path=${encodeURIComponent(currentConfigPath)}`);
-            data = await response.json();
-        }
-
-        if (data.success) {
-            // Always merge servers from Claude config into global configs (including new manual additions)
-            let hasNewServers = false;
-            for (const [name, config] of Object.entries(data.servers)) {
-                if (!globalServerConfigs[name]) {
-                    globalServerConfigs[name] = config;
-                    hasNewServers = true;
-                    console.log(`Detected new server in Claude config: ${name}`);
-                }
-            }
-
-            // Set current profile to enabled servers from Claude config (respecting manual changes)
-            currentProfile = Object.keys(data.servers);
-
-            // Only save global configs if we found new servers
-            if (hasNewServers) {
-                await saveGlobalConfigs();
-                showToast('Detected new servers in Claude config', 'info');
-            }
-
-            renderServers();
-
-            if (data.isNew) {
-                showToast('No config file found. A new one will be created when you save.', 'info');
-            }
-        } else {
-            showToast('Error loading servers: ' + data.error, 'error');
-        }
-    } catch (error) {
-        showToast('Error loading servers', 'error');
-    }
-}
-
-function renderServers() {
-    const serversList = document.getElementById('serversList');
-    serversList.innerHTML = '';
-
-    if (Object.keys(globalServerConfigs).length === 0) {
-        serversList.innerHTML = '<p class="no-servers">No servers configured. Click "+ Add Server" to get started.</p>';
-        return;
-    }
-
-    // Show all servers from global configs, with enablement based on current profile
-    for (const [name, config] of Object.entries(globalServerConfigs)) {
-        const isEnabled = currentProfile.includes(name);
-        const serverCard = createServerCard(name, config, isEnabled);
-        serversList.appendChild(serverCard);
-    }
-}
-
-function syntaxHighlightJSON(json) {
-    if (typeof json !== 'string') {
-        json = JSON.stringify(json, null, 2);
-    }
-
-    return json.replace(/("(\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
-        function (match) {
+        return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
             let cls = 'json-number';
             if (/^"/.test(match)) {
                 if (/:$/.test(match)) {
@@ -163,419 +189,833 @@ function syntaxHighlightJSON(json) {
             } else if (/null/.test(match)) {
                 cls = 'json-null';
             }
-            return '<span class="' + cls + '">' + match + '</span>';
+            return `<span class="${cls}">${match}</span>`;
         });
-}
-
-function createServerCard(name, config, isEnabled = false) {
-    const card = document.createElement('div');
-    card.className = 'server-card';
-    card.dataset.serverName = name;
-
-    card.innerHTML = `
-        <div class="server-header">
-            <h3>${name}</h3>
-            <div class="server-status">
-                <span class="status-indicator ${isEnabled ? 'active' : ''}"></span>
-                <label class="toggle">
-                    <input type="checkbox" ${isEnabled ? 'checked' : ''} data-server="${name}">
-                    <span class="toggle-slider"></span>
-                </label>
-            </div>
-        </div>
-        <div class="server-details">
-            <pre>${syntaxHighlightJSON(config)}</pre>
-        </div>
-        <div class="server-actions">
-            <button class="btn btn-sm" onclick="editServer('${name}')">Edit</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteServer('${name}')">Delete</button>
-        </div>
-    `;
-
-    const toggle = card.querySelector('input[type="checkbox"]');
-    toggle.addEventListener('change', (e) => {
-        toggleServer(name, e.target.checked);
-    });
-
-    return card;
-}
-
-async function toggleServer(name, enabled) {
-    if (enabled) {
-        // Add server to current profile
-        if (!currentProfile.includes(name)) {
-            currentProfile.push(name);
-        }
-    } else {
-        // Remove server from current profile
-        currentProfile = currentProfile.filter(serverName => serverName !== name);
     }
+};
 
-    try {
-        await saveCurrentProfile();
-        renderServers();
-        showToast(`Server "${name}" ${enabled ? 'enabled' : 'disabled'}`, 'success');
-    } catch (error) {
-        // Revert the change on error
-        if (enabled) {
-            currentProfile = currentProfile.filter(serverName => serverName !== name);
-        } else {
-            if (!currentProfile.includes(name)) {
-                currentProfile.push(name);
-            }
-        }
-        renderServers();
-        showToast(`Error ${enabled ? 'enabling' : 'disabling'} server`, 'error');
-    }
-}
-
-async function saveCurrentProfile() {
-    // Save current profile to Claude config (only enabled servers)
-    const serversToSave = {};
-    for (const serverName of currentProfile) {
-        if (globalServerConfigs[serverName]) {
-            serversToSave[serverName] = globalServerConfigs[serverName];
-        }
-    }
-
-    try {
-        let data;
-        if (isElectron) {
-            data = await window.api.saveConfig(serversToSave, currentConfigPath);
-        } else {
-            const response = await fetch('/api/config', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    servers: serversToSave,
-                    configPath: currentConfigPath
-                })
-            });
-            data = await response.json();
-        }
-
-        if (!data.success) {
-            throw new Error(data.error);
-        }
-    } catch (error) {
-        throw error;
-    }
-}
-
-async function saveAllServers() {
-    // Deprecated - use saveCurrentProfile instead
-    await saveCurrentProfile();
-}
-
-function editServer(name) {
-    const config = globalServerConfigs[name];
-    document.getElementById('editServerName').value = name;
-    document.getElementById('editServerConfig').value = JSON.stringify(config, null, 2);
-    document.getElementById('editServerModal').classList.remove('hidden');
-}
-
-async function deleteServer(name) {
-    if (!confirm(`Are you sure you want to delete server "${name}"?`)) {
-        return;
-    }
-
-    try {
-        // Remove from global configs
-        delete globalServerConfigs[name];
-
-        // Remove from current profile if present
-        currentProfile = currentProfile.filter(serverName => serverName !== name);
-
-        // Save both global configs and current profile
-        await saveGlobalConfigs();
-        await saveCurrentProfile();
-        renderServers();
-        showToast(`Server "${name}" deleted`, 'success');
-    } catch (error) {
-        showToast('Error deleting server', 'error');
-    }
-}
-
-async function loadProfiles() {
-    try {
-        let data;
-        if (isElectron) {
-            data = await window.api.getProfiles();
-        } else {
-            const response = await fetch('/api/profiles');
-            data = await response.json();
-        }
-
-        if (data.success) {
-            const select = document.getElementById('profileSelect');
-            select.innerHTML = '<option value="">Select a profile...</option>';
-
-            data.profiles.forEach(profile => {
-                const option = document.createElement('option');
-                option.value = profile;
-                option.textContent = profile;
-                select.appendChild(option);
-            });
-        }
-    } catch (error) {
-        showToast('Error loading profiles', 'error');
-    }
-}
-
-async function loadProfile() {
-    const select = document.getElementById('profileSelect');
-    const profileName = select.value;
-
-    if (!profileName) {
-        showToast('Please select a profile', 'warning');
-        return;
-    }
-
-    try {
-        let data;
-        if (isElectron) {
-            data = await window.api.getProfile(profileName);
-        } else {
-            const response = await fetch(`/api/profile/${encodeURIComponent(profileName)}`);
-            data = await response.json();
-        }
-
-        if (data.success) {
-            currentServers = data.servers;
-            await saveAllServers();
-            renderServers();
-            showToast(`Profile "${profileName}" loaded`, 'success');
-        } else {
-            showToast('Error loading profile: ' + data.error, 'error');
-        }
-    } catch (error) {
-        showToast('Error loading profile', 'error');
-    }
-}
-
-async function saveProfile() {
-    const profileName = document.getElementById('profileName').value.trim();
-
-    if (!profileName) {
-        showToast('Please enter a profile name', 'warning');
-        return;
-    }
-
-    try {
-        let data;
-        if (isElectron) {
-            data = await window.api.saveProfile(profileName, currentServers);
-        } else {
-            const response = await fetch('/api/profile', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    name: profileName,
-                    servers: currentServers
-                })
-            });
-            data = await response.json();
-        }
-
-        if (data.success) {
-            showToast(`Profile "${profileName}" saved`, 'success');
-            document.getElementById('saveProfileForm').classList.add('hidden');
-            document.getElementById('profileName').value = '';
-            await loadProfiles();
-        } else {
-            showToast('Error saving profile: ' + data.error, 'error');
-        }
-    } catch (error) {
-        showToast('Error saving profile', 'error');
-    }
-}
-
-async function deleteProfile() {
-    const select = document.getElementById('profileSelect');
-    const profileName = select.value;
-
-    if (!profileName) {
-        showToast('Please select a profile to delete', 'warning');
-        return;
-    }
-
-    if (!confirm(`Are you sure you want to delete profile "${profileName}"?`)) {
-        return;
-    }
-
-    try {
-        let data;
-        if (isElectron) {
-            data = await window.api.deleteProfile(profileName);
-        } else {
-            const response = await fetch(`/api/profile/${encodeURIComponent(profileName)}`, {
-                method: 'DELETE'
-            });
-            data = await response.json();
-        }
-
-        if (data.success) {
-            showToast(`Profile "${profileName}" deleted`, 'success');
-            await loadProfiles();
-        } else {
-            showToast('Error deleting profile: ' + data.error, 'error');
-        }
-    } catch (error) {
-        showToast('Error deleting profile', 'error');
-    }
-}
-
-function setupEventListeners() {
-    document.getElementById('refreshBtn').addEventListener('click', async () => {
-        showToast('Refreshing from Claude config...', 'info');
-        await loadCurrentServers();
-        showToast('Servers refreshed from Claude config', 'success');
-    });
-
-    document.getElementById('addServerBtn').addEventListener('click', () => {
-        document.getElementById('addServerForm').classList.remove('hidden');
-    });
-
-    document.getElementById('cancelServerBtn').addEventListener('click', () => {
-        document.getElementById('addServerForm').classList.add('hidden');
-        document.getElementById('serverName').value = '';
-        document.getElementById('serverConfig').value = '';
-    });
-
-    document.getElementById('saveServerBtn').addEventListener('click', async () => {
-        const name = document.getElementById('serverName').value.trim();
-        const configStr = document.getElementById('serverConfig').value.trim();
-
-        if (!name) {
-            showToast('Please enter a server name', 'warning');
-            return;
-        }
-
-        let config;
+// Server Management Functions
+const servers = {
+    async load() {
         try {
-            config = JSON.parse(configStr);
+            ui.showLoading();
+            state.servers = await api.getServers();
+            this.render();
+            this.updateSearch();
+            notyf.success('Servers loaded successfully');
         } catch (error) {
-            showToast('Invalid JSON configuration', 'error');
+            notyf.error(`Failed to load servers: ${error.message}`);
+        } finally {
+            ui.hideLoading();
+        }
+    },
+
+    async save() {
+        try {
+            await api.saveServers(state.servers);
+
+            if (state.settings.autoSave) {
+                notyf.success('Changes saved automatically');
+            } else {
+                notyf.success('Servers saved successfully');
+            }
+
+        } catch (error) {
+            notyf.error(`Failed to save servers: ${error.message}`);
+        }
+    },
+
+    async add(name, config, tags = []) {
+        try {
+            // Validate config is valid JSON
+            const configObj = typeof config === 'string' ? JSON.parse(config) : config;
+
+            if (state.servers[name]) {
+                throw new Error(`Server "${name}" already exists`);
+            }
+
+            state.servers[name] = configObj;
+
+            if (state.settings.autoSave) {
+                await this.save();
+            } else {
+                this.render();
+                }
+
+            notyf.success(`Server "${name}" added successfully`);
+            return true;
+        } catch (error) {
+            notyf.error(`Failed to add server: ${error.message}`);
+            return false;
+        }
+    },
+
+    async update(name, config) {
+        try {
+            const configObj = typeof config === 'string' ? JSON.parse(config) : config;
+            state.servers[name] = configObj;
+
+            if (state.settings.autoSave) {
+                await this.save();
+            } else {
+                this.render();
+            }
+
+            notyf.success(`Server "${name}" updated successfully`);
+            return true;
+        } catch (error) {
+            notyf.error(`Failed to update server: ${error.message}`);
+            return false;
+        }
+    },
+
+    async delete(name) {
+        try {
+            if (state.settings.confirmDelete) {
+                const confirmed = await this.confirmDelete(name);
+                if (!confirmed) return;
+            }
+
+            delete state.servers[name];
+
+            if (state.settings.autoSave) {
+                await this.save();
+            } else {
+                this.render();
+                }
+
+            notyf.success(`Server "${name}" deleted successfully`);
+        } catch (error) {
+            notyf.error(`Failed to delete server: ${error.message}`);
+        }
+    },
+
+    async toggle(name) {
+        try {
+            if (state.servers[name] === null) {
+                // Re-enable: need to restore from somewhere or set a default
+                state.servers[name] = { command: "placeholder", args: [] };
+                notyf.success(`Server "${name}" enabled`);
+            } else {
+                // Disable
+                state.servers[name] = null;
+                notyf.warning(`Server "${name}" disabled`);
+            }
+
+            if (state.settings.autoSave) {
+                await this.save();
+            } else {
+                this.render();
+            }
+        } catch (error) {
+            notyf.error(`Failed to toggle server: ${error.message}`);
+        }
+    },
+
+    async duplicate(name) {
+        try {
+            const newName = `${name}_copy`;
+            const config = state.servers[name];
+
+            if (state.servers[newName]) {
+                throw new Error(`Server "${newName}" already exists`);
+            }
+
+            state.servers[newName] = JSON.parse(JSON.stringify(config));
+
+            if (state.settings.autoSave) {
+                await this.save();
+            } else {
+                this.render();
+                }
+
+            notyf.success(`Server duplicated as "${newName}"`);
+        } catch (error) {
+            notyf.error(`Failed to duplicate server: ${error.message}`);
+        }
+    },
+
+    confirmDelete(name) {
+        return new Promise((resolve) => {
+            const confirmed = confirm(`Are you sure you want to delete server "${name}"?`);
+            resolve(confirmed);
+        });
+    },
+
+    getFiltered() {
+        let servers = Object.entries(state.servers);
+
+        // Apply filter
+        switch (state.filter) {
+            case 'active':
+                servers = servers.filter(([_, config]) => config !== null);
+                break;
+            case 'disabled':
+                servers = servers.filter(([_, config]) => config === null);
+                break;
+            case 'recent':
+                // TODO: Implement recent sorting based on modification time
+                break;
+        }
+
+        // Apply search
+        if (state.searchQuery && fuseInstance) {
+            const results = fuseInstance.search(state.searchQuery);
+            const names = new Set(results.map(r => r.item.name));
+            servers = servers.filter(([name]) => names.has(name));
+        }
+
+        return servers;
+    },
+
+    updateSearch() {
+        const searchData = Object.keys(state.servers).map(name => ({
+            name,
+            config: JSON.stringify(state.servers[name])
+        }));
+
+        fuseInstance = new Fuse(searchData, {
+            keys: ['name', 'config'],
+            threshold: 0.3
+        });
+    },
+
+    render() {
+        const container = document.getElementById('serversContainer');
+        const emptyState = document.getElementById('emptyState');
+        const gridContainer = document.getElementById('serversGrid');
+        const listContainer = document.getElementById('serversList');
+
+        const filtered = this.getFiltered();
+
+        if (filtered.length === 0 && Object.keys(state.servers).length === 0) {
+            emptyState.classList.remove('hidden');
+            gridContainer.classList.add('hidden');
+            listContainer.classList.add('hidden');
             return;
         }
 
-        try {
-            let data;
-            if (isElectron) {
-                data = await window.api.addServer(name, config, currentConfigPath);
-            } else {
-                const response = await fetch('/api/server', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        name,
-                        config,
-                        configPath: currentConfigPath
-                    })
+        emptyState.classList.add('hidden');
+
+        if (state.viewMode === 'grid') {
+            gridContainer.classList.remove('hidden');
+            listContainer.classList.add('hidden');
+            this.renderGrid(filtered);
+        } else {
+            gridContainer.classList.add('hidden');
+            listContainer.classList.remove('hidden');
+            this.renderList(filtered);
+        }
+
+        // Initialize tooltips for new elements
+        tippy('[data-tooltip]', {
+            content: (element) => element.getAttribute('data-tooltip'),
+            placement: 'top',
+            animation: 'scale'
+        });
+    },
+
+    renderGrid(servers) {
+        const container = document.getElementById('serversGrid');
+        container.innerHTML = '';
+
+        servers.forEach(([name, config]) => {
+            const card = document.createElement('div');
+            card.className = `server-card ${config === null ? 'disabled' : ''} animate-in`;
+            card.dataset.server = name;
+
+            card.innerHTML = `
+                <div class="server-card-header">
+                    <h3 class="server-card-title">${name}</h3>
+                    <div class="server-card-status ${config === null ? 'disabled' : ''}"></div>
+                </div>
+                <div class="server-card-body">
+                    <pre class="server-card-config">${ui.syntaxHighlight(config)}</pre>
+                </div>
+                <div class="server-card-footer">
+                    <button class="btn-icon" data-action="edit" data-tooltip="Edit">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M12.146.146a.5.5 0 01.708 0l3 3a.5.5 0 010 .708l-10 10a.5.5 0 01-.168.11l-5 2a.5.5 0 01-.65-.65l2-5a.5.5 0 01.11-.168l10-10z"/>
+                        </svg>
+                    </button>
+                    <button class="btn-icon" data-action="duplicate" data-tooltip="Duplicate">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M4 2a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H4z"/>
+                        </svg>
+                    </button>
+                    <button class="btn-icon" data-action="toggle" data-tooltip="${config === null ? 'Enable' : 'Disable'}">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M${config === null ? '8 5v6M5 8h6' : '11 8H5'}"/>
+                        </svg>
+                    </button>
+                    <button class="btn-icon" data-action="delete" data-tooltip="Delete">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+
+            // Add event listeners
+            card.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const action = btn.dataset.action;
+                    this.handleAction(action, name);
                 });
-                data = await response.json();
-            }
+            });
 
-            if (data.success) {
-                currentServers[name] = config;
-                renderServers();
-                showToast(`Server "${name}" added`, 'success');
-                document.getElementById('addServerForm').classList.add('hidden');
-                document.getElementById('serverName').value = '';
-                document.getElementById('serverConfig').value = '';
-            } else {
-                showToast('Error adding server: ' + data.error, 'error');
+            // Add context menu
+            card.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                this.showContextMenu(e, name);
+            });
+
+            container.appendChild(card);
+        });
+    },
+
+    renderList(servers) {
+        const container = document.getElementById('serversList');
+        container.innerHTML = '';
+
+        servers.forEach(([name, config]) => {
+            const item = document.createElement('div');
+            item.className = 'server-list-item animate-in';
+            item.dataset.server = name;
+
+            const isDisabled = config === null;
+            const configStr = isDisabled ? 'Disabled' : JSON.stringify(config).substring(0, 50) + '...';
+
+            item.innerHTML = `
+                <input type="checkbox" class="server-list-checkbox" data-server="${name}">
+                <div class="server-list-status ${isDisabled ? 'disabled' : ''}"></div>
+                <div class="server-list-info">
+                    <div class="server-list-name">${name}</div>
+                    <div class="server-list-meta">${configStr}</div>
+                </div>
+                <div class="server-list-actions">
+                    <button class="btn-icon" data-action="edit" data-tooltip="Edit">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M12.146.146a.5.5 0 01.708 0l3 3a.5.5 0 010 .708l-10 10a.5.5 0 01-.168.11l-5 2a.5.5 0 01-.65-.65l2-5a.5.5 0 01.11-.168l10-10z"/>
+                        </svg>
+                    </button>
+                    <button class="btn-icon" data-action="toggle" data-tooltip="${isDisabled ? 'Enable' : 'Disable'}">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M${isDisabled ? '8 5v6M5 8h6' : '11 8H5'}"/>
+                        </svg>
+                    </button>
+                    <button class="btn-icon" data-action="delete" data-tooltip="Delete">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+
+            // Add event listeners
+            item.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const action = btn.dataset.action;
+                    this.handleAction(action, name);
+                });
+            });
+
+            // Checkbox handler
+            const checkbox = item.querySelector('.server-list-checkbox');
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    state.selectedServers.add(name);
+                } else {
+                    state.selectedServers.delete(name);
+                }
+                this.updateBulkActions();
+            });
+
+            container.appendChild(item);
+        });
+    },
+
+    handleAction(action, name) {
+        switch (action) {
+            case 'edit':
+                this.showEditModal(name);
+                break;
+            case 'duplicate':
+                this.duplicate(name);
+                break;
+            case 'toggle':
+                this.toggle(name);
+                break;
+            case 'delete':
+                this.delete(name);
+                break;
+        }
+    },
+
+    showEditModal(name) {
+        const modal = document.getElementById('serverModal');
+        const title = document.getElementById('modalTitle');
+        const nameInput = document.getElementById('serverName');
+        const configInput = document.getElementById('serverConfig');
+
+        title.textContent = `Edit Server: ${name}`;
+        nameInput.value = name;
+        nameInput.disabled = true;
+        configInput.value = ui.formatJSON(state.servers[name]);
+
+        ui.showModal('serverModal');
+    },
+
+    showContextMenu(event, serverName) {
+        const menu = document.getElementById('contextMenu');
+        menu.classList.remove('hidden');
+
+        // Position menu at cursor
+        menu.style.left = `${event.pageX}px`;
+        menu.style.top = `${event.pageY}px`;
+
+        // Handle menu item clicks
+        menu.querySelectorAll('.context-menu-item').forEach(item => {
+            item.onclick = () => {
+                const action = item.dataset.action;
+                this.handleAction(action, serverName);
+                menu.classList.add('hidden');
+            };
+        });
+
+        // Hide menu on click outside
+        document.addEventListener('click', () => {
+            menu.classList.add('hidden');
+        }, { once: true });
+    },
+
+    updateBulkActions() {
+        const btn = document.getElementById('bulkActionsBtn');
+        btn.disabled = state.selectedServers.size === 0;
+
+        if (state.selectedServers.size > 0) {
+            btn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M2.5 1a1 1 0 00-1 1v1a1 1 0 001 1H3v9a2 2 0 002 2h6a2 2 0 002-2V4h.5a1 1 0 001-1V2a1 1 0 00-1-1H10a1 1 0 00-1-1H7a1 1 0 00-1 1H2.5z"/>
+                </svg>
+                Bulk Actions (${state.selectedServers.size})
+            `;
+        }
+    }
+};
+
+// Profile Management
+const profiles = {
+    async load() {
+        try {
+            state.profiles = await api.getProfiles();
+            this.render();
+        } catch (error) {
+            notyf.error(`Failed to load profiles: ${error.message}`);
+        }
+    },
+
+    async save(name) {
+        try {
+            await api.saveProfile(name, state.servers);
+            await this.load();
+            notyf.success(`Profile "${name}" saved successfully`);
+        } catch (error) {
+            notyf.error(`Failed to save profile: ${error.message}`);
+        }
+    },
+
+    async loadProfile(name) {
+        try {
+            state.servers = await api.loadProfile(name);
+            state.currentProfile = name;
+            servers.render();
+            servers.updateSearch();
+            notyf.success(`Profile "${name}" loaded successfully`);
+        } catch (error) {
+            notyf.error(`Failed to load profile: ${error.message}`);
+        }
+    },
+
+    async delete(name) {
+        try {
+            if (confirm(`Are you sure you want to delete profile "${name}"?`)) {
+                await api.deleteProfile(name);
+                await this.load();
+                notyf.success(`Profile "${name}" deleted successfully`);
             }
         } catch (error) {
-            showToast('Error adding server', 'error');
+            notyf.error(`Failed to delete profile: ${error.message}`);
         }
+    },
+
+    render() {
+        const container = document.getElementById('profilesList');
+        container.innerHTML = '';
+
+        state.profiles.forEach(profile => {
+            const item = document.createElement('div');
+            item.className = `profile-item ${profile === state.currentProfile ? 'active' : ''}`;
+
+            item.innerHTML = `
+                <span>${profile}</span>
+                <div class="profile-actions">
+                    <button class="btn-icon btn-sm" data-action="load" data-tooltip="Load">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                            <path d="M7 10l-5-5h3V2h4v3h3l-5 5z"/>
+                        </svg>
+                    </button>
+                    <button class="btn-icon btn-sm" data-action="delete" data-tooltip="Delete">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                            <path d="M5.5 5.5A.5.5 0 016 6v4a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2 0a.5.5 0 01.5.5v4a.5.5 0 01-1 0V6a.5.5 0 01.5-.5z"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+
+            item.querySelector('[data-action="load"]').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.loadProfile(profile);
+            });
+
+            item.querySelector('[data-action="delete"]').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.delete(profile);
+            });
+
+            container.appendChild(item);
+        });
+    }
+};
+
+// Keyboard Shortcuts
+const shortcuts = {
+    init() {
+        document.addEventListener('keydown', (e) => {
+            // Command/Ctrl + K: Focus search
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('searchInput').focus();
+            }
+
+            // Command/Ctrl + N: New server
+            if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+                e.preventDefault();
+                document.getElementById('newServerBtn').click();
+            }
+
+            // Command/Ctrl + S: Save
+            if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+                e.preventDefault();
+                servers.save();
+            }
+
+            // Command/Ctrl + R: Refresh
+            if ((e.metaKey || e.ctrlKey) && e.key === 'r') {
+                e.preventDefault();
+                servers.load();
+            }
+
+            // Escape: Close modals
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal:not(.hidden)').forEach(modal => {
+                    ui.hideModal(modal.id);
+                });
+            }
+        });
+    }
+};
+
+// Event Listeners
+function initEventListeners() {
+    // Header buttons
+    document.getElementById('sidebarToggle').addEventListener('click', () => {
+        document.getElementById('appSidebar').classList.toggle('open');
+    });
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        state.searchQuery = e.target.value;
+        servers.render();
     });
 
     document.getElementById('settingsBtn').addEventListener('click', () => {
-        document.getElementById('settingsModal').classList.remove('hidden');
+        ui.showModal('settingsModal');
     });
 
-    document.getElementById('closeSettingsBtn').addEventListener('click', () => {
-        document.getElementById('settingsModal').classList.add('hidden');
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+        servers.load();
     });
 
-    document.getElementById('saveSettingsBtn').addEventListener('click', () => {
-        currentConfigPath = document.getElementById('configPath').value;
-        document.getElementById('settingsModal').classList.add('hidden');
-        loadServers();
-        showToast('Settings saved', 'success');
+    // View toggle
+    document.getElementById('gridViewBtn').addEventListener('click', () => {
+        state.viewMode = 'grid';
+        document.getElementById('gridViewBtn').classList.add('active');
+        document.getElementById('listViewBtn').classList.remove('active');
+        servers.render();
     });
 
-    document.getElementById('saveEditBtn').addEventListener('click', async () => {
-        const name = document.getElementById('editServerName').value;
-        const configStr = document.getElementById('editServerConfig').value.trim();
+    document.getElementById('listViewBtn').addEventListener('click', () => {
+        state.viewMode = 'list';
+        document.getElementById('listViewBtn').classList.add('active');
+        document.getElementById('gridViewBtn').classList.remove('active');
+        servers.render();
+    });
 
-        let config;
+    // Filter select
+    document.getElementById('filterSelect').addEventListener('change', (e) => {
+        state.filter = e.target.value;
+        servers.render();
+    });
+
+    // Quick actions
+    document.getElementById('newServerBtn').addEventListener('click', () => {
+        document.getElementById('modalTitle').textContent = 'Add New Server';
+        document.getElementById('serverName').value = '';
+        document.getElementById('serverName').disabled = false;
+        document.getElementById('serverConfig').value = '';
+        ui.showModal('serverModal');
+    });
+
+    document.getElementById('emptyStateBtn').addEventListener('click', () => {
+        document.getElementById('newServerBtn').click();
+    });
+
+    // Server modal
+    document.getElementById('serverForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('serverName').value;
+        const config = document.getElementById('serverConfig').value;
+
+        const isEdit = document.getElementById('serverName').disabled;
+        const success = isEdit ?
+            await servers.update(name, config) :
+            await servers.add(name, config);
+
+        if (success) {
+            ui.hideModal('serverModal');
+        }
+    });
+
+    document.getElementById('formatJsonBtn').addEventListener('click', () => {
+        const input = document.getElementById('serverConfig');
         try {
-            config = JSON.parse(configStr);
-        } catch (error) {
-            showToast('Invalid JSON configuration', 'error');
-            return;
-        }
-
-        currentServers[name] = config;
-        await saveAllServers();
-        renderServers();
-        showToast(`Server "${name}" updated`, 'success');
-        document.getElementById('editServerModal').classList.add('hidden');
-    });
-
-    document.getElementById('cancelEditBtn').addEventListener('click', () => {
-        document.getElementById('editServerModal').classList.add('hidden');
-    });
-
-    document.getElementById('loadProfileBtn').addEventListener('click', loadProfile);
-
-    document.getElementById('saveProfileBtn').addEventListener('click', () => {
-        document.getElementById('saveProfileForm').classList.remove('hidden');
-    });
-
-    document.getElementById('confirmSaveProfile').addEventListener('click', saveProfile);
-
-    document.getElementById('cancelSaveProfile').addEventListener('click', () => {
-        document.getElementById('saveProfileForm').classList.add('hidden');
-        document.getElementById('profileName').value = '';
-    });
-
-    document.getElementById('deleteProfileBtn').addEventListener('click', deleteProfile);
-
-    // Show/hide delete button based on profile selection
-    document.getElementById('profileSelect').addEventListener('change', (e) => {
-        const deleteBtn = document.getElementById('deleteProfileBtn');
-        if (e.target.value) {
-            deleteBtn.classList.remove('hidden');
-        } else {
-            deleteBtn.classList.add('hidden');
+            input.value = ui.formatJSON(input.value);
+            notyf.success('JSON formatted successfully');
+        } catch (e) {
+            notyf.error('Invalid JSON format');
         }
     });
 
-    document.addEventListener('click', (e) => {
-        if (e.target.classList.contains('modal')) {
-            e.target.classList.add('hidden');
+    document.getElementById('validateJsonBtn').addEventListener('click', () => {
+        const input = document.getElementById('serverConfig');
+        try {
+            JSON.parse(input.value);
+            notyf.success('Valid JSON');
+        } catch (e) {
+            notyf.error(`Invalid JSON: ${e.message}`);
+        }
+    });
+
+    document.getElementById('cancelServerBtn').addEventListener('click', () => {
+        ui.hideModal('serverModal');
+    });
+
+    document.getElementById('modalClose').addEventListener('click', () => {
+        ui.hideModal('serverModal');
+    });
+
+    // Settings modal
+    document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+        state.configPath = document.getElementById('configPath').value || '~/.claude.json';
+        state.settings.autoSave = document.getElementById('autoSave').checked;
+        state.settings.confirmDelete = document.getElementById('confirmDelete').checked;
+
+        localStorage.setItem('mcp-settings', JSON.stringify(state.settings));
+        localStorage.setItem('mcp-configPath', state.configPath);
+
+        ui.hideModal('settingsModal');
+        notyf.success('Settings saved');
+
+        // Reload servers with new config path
+        await servers.load();
+    });
+
+    document.getElementById('settingsClose').addEventListener('click', () => {
+        ui.hideModal('settingsModal');
+    });
+
+    // Settings tabs
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.dataset.tab;
+
+            // Update buttons
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            document.getElementById(`${tabId}Tab`).classList.remove('hidden');
+        });
+    });
+
+    // Profile buttons
+    document.getElementById('newProfileBtn').addEventListener('click', () => {
+        const name = prompt('Enter profile name:');
+        if (name) {
+            profiles.save(name);
+        }
+    });
+
+    // Import/Export
+    document.getElementById('importBtn').addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+
+        input.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        const config = JSON.parse(event.target.result);
+                        state.servers = config.mcpServers || config;
+                        await servers.save();
+                        servers.render();
+                        notyf.success('Configuration imported successfully');
+                    } catch (error) {
+                        notyf.error('Invalid configuration file');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        input.click();
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+        const data = JSON.stringify({ mcpServers: state.servers }, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'mcp-servers-config.json';
+        a.click();
+
+        URL.revokeObjectURL(url);
+        notyf.success('Configuration exported');
+    });
+
+    // Modal overlay click to close
+    document.getElementById('modalOverlay').addEventListener('click', () => {
+        document.querySelectorAll('.modal:not(.hidden)').forEach(modal => {
+            ui.hideModal(modal.id);
+        });
+    });
+
+    // Bulk actions
+    document.getElementById('bulkActionsBtn').addEventListener('click', () => {
+        if (state.selectedServers.size > 0) {
+            const action = prompt(`What would you like to do with ${state.selectedServers.size} selected servers?\n\n1. Delete\n2. Disable\n3. Enable\n4. Export`);
+
+            switch (action) {
+                case '1':
+                case 'delete':
+                    if (confirm(`Delete ${state.selectedServers.size} servers?`)) {
+                        state.selectedServers.forEach(name => delete state.servers[name]);
+                        servers.save();
+                        state.selectedServers.clear();
+                        servers.render();
+                    }
+                    break;
+                case '2':
+                case 'disable':
+                    state.selectedServers.forEach(name => state.servers[name] = null);
+                    servers.save();
+                    state.selectedServers.clear();
+                    servers.render();
+                    break;
+                case '3':
+                case 'enable':
+                    // Would need stored configs to re-enable
+                    notyf.warning('Cannot re-enable servers without stored configurations');
+                    break;
+                case '4':
+                case 'export':
+                    const selected = {};
+                    state.selectedServers.forEach(name => {
+                        selected[name] = state.servers[name];
+                    });
+                    const data = JSON.stringify(selected, null, 2);
+                    const blob = new Blob([data], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'selected-servers.json';
+                    a.click();
+
+                    URL.revokeObjectURL(url);
+                    break;
+            }
         }
     });
 }
 
-function showToast(message, type = 'info') {
-    const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.className = `toast ${type}`;
-    toast.classList.add('show');
+// Initialize Application
+async function init() {
+    try {
+        // Load settings from localStorage
+        const savedSettings = localStorage.getItem('mcp-settings');
+        if (savedSettings) {
+            Object.assign(state.settings, JSON.parse(savedSettings));
+        }
 
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 3000);
+        const savedConfigPath = localStorage.getItem('mcp-configPath');
+        if (savedConfigPath) {
+            state.configPath = savedConfigPath;
+        }
+
+        // Apply settings
+        document.getElementById('configPath').value = state.configPath;
+        document.getElementById('autoSave').checked = state.settings.autoSave;
+        document.getElementById('confirmDelete').checked = state.settings.confirmDelete;
+
+        // Initialize UI
+        initEventListeners();
+        shortcuts.init();
+
+        // Load data
+        await servers.load();
+        await profiles.load();
+
+        // Hide loading screen
+        ui.hideLoading();
+
+        // Show welcome message
+        if (!localStorage.getItem('mcp-welcomed')) {
+            setTimeout(() => {
+                notyf.success('Welcome to MCP Server Manager!');
+                localStorage.setItem('mcp-welcomed', 'true');
+            }, 1000);
+        }
+    } catch (error) {
+        console.error('Failed to initialize application:', error);
+        notyf.error('Failed to initialize application');
+        ui.hideLoading();
+    }
 }
 
-document.addEventListener('DOMContentLoaded', init);
+// Start application when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
