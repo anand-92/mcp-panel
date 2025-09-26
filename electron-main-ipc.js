@@ -34,7 +34,12 @@ ipcMain.handle('get-config-path', () => {
 });
 
 ipcMain.handle('get-config', async (event, configPath) => {
-    const targetPath = configPath || getDefaultConfigPath();
+    let targetPath = configPath || getDefaultConfigPath();
+
+    // Expand tilde to home directory
+    if (targetPath && targetPath.startsWith('~/')) {
+        targetPath = path.join(os.homedir(), targetPath.slice(2));
+    }
 
     try {
         const data = await fs.readFile(targetPath, 'utf8');
@@ -64,7 +69,12 @@ ipcMain.handle('get-config', async (event, configPath) => {
 });
 
 ipcMain.handle('save-config', async (event, servers, configPath) => {
-    const targetPath = configPath || getDefaultConfigPath();
+    let targetPath = configPath || getDefaultConfigPath();
+
+    // Expand tilde to home directory
+    if (targetPath && targetPath.startsWith('~/')) {
+        targetPath = path.join(os.homedir(), targetPath.slice(2));
+    }
 
     try {
         let config;
@@ -88,7 +98,12 @@ ipcMain.handle('save-config', async (event, servers, configPath) => {
 });
 
 ipcMain.handle('add-server', async (event, name, serverConfig, configPath) => {
-    const targetPath = configPath || getDefaultConfigPath();
+    let targetPath = configPath || getDefaultConfigPath();
+
+    // Expand tilde to home directory
+    if (targetPath && targetPath.startsWith('~/')) {
+        targetPath = path.join(os.homedir(), targetPath.slice(2));
+    }
 
     try {
         let config;
@@ -116,7 +131,12 @@ ipcMain.handle('add-server', async (event, name, serverConfig, configPath) => {
 });
 
 ipcMain.handle('delete-server', async (event, name, configPath) => {
-    const targetPath = configPath || getDefaultConfigPath();
+    let targetPath = configPath || getDefaultConfigPath();
+
+    // Expand tilde to home directory
+    if (targetPath && targetPath.startsWith('~/')) {
+        targetPath = path.join(os.homedir(), targetPath.slice(2));
+    }
 
     try {
         const data = await fs.readFile(targetPath, 'utf8');

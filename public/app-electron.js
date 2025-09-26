@@ -32,14 +32,11 @@ const state = {
 // Fuse.js for fuzzy search
 let fuseInstance = null;
 
-// API Helper Functions
-const api = {
+// API Functions - Electron IPC only
+const mcpApi = {
     async getServers() {
         try {
-            const response = window.api ?
-                await window.api.getServers(state.configPath) :
-                await fetch('/api/servers').then(r => r.json());
-
+            const response = await window.api.getConfig(state.configPath);
             if (response.error) throw new Error(response.error);
             return response.servers || {};
         } catch (error) {
@@ -50,14 +47,7 @@ const api = {
 
     async saveServers(servers) {
         try {
-            const response = window.api ?
-                await window.api.saveServers(state.configPath, servers) :
-                await fetch('/api/servers', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ configPath: state.configPath, servers })
-                }).then(r => r.json());
-
+            const response = await window.api.saveConfig(servers, state.configPath);
             if (response.error) throw new Error(response.error);
             return response;
         } catch (error) {
@@ -68,10 +58,7 @@ const api = {
 
     async getProfiles() {
         try {
-            const response = window.api ?
-                await window.api.getProfiles() :
-                await fetch('/api/profiles').then(r => r.json());
-
+            const response = await window.api.getProfiles();
             if (response.error) throw new Error(response.error);
             return response.profiles || [];
         } catch (error) {
@@ -82,14 +69,7 @@ const api = {
 
     async saveProfile(name, servers) {
         try {
-            const response = window.api ?
-                await window.api.saveProfile(name, servers) :
-                await fetch('/api/profiles', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, servers })
-                }).then(r => r.json());
-
+            const response = await window.api.saveProfile(name, servers);
             if (response.error) throw new Error(response.error);
             return response;
         } catch (error) {
@@ -100,10 +80,7 @@ const api = {
 
     async loadProfile(name) {
         try {
-            const response = window.api ?
-                await window.api.loadProfile(name) :
-                await fetch(`/api/profiles/${encodeURIComponent(name)}`).then(r => r.json());
-
+            const response = await window.api.getProfile(name);
             if (response.error) throw new Error(response.error);
             return response.servers || {};
         } catch (error) {
@@ -114,12 +91,7 @@ const api = {
 
     async deleteProfile(name) {
         try {
-            const response = window.api ?
-                await window.api.deleteProfile(name) :
-                await fetch(`/api/profiles/${encodeURIComponent(name)}`, {
-                    method: 'DELETE'
-                }).then(r => r.json());
-
+            const response = await window.api.deleteProfile(name);
             if (response.error) throw new Error(response.error);
             return response;
         } catch (error) {
@@ -199,7 +171,7 @@ const servers = {
     async load() {
         try {
             ui.showLoading();
-            state.servers = await api.getServers();
+            state.servers = await mcpApi.getServers();
             this.render();
             this.updateSearch();
             notyf.success('Servers loaded successfully');
@@ -212,7 +184,7 @@ const servers = {
 
     async save() {
         try {
-            await api.saveServers(state.servers);
+            await mcpApi.saveServers(state.servers);
 
             if (state.settings.autoSave) {
                 notyf.success('Changes saved automatically');
@@ -610,7 +582,7 @@ const servers = {
 const profiles = {
     async load() {
         try {
-            state.profiles = await api.getProfiles();
+            state.profiles = await mcpApi.getProfiles();
             this.render();
         } catch (error) {
             notyf.error(`Failed to load profiles: ${error.message}`);
@@ -619,7 +591,7 @@ const profiles = {
 
     async save(name) {
         try {
-            await api.saveProfile(name, state.servers);
+            await mcpApi.saveProfile(name, state.servers);
             await this.load();
             notyf.success(`Profile "${name}" saved successfully`);
         } catch (error) {
@@ -629,7 +601,7 @@ const profiles = {
 
     async loadProfile(name) {
         try {
-            state.servers = await api.loadProfile(name);
+            state.servers = await mcpApi.loadProfile(name);
             state.currentProfile = name;
             servers.render();
             servers.updateSearch();
@@ -642,7 +614,7 @@ const profiles = {
     async delete(name) {
         try {
             if (confirm(`Are you sure you want to delete profile "${name}"?`)) {
-                await api.deleteProfile(name);
+                await mcpApi.deleteProfile(name);
                 await this.load();
                 notyf.success(`Profile "${name}" deleted successfully`);
             }
