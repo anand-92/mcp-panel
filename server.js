@@ -8,7 +8,20 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
-app.use(express.static('public'));
+// Serve static files with custom routing for app.js
+app.use(express.static('public', {
+    index: false // Don't serve index.html automatically
+}));
+
+// Route for the main page
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Redirect app-electron.js to app.js for web version
+app.get('/app-electron.js', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'app.js'));
+});
 
 const getDefaultConfigPath = () => {
     return path.join(os.homedir(), '.claude.json');
