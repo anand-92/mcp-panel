@@ -12,8 +12,10 @@ const notyf = new Notyf({
 // State Management
 const state = {
     servers: {},
-    profiles: [],
-    currentProfile: null,
+    serverConfigs: {}, // Permanent storage of all server configs
+    serverStates: {}, // enabled/disabled state for each server
+    serverTags: {}, // tags for each server
+    selectedSidebarTags: new Set(), // currently selected sidebar tags
     configPath: '~/.claude.json',
     viewMode: 'grid',
     filter: 'all',
@@ -21,7 +23,7 @@ const state = {
     selectedServers: new Set(),
     isLoading: false,
     settings: {
-        autoSave: false,
+        autoSave: true,
         confirmDelete: true,
         animations: true,
         theme: 'dark',
@@ -52,50 +54,6 @@ const mcpApi = {
             return response;
         } catch (error) {
             console.error('Failed to save servers:', error);
-            throw error;
-        }
-    },
-
-    async getProfiles() {
-        try {
-            const response = await window.api.getProfiles();
-            if (response.error) throw new Error(response.error);
-            return response.profiles || [];
-        } catch (error) {
-            console.error('Failed to fetch profiles:', error);
-            return [];
-        }
-    },
-
-    async saveProfile(name, servers) {
-        try {
-            const response = await window.api.saveProfile(name, servers);
-            if (response.error) throw new Error(response.error);
-            return response;
-        } catch (error) {
-            console.error('Failed to save profile:', error);
-            throw error;
-        }
-    },
-
-    async loadProfile(name) {
-        try {
-            const response = await window.api.getProfile(name);
-            if (response.error) throw new Error(response.error);
-            return response.servers || {};
-        } catch (error) {
-            console.error('Failed to load profile:', error);
-            throw error;
-        }
-    },
-
-    async deleteProfile(name) {
-        try {
-            const response = await window.api.deleteProfile(name);
-            if (response.error) throw new Error(response.error);
-            return response;
-        } catch (error) {
-            console.error('Failed to delete profile:', error);
             throw error;
         }
     }
@@ -171,7 +129,19 @@ const servers = {
     async load() {
         try {
             ui.showLoading();
-            state.servers = await mcpApi.getServers();
+            const loadedServers = await mcpApi.getServers();
+
+            // Initialize serverConfigs and serverStates from loaded servers
+            Object.entries(loadedServers).forEach(([name, config]) => {
+                if (config !== null) {
+                    state.serverConfigs[name] = config;
+                    state.serverStates[name] = true; // enabled if in claude.json
+                }
+            });
+
+            // state.servers remains the view of what's currently in claude.json
+            state.servers = loadedServers;
+
             this.render();
             this.updateSearch();
             notyf.success('Servers loaded successfully');
@@ -184,7 +154,16 @@ const servers = {
 
     async save() {
         try {
-            await mcpApi.saveServers(state.servers);
+            // Build the servers object with only enabled servers
+            const enabledServers = {};
+            Object.entries(state.serverConfigs).forEach(([name, config]) => {
+                if (state.serverStates[name]) {
+                    enabledServers[name] = config;
+                }
+            });
+
+            await mcpApi.saveServers(enabledServers);
+            state.servers = enabledServers; // Update view state
 
             if (state.settings.autoSave) {
                 notyf.success('Changes saved automatically');
@@ -202,17 +181,19 @@ const servers = {
             // Validate config is valid JSON
             const configObj = typeof config === 'string' ? JSON.parse(config) : config;
 
-            if (state.servers[name]) {
+            if (state.serverConfigs[name]) {
                 throw new Error(`Server "${name}" already exists`);
             }
 
-            state.servers[name] = configObj;
+            // Store config permanently and enable by default
+            state.serverConfigs[name] = configObj;
+            state.serverStates[name] = true;
+            state.serverTags[name] = tags;
 
             if (state.settings.autoSave) {
                 await this.save();
-            } else {
-                this.render();
-                }
+            }
+            this.render();
 
             notyf.success(`Server "${name}" added successfully`);
             return true;
@@ -225,7 +206,9 @@ const servers = {
     async update(name, config) {
         try {
             const configObj = typeof config === 'string' ? JSON.parse(config) : config;
-            state.servers[name] = configObj;
+
+            // Update the permanent config storage
+            state.serverConfigs[name] = configObj;
 
             if (state.settings.autoSave) {
                 await this.save();
@@ -248,7 +231,10 @@ const servers = {
                 if (!confirmed) return;
             }
 
-            delete state.servers[name];
+            // Delete from both permanent storage and enabled state
+            delete state.serverConfigs[name];
+            delete state.serverStates[name];
+            delete state.serverTags[name];
 
             if (state.settings.autoSave) {
                 await this.save();
@@ -264,15 +250,11 @@ const servers = {
 
     async toggle(name) {
         try {
-            if (state.servers[name] === null) {
-                // Re-enable: need to restore from somewhere or set a default
-                state.servers[name] = { command: "placeholder", args: [] };
-                notyf.success(`Server "${name}" enabled`);
-            } else {
-                // Disable
-                state.servers[name] = null;
-                notyf.warning(`Server "${name}" disabled`);
-            }
+            // Simply toggle the enabled state - config is preserved
+            state.serverStates[name] = !state.serverStates[name];
+
+            const action = state.serverStates[name] ? 'enabled' : 'disabled';
+            notyf.success(`Server "${name}" ${action}`);
 
             if (state.settings.autoSave) {
                 await this.save();
@@ -284,27 +266,20 @@ const servers = {
         }
     },
 
-    async duplicate(name) {
-        try {
-            const newName = `${name}_copy`;
-            const config = state.servers[name];
+    // Bulk enable/disable based on selected sidebar tags
+    updateServerStatesByTags() {
+        // If no tags selected, don't change anything
+        if (state.selectedSidebarTags.size === 0) return;
 
-            if (state.servers[newName]) {
-                throw new Error(`Server "${newName}" already exists`);
-            }
+        // Enable servers that have any of the selected tags, disable others
+        Object.keys(state.serverConfigs).forEach(name => {
+            const serverTags = state.serverTags[name] || [];
+            const hasSelectedTag = serverTags.some(tag => state.selectedSidebarTags.has(tag));
+            state.serverStates[name] = hasSelectedTag;
+        });
 
-            state.servers[newName] = JSON.parse(JSON.stringify(config));
-
-            if (state.settings.autoSave) {
-                await this.save();
-            } else {
-                this.render();
-                }
-
-            notyf.success(`Server duplicated as "${newName}"`);
-        } catch (error) {
-            notyf.error(`Failed to duplicate server: ${error.message}`);
-        }
+        // Save and render
+        this.save();
     },
 
     confirmDelete(name) {
@@ -405,12 +380,7 @@ const servers = {
                     <pre class="server-card-config">${ui.syntaxHighlight(config)}</pre>
                 </div>
                 <div class="server-card-footer">
-                    <button class="btn-icon" data-action="edit" data-tooltip="Edit">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M12.146.146a.5.5 0 01.708 0l3 3a.5.5 0 010 .708l-10 10a.5.5 0 01-.168.11l-5 2a.5.5 0 01-.65-.65l2-5a.5.5 0 01.11-.168l10-10z"/>
-                        </svg>
-                    </button>
-                    <button class="toggle-switch ${config !== null ? 'active' : ''}" data-action="toggle" data-tooltip="${config === null ? 'Enable' : 'Disable'}">
+                    <button class="toggle-switch ${state.serverStates[name] ? 'active' : ''}" data-action="toggle" data-tooltip="${state.serverStates[name] ? 'Disable' : 'Enable'}">
                         <span class="toggle-switch-track"></span>
                         <span class="toggle-switch-thumb"></span>
                     </button>
@@ -461,11 +431,6 @@ const servers = {
                     <div class="server-list-meta">${configStr}</div>
                 </div>
                 <div class="server-list-actions">
-                    <button class="btn-icon" data-action="edit" data-tooltip="Edit">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M12.146.146a.5.5 0 01.708 0l3 3a.5.5 0 010 .708l-10 10a.5.5 0 01-.168.11l-5 2a.5.5 0 01-.65-.65l2-5a.5.5 0 01.11-.168l10-10z"/>
-                        </svg>
-                    </button>
                     <button class="btn-icon" data-action="toggle" data-tooltip="${isDisabled ? 'Enable' : 'Disable'}">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M${isDisabled ? '8 5v6M5 8h6' : '11 8H5'}"/>
@@ -505,9 +470,6 @@ const servers = {
 
     handleAction(action, name) {
         switch (action) {
-            case 'edit':
-                this.showEditModal(name);
-                break;
             case 'toggle':
                 this.toggle(name);
                 break;
@@ -517,19 +479,6 @@ const servers = {
         }
     },
 
-    showEditModal(name) {
-        const modal = document.getElementById('serverModal');
-        const title = document.getElementById('modalTitle');
-        const nameInput = document.getElementById('serverName');
-        const configInput = document.getElementById('serverConfig');
-
-        title.textContent = `Edit Server: ${name}`;
-        nameInput.value = name;
-        nameInput.disabled = true;
-        configInput.value = ui.formatJSON(state.servers[name]);
-
-        ui.showModal('serverModal');
-    },
 
     showContextMenu(event, serverName) {
         const menu = document.getElementById('contextMenu');
@@ -569,89 +518,6 @@ const servers = {
     }
 };
 
-// Profile Management
-const profiles = {
-    async load() {
-        try {
-            state.profiles = await mcpApi.getProfiles();
-            this.render();
-        } catch (error) {
-            notyf.error(`Failed to load profiles: ${error.message}`);
-        }
-    },
-
-    async save(name) {
-        try {
-            await mcpApi.saveProfile(name, state.servers);
-            await this.load();
-            notyf.success(`Profile "${name}" saved successfully`);
-        } catch (error) {
-            notyf.error(`Failed to save profile: ${error.message}`);
-        }
-    },
-
-    async loadProfile(name) {
-        try {
-            state.servers = await mcpApi.loadProfile(name);
-            state.currentProfile = name;
-            servers.render();
-            servers.updateSearch();
-            notyf.success(`Profile "${name}" loaded successfully`);
-        } catch (error) {
-            notyf.error(`Failed to load profile: ${error.message}`);
-        }
-    },
-
-    async delete(name) {
-        try {
-            if (confirm(`Are you sure you want to delete profile "${name}"?`)) {
-                await mcpApi.deleteProfile(name);
-                await this.load();
-                notyf.success(`Profile "${name}" deleted successfully`);
-            }
-        } catch (error) {
-            notyf.error(`Failed to delete profile: ${error.message}`);
-        }
-    },
-
-    render() {
-        const container = document.getElementById('profilesList');
-        container.innerHTML = '';
-
-        state.profiles.forEach(profile => {
-            const item = document.createElement('div');
-            item.className = `profile-item ${profile === state.currentProfile ? 'active' : ''}`;
-
-            item.innerHTML = `
-                <span>${profile}</span>
-                <div class="profile-actions">
-                    <button class="btn-icon btn-sm" data-action="load" data-tooltip="Load">
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-                            <path d="M7 10l-5-5h3V2h4v3h3l-5 5z"/>
-                        </svg>
-                    </button>
-                    <button class="btn-icon btn-sm" data-action="delete" data-tooltip="Delete">
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-                            <path d="M5.5 5.5A.5.5 0 016 6v4a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2 0a.5.5 0 01.5.5v4a.5.5 0 01-1 0V6a.5.5 0 01.5-.5z"/>
-                        </svg>
-                    </button>
-                </div>
-            `;
-
-            item.querySelector('[data-action="load"]').addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.loadProfile(profile);
-            });
-
-            item.querySelector('[data-action="delete"]').addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.delete(profile);
-            });
-
-            container.appendChild(item);
-        });
-    }
-};
 
 // Keyboard Shortcuts
 const shortcuts = {
@@ -735,10 +601,40 @@ function initEventListeners() {
     // Quick actions
     document.getElementById('newServerBtn').addEventListener('click', () => {
         document.getElementById('modalTitle').textContent = 'Add New Server';
-        document.getElementById('serverName').value = '';
-        document.getElementById('serverName').disabled = false;
         document.getElementById('serverConfig').value = '';
+
+        // Clear selected tags
+        document.querySelectorAll('.tag-pill').forEach(pill => {
+            pill.classList.remove('selected');
+        });
+
         ui.showModal('serverModal');
+    });
+
+    // Tag selector in modal
+    document.getElementById('tagSelector').addEventListener('click', (e) => {
+        if (e.target.classList.contains('tag-pill')) {
+            e.target.classList.toggle('selected');
+        }
+    });
+
+    // Sidebar tags for bulk enable/disable
+    document.querySelector('.sidebar-tags').addEventListener('click', (e) => {
+        if (e.target.classList.contains('sidebar-tag')) {
+            const tag = e.target.dataset.tag;
+
+            // Toggle tag selection
+            if (state.selectedSidebarTags.has(tag)) {
+                state.selectedSidebarTags.delete(tag);
+                e.target.classList.remove('selected');
+            } else {
+                state.selectedSidebarTags.add(tag);
+                e.target.classList.add('selected');
+            }
+
+            // Update server states based on selected tags
+            servers.updateServerStatesByTags();
+        }
     });
 
     document.getElementById('emptyStateBtn').addEventListener('click', () => {
@@ -748,16 +644,52 @@ function initEventListeners() {
     // Server modal
     document.getElementById('serverForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const name = document.getElementById('serverName').value;
-        const config = document.getElementById('serverConfig').value;
+        const rawConfig = document.getElementById('serverConfig').value.trim();
 
-        const isEdit = document.getElementById('serverName').disabled;
-        const success = isEdit ?
-            await servers.update(name, config) :
-            await servers.add(name, config);
+        try {
+            // Parse the input to handle different formats
+            const parsed = JSON.parse(rawConfig);
+            let serverEntries = {};
 
-        if (success) {
-            ui.hideModal('serverModal');
+            if (parsed.mcpServers) {
+                // Format 1: Full config with mcpServers wrapper
+                serverEntries = parsed.mcpServers;
+            } else if (typeof parsed === 'object' && !Array.isArray(parsed)) {
+                // Check if it's format 2 (just mcpServers object) or format 3 (single server)
+                const keys = Object.keys(parsed);
+                if (keys.length === 1 && typeof parsed[keys[0]] === 'object' && parsed[keys[0]].command) {
+                    // Format 3: Single server entry
+                    serverEntries = parsed;
+                } else {
+                    // Format 2: mcpServers object content
+                    serverEntries = parsed;
+                }
+            } else {
+                throw new Error('Invalid format: Expected server configuration object');
+            }
+
+            // Collect selected tags
+            const selectedTags = Array.from(document.querySelectorAll('.tag-pill.selected'))
+                .map(pill => pill.dataset.tag);
+
+            // Add each server found
+            let addedCount = 0;
+            for (const [name, config] of Object.entries(serverEntries)) {
+                if (config && typeof config === 'object' && config.command) {
+                    await servers.add(name, config, selectedTags);
+                    addedCount++;
+                }
+            }
+
+            if (addedCount > 0) {
+                ui.hideModal('serverModal');
+                notyf.success(`Added ${addedCount} server${addedCount > 1 ? 's' : ''} successfully`);
+            } else {
+                notyf.error('No valid server configurations found');
+            }
+
+        } catch (error) {
+            notyf.error(`Failed to parse configuration: ${error.message}`);
         }
     });
 
@@ -826,13 +758,6 @@ function initEventListeners() {
         });
     });
 
-    // Profile buttons
-    document.getElementById('newProfileBtn').addEventListener('click', () => {
-        const name = prompt('Enter profile name:');
-        if (name) {
-            profiles.save(name);
-        }
-    });
 
     // Import/Export
     document.getElementById('importBtn').addEventListener('click', () => {
@@ -908,7 +833,7 @@ function initEventListeners() {
                 case '3':
                 case 'enable':
                     // Would need stored configs to re-enable
-                    notyf.warning('Cannot re-enable servers without stored configurations');
+                    notyf.error('Cannot re-enable servers without stored configurations');
                     break;
                 case '4':
                 case 'export':
@@ -957,7 +882,6 @@ async function init() {
 
         // Load data
         await servers.load();
-        await profiles.load();
 
         // Hide loading screen
         ui.hideLoading();

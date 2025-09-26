@@ -1117,6 +1117,57 @@ body {
     color: #ff79c6;
 }
 
+/* Tag Selector */
+.tag-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+}
+
+.tag-pill {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    outline: none;
+}
+
+.tag-pill:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-primary);
+    color: var(--text-primary);
+}
+
+.tag-pill.selected {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+.tag-pill:focus {
+    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent-primary);
+}
+
+/* Sidebar Tags */
+.sidebar-tags {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+}
+
+.sidebar-tag {
+    justify-self: stretch;
+    text-align: center;
+    font-size: 0.8rem;
+    padding: 8px 12px;
+}
+
 .json-null {
     color: #6272a4;
 }

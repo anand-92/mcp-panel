@@ -115,15 +115,15 @@
 
                 <div class="sidebar-section">
                     <div class="section-header">
-                        <h2 class="section-title">Profiles</h2>
-                        <button id="newProfileBtn" class="btn-icon btn-sm" data-tooltip="New profile">
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-                                <path d="M7 3.5a.5.5 0 01.5.5v2.5H10a.5.5 0 010 1H7.5V10a.5.5 0 01-1 0V7.5H4a.5.5 0 010-1h2.5V4a.5.5 0 01.5-.5z"/>
-                            </svg>
-                        </button>
+                        <h2 class="section-title">Tags</h2>
                     </div>
-                    <div class="profiles-list" id="profilesList">
-                        <!-- Profiles will be loaded here -->
+                    <div class="sidebar-tags">
+                        <div class="tag-pill sidebar-tag" data-tag="Deploy">Deploy</div>
+                        <div class="tag-pill sidebar-tag" data-tag="Dev">Dev</div>
+                        <div class="tag-pill sidebar-tag" data-tag="DB">DB</div>
+                        <div class="tag-pill sidebar-tag" data-tag="Debug">Debug</div>
+                        <div class="tag-pill sidebar-tag" data-tag="Docs">Docs</div>
+                        <div class="tag-pill sidebar-tag" data-tag="API">API</div>
                     </div>
                 </div>
 
@@ -219,28 +219,52 @@
             <div class="modal-body">
                 <form id="serverForm">
                     <div class="form-group">
-                        <label for="serverName">Server Name</label>
-                        <input type="text" id="serverName" class="form-input" placeholder="e.g., docker-mcp, filesystem" required>
-                        <small class="form-help">Unique identifier for this server</small>
-                    </div>
-
-
-                    <div class="form-group">
-                        <label for="serverConfig">Configuration</label>
+                        <label for="serverConfig">Server Configuration</label>
                         <div class="code-editor">
-                            <textarea id="serverConfig" class="form-textarea code-input" rows="10" placeholder='{"command": "npx", "args": ["@modelcontextprotocol/server-filesystem", "/path"]}' required></textarea>
+                            <textarea id="serverConfig" class="form-textarea code-input" rows="15" placeholder='Paste any of these formats:
+
+Full config with mcpServers wrapper:
+{
+  "mcpServers": {
+    "server-name": {
+      "command": "npx",
+      "args": ["package@latest"]
+    }
+  }
+}
+
+Just the mcpServers object:
+"mcpServers": {
+  "server-name": {
+    "command": "npx",
+    "args": ["package@latest"]
+  }
+}
+
+Or just the server entry:
+"server-name": {
+  "command": "npx",
+  "args": ["package@latest"]
+}' required></textarea>
                             <div class="code-toolbar">
                                 <button type="button" id="formatJsonBtn" class="btn-text">Format JSON</button>
                                 <button type="button" id="validateJsonBtn" class="btn-text">Validate</button>
                             </div>
                         </div>
-                        <small class="form-help">Enter valid JSON configuration for the server</small>
+                        <small class="form-help">Paste server configuration in any of the supported formats</small>
                     </div>
 
                     <div class="form-group">
-                        <label for="serverTags">Tags (optional)</label>
-                        <input type="text" id="serverTags" class="form-input" placeholder="development, production, testing">
-                        <small class="form-help">Comma-separated tags for organization</small>
+                        <label>Tags (optional)</label>
+                        <div class="tag-selector" id="tagSelector">
+                            <button type="button" class="tag-pill" data-tag="Deploy">Deploy</button>
+                            <button type="button" class="tag-pill" data-tag="Dev">Dev</button>
+                            <button type="button" class="tag-pill" data-tag="DB">DB</button>
+                            <button type="button" class="tag-pill" data-tag="Debug">Debug</button>
+                            <button type="button" class="tag-pill" data-tag="Docs">Docs</button>
+                            <button type="button" class="tag-pill" data-tag="API">API</button>
+                        </div>
+                        <small class="form-help">Click tags to select/deselect for organization</small>
                     </div>
                 </form>
             </div>
@@ -347,12 +371,6 @@
 
     <!-- Context Menu -->
     <div id="contextMenu" class="context-menu hidden">
-        <button class="context-menu-item" data-action="edit">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M12.146.146a.5.5 0 01.708 0l3 3a.5.5 0 010 .708l-10 10a.5.5 0 01-.168.11l-5 2a.5.5 0 01-.65-.65l2-5a.5.5 0 01.11-.168l10-10zM11.207 2.5L13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 01.5.5v.5h.5a.5.5 0 01.5.5v.5h.293l6.5-6.5zm-9.761 5.175l-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 015 12.5V12h-.5a.5.5 0 01-.5-.5V11h-.5a.5.5 0 01-.468-.325z"/>
-            </svg>
-            Edit
-        </button>
         <button class="context-menu-item" data-action="toggle">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M11.5 1a.5.5 0 01.5.5V4h-1V1.5a.5.5 0 01.5-.5zm-7 0a.5.5 0 01.5.5V4H4V1.5a.5.5 0 01.5-.5zm8 14a.5.5 0 01-.5-.5V12h1v2.5a.5.5 0 01-.5.5zm-8 0a.5.5 0 01-.5-.5V12h1v2.5a.5.5 0 01-.5.5z"/>
