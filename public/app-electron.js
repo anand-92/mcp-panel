@@ -9,9 +9,21 @@ const isElectron = window.api !== undefined;
 async function init() {
     await loadConfigPath();
     await loadGlobalConfigs();
-    await loadCurrentServers(); // Load from Claude config to populate global configs
+    await loadCurrentServers(); // Load from Claude config to populate global configs (respects manual changes)
     await loadProfiles();
     setupEventListeners();
+
+    // Auto-refresh every 30 seconds to detect manual changes
+    setInterval(async () => {
+        const oldProfileLength = currentProfile.length;
+        const oldGlobalCount = Object.keys(globalServerConfigs).length;
+        await loadCurrentServers();
+
+        // Only show notification if there were actual changes
+        if (currentProfile.length !== oldProfileLength || Object.keys(globalServerConfigs).length !== oldGlobalCount) {
+            console.log('Auto-refresh detected changes in Claude config');
+        }
+    }, 30000);
 }
 
 async function loadConfigPath() {
@@ -83,16 +95,25 @@ async function loadCurrentServers() {
         }
 
         if (data.success) {
-            // Merge any servers from Claude config into global configs
+            // Always merge servers from Claude config into global configs (including new manual additions)
+            let hasNewServers = false;
             for (const [name, config] of Object.entries(data.servers)) {
                 if (!globalServerConfigs[name]) {
                     globalServerConfigs[name] = config;
+                    hasNewServers = true;
+                    console.log(`Detected new server in Claude config: ${name}`);
                 }
             }
 
-            // Set current profile to enabled servers from Claude config
+            // Set current profile to enabled servers from Claude config (respecting manual changes)
             currentProfile = Object.keys(data.servers);
-            await saveGlobalConfigs();
+
+            // Only save global configs if we found new servers
+            if (hasNewServers) {
+                await saveGlobalConfigs();
+                showToast('Detected new servers in Claude config', 'info');
+            }
+
             renderServers();
 
             if (data.isNew) {
@@ -409,9 +430,10 @@ async function deleteProfile() {
 }
 
 function setupEventListeners() {
-    document.getElementById('refreshBtn').addEventListener('click', () => {
-        loadServers();
-        showToast('Servers refreshed', 'success');
+    document.getElementById('refreshBtn').addEventListener('click', async () => {
+        showToast('Refreshing from Claude config...', 'info');
+        await loadCurrentServers();
+        showToast('Servers refreshed from Claude config', 'success');
     });
 
     document.getElementById('addServerBtn').addEventListener('click', () => {
