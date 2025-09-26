@@ -40,6 +40,7 @@
   "build": {
     "appId": "com.mcpmanager.app",
     "productName": "MCP Server Manager",
+    "artifactName": "MCP-Server-Manager.${ext}",
     "directories": {
       "output": "dist"
     },
