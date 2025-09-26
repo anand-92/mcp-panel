@@ -23,8 +23,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        npm ci --include=dev
-        npm install @electron/notarize --save-dev
+        npm ci
 
     - name: Build macOS app and DMG
       env:
@@ -44,9 +43,9 @@ jobs:
         NOTARIZE: true
       run: |
         # Rename DMG to have consistent name
-        npm run build-mac
-        mv dist/*.dmg dist/MCP-Server-Manager.dmg || true
-        mv dist/*.zip dist/MCP-Server-Manager.zip || true
+        npx electron-builder --mac
+        mv dist/*.dmg dist/MCP-Server-Manager.dmg
+        mv dist/*.zip dist/MCP-Server-Manager.zip
 
     - name: List build artifacts
       run: |

@@ -99,7 +99,6 @@
     ],
     "asar": true,
     "compression": "maximum",
-    "afterSign": "scripts/notarize.js",
     "publish": {
       "provider": "github",
       "releaseType": "release"
