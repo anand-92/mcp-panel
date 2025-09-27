@@ -70,6 +70,19 @@ const ui = {
         }, 500);
     },
 
+    updateConnectionStatus(connected, message) {
+        const statusDot = document.querySelector('.status-dot');
+        const statusText = document.querySelector('.status-text');
+
+        if (connected) {
+            statusDot.style.background = 'var(--accent-success)';
+            statusText.textContent = message || 'Connected';
+        } else {
+            statusDot.style.background = 'var(--accent-danger)';
+            statusText.textContent = message || 'Disconnected';
+        }
+    },
+
     showModal(modalId) {
         document.getElementById('modalOverlay').classList.remove('hidden');
         document.getElementById(modalId).classList.remove('hidden');
@@ -126,6 +139,7 @@ const servers = {
     async load() {
         try {
             ui.showLoading();
+            ui.updateConnectionStatus(false, 'Loading...');
             const loadedServers = await mcpApi.getServers();
 
             // Load saved configs from localStorage if they exist
@@ -155,9 +169,15 @@ const servers = {
 
             this.render();
             this.updateSearch();
+
+            // Update status to show config file path
+            const shortPath = state.configPath.replace(/^.*\//, '');
+            ui.updateConnectionStatus(true, `${shortPath}`);
+
             notyf.success('Servers loaded successfully');
         } catch (error) {
             notyf.error(`Failed to load servers: ${error.message}`);
+            ui.updateConnectionStatus(false, 'Config Error');
         } finally {
             ui.hideLoading();
         }
@@ -698,6 +718,46 @@ function initEventListeners() {
         ui.hideModal('serverModal');
     });
 
+    // Test connection button
+    document.getElementById('testConnectionBtn').addEventListener('click', async () => {
+        const testPath = document.getElementById('configPath').value || '~/.claude.json';
+        const btn = document.getElementById('testConnectionBtn');
+
+        // Update button to show testing
+        btn.textContent = 'Testing...';
+        btn.disabled = true;
+
+        try {
+            const response = await window.api.getConfig(testPath);
+            if (response.error) throw new Error(response.error);
+
+            // Success - show green
+            btn.textContent = '✓ Connected';
+            btn.classList.add('btn-success');
+            btn.classList.remove('btn-secondary', 'btn-danger');
+
+            // Count servers found
+            const serverCount = Object.keys(response.servers || {}).length;
+            notyf.success(`Connected! Found ${serverCount} server${serverCount !== 1 ? 's' : ''}`);
+
+        } catch (error) {
+            // Failed - show red
+            btn.textContent = '✗ Failed';
+            btn.classList.add('btn-danger');
+            btn.classList.remove('btn-secondary', 'btn-success');
+
+            notyf.error(`Connection failed: ${error.message}`);
+        } finally {
+            // Reset button after 3 seconds
+            setTimeout(() => {
+                btn.textContent = 'Test Connection';
+                btn.disabled = false;
+                btn.classList.add('btn-secondary');
+                btn.classList.remove('btn-success', 'btn-danger');
+            }, 3000);
+        }
+    });
+
     // Settings modal
     document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
         state.configPath = document.getElementById('configPath').value || '~/.claude.json';
@@ -832,6 +892,9 @@ async function init() {
         // Initialize UI
         initEventListeners();
         shortcuts.init();
+
+        // Show initial connecting status
+        ui.updateConnectionStatus(false, 'Connecting...');
 
         // Load data
         await servers.load();
