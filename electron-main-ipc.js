@@ -9,6 +9,7 @@ const isDev = !app.isPackaged;
 const rendererDistPath = path.join(__dirname, 'renderer', 'dist');
 const rendererIndexPath = path.join(rendererDistPath, 'index.html');
 const devServerUrl = process.env.VITE_DEV_SERVER_URL || process.env.ELECTRON_RENDERER_URL;
+const REGISTRY_BASE_URL = 'https://registry.modelcontextprotocol.io';
 
 // Helper functions
 const getDefaultConfigPath = () => {
@@ -252,6 +253,30 @@ ipcMain.handle('save-global-configs', async (event, configs) => {
     } catch (error) {
         return { success: false, error: error.message };
     }
+});
+
+ipcMain.handle('fetch-registry', async (event, options = {}) => {
+    const url = new URL('/v0/servers', REGISTRY_BASE_URL);
+
+    if (options.limit) {
+        url.searchParams.set('limit', String(options.limit));
+    }
+
+    if (options.cursor) {
+        url.searchParams.set('cursor', options.cursor);
+    }
+
+    if (options.query) {
+        url.searchParams.set('query', options.query);
+    }
+
+    const response = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+
+    if (!response.ok) {
+        throw new Error(`Registry request failed with status ${response.status}`);
+    }
+
+    return response.json();
 });
 
 function createWindow() {

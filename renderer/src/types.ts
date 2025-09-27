@@ -1,12 +1,27 @@
 export type ViewMode = 'grid' | 'list';
 export type FilterMode = 'all' | 'active' | 'disabled' | 'recent';
 
+export interface ServerTransportConfig {
+  type: string;
+  url?: string;
+  headers?: Record<string, string>;
+  [key: string]: unknown;
+}
+
+export interface ServerRemoteConfig {
+  type: string;
+  url: string;
+  headers?: Record<string, string>;
+  [key: string]: unknown;
+}
+
 export interface ServerConfig {
-  command: string;
+  command?: string;
   args?: string[];
   cwd?: string;
   env?: Record<string, string>;
-  transport?: Record<string, unknown>;
+  transport?: ServerTransportConfig;
+  remotes?: ServerRemoteConfig[];
   [key: string]: unknown;
 }
 

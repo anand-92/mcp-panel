@@ -23,5 +23,8 @@ contextBridge.exposeInMainWorld('api', {
     saveGlobalConfigs: (configs) => ipcRenderer.invoke('save-global-configs', configs),
 
     // Platform info
-    getPlatform: () => process.platform
+    getPlatform: () => process.platform,
+
+    // Registry proxy
+    fetchRegistry: (options) => ipcRenderer.invoke('fetch-registry', options)
 });

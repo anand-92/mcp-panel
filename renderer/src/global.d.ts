@@ -1,4 +1,5 @@
 import type { ConfigResponse, SaveResponse, ServerConfig } from './types';
+import type { FetchRegistryOptions, RegistryListResponse } from './registry';
 
 declare global {
   interface WindowApi {
@@ -13,6 +14,7 @@ declare global {
     deleteProfile: (name: string) => Promise<SaveResponse>;
     getGlobalConfigs: () => Promise<{ success: boolean; configs: Record<string, unknown>; error?: string }>;
     saveGlobalConfigs: (configs: Record<string, unknown>) => Promise<SaveResponse>;
+    fetchRegistry: (options?: FetchRegistryOptions) => Promise<RegistryListResponse>;
     getPlatform: () => string;
   }
 

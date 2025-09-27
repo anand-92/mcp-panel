@@ -8,6 +8,8 @@ const open = require('open');
 const app = express();
 const PORT = 3000;
 
+const REGISTRY_BASE_URL = 'https://registry.modelcontextprotocol.io';
+
 const rendererDistPath = path.join(__dirname, 'renderer', 'dist');
 const rendererIndexPath = path.join(rendererDistPath, 'index.html');
 const hasRendererBuild = existsSync(rendererIndexPath);
@@ -20,6 +22,30 @@ app.use(express.json());
 if (hasRendererBuild) {
     app.use(express.static(rendererDistPath));
 }
+
+app.use('/registry', async (req, res) => {
+    if (req.method !== 'GET') {
+        res.status(405).json({ success: false, error: 'Method not allowed' });
+        return;
+    }
+
+    const targetUrl = `${REGISTRY_BASE_URL}${req.originalUrl.replace(/^\/registry/, '')}`;
+
+    try {
+        const response = await fetch(targetUrl, { headers: { Accept: req.get('accept') || 'application/json' } });
+        const body = await response.text();
+
+        res.status(response.status);
+        const contentType = response.headers.get('content-type');
+        if (contentType) {
+            res.set('content-type', contentType);
+        }
+
+        res.send(body);
+    } catch (error) {
+        res.status(502).json({ success: false, error: error.message });
+    }
+});
 
 const getDefaultConfigPath = () => {
     return path.join(os.homedir(), '.claude.json');

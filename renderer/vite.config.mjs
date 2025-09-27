@@ -14,6 +14,16 @@ export default defineConfig(() => {
       outDir: path.resolve(rootDir, 'dist'),
       emptyOutDir: true
     },
+    server: {
+      proxy: {
+        '/registry': {
+          target: 'https://registry.modelcontextprotocol.io',
+          changeOrigin: true,
+          secure: true,
+          rewrite: pathValue => pathValue.replace(/^\/registry/, '')
+        }
+      }
+    },
     resolve: {
       alias: {
         '@': path.resolve(rootDir, 'src')
