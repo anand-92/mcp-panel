@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     <link rel="stylesheet" href="style-dark.css">
+    <link rel="stylesheet" href="cyberpunk.css">
 </head>
 <body>
     <!-- Loading Screen -->
@@ -56,12 +57,6 @@
                     <span class="status-text">Connected</span>
                 </div>
 
-                <button id="notificationsBtn" class="btn-icon" aria-label="Notifications" data-tooltip="Notifications">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/>
-                    </svg>
-                    <span class="notification-badge hidden" id="notificationBadge">0</span>
-                </button>
 
                 <button id="settingsBtn" class="btn-icon" aria-label="Settings" data-tooltip="Settings">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -69,15 +64,6 @@
                     </svg>
                 </button>
 
-                <div class="user-menu">
-                    <button id="userMenuBtn" class="user-menu-btn" aria-label="User menu">
-                        <div class="user-avatar">
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/>
-                            </svg>
-                        </div>
-                    </button>
-                </div>
             </div>
         </header>
 
@@ -101,14 +87,14 @@
                                 <path d="M.5 9.9a.5.5 0 01.5.5v2.5a1 1 0 001 1h12a1 1 0 001-1v-2.5a.5.5 0 011 0v2.5a2 2 0 01-2 2H2a2 2 0 01-2-2v-2.5a.5.5 0 01.5-.5z"/>
                                 <path d="M7.646 1.146a.5.5 0 01.708 0l3 3a.5.5 0 01-.708.708L8.5 2.707V11.5a.5.5 0 01-1 0V2.707L5.354 4.854a.5.5 0 11-.708-.708l3-3z"/>
                             </svg>
-                            Import Config
+                            Import mcpServers JSON
                         </button>
                         <button id="exportBtn" class="btn btn-secondary btn-block">
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                                 <path d="M.5 9.9a.5.5 0 01.5.5v2.5a1 1 0 001 1h12a1 1 0 001-1v-2.5a.5.5 0 011 0v2.5a2 2 0 01-2 2H2a2 2 0 01-2-2v-2.5a.5.5 0 01.5-.5z"/>
                                 <path d="M7.646 11.854a.5.5 0 00.708 0l3-3a.5.5 0 00-.708-.708L8.5 10.293V1.5a.5.5 0 00-1 0v8.793L5.354 8.146a.5.5 0 10-.708.708l3 3z"/>
                             </svg>
-                            Export Config
+                            Export enabled mcpServers JSON
                         </button>
                     </div>
                 </div>
@@ -165,12 +151,6 @@
                             </svg>
                         </button>
 
-                        <button id="bulkActionsBtn" class="btn btn-secondary" disabled>
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                <path d="M2.5 1a1 1 0 00-1 1v1a1 1 0 001 1H3v9a2 2 0 002 2h6a2 2 0 002-2V4h.5a1 1 0 001-1V2a1 1 0 00-1-1H10a1 1 0 00-1-1H7a1 1 0 00-1 1H2.5zm3 4a.5.5 0 01.5.5v7a.5.5 0 01-1 0v-7a.5.5 0 01.5-.5zM8 5a.5.5 0 01.5.5v7a.5.5 0 01-1 0v-7A.5.5 0 018 5zm3 .5v7a.5.5 0 01-1 0v-7a.5.5 0 011 0z"/>
-                            </svg>
-                            Bulk Actions
-                        </button>
                     </div>
                 </div>
 
@@ -290,7 +270,6 @@ Or just the server entry:
                 <div class="settings-tabs">
                     <button class="tab-button active" data-tab="general">General</button>
                     <button class="tab-button" data-tab="appearance">Appearance</button>
-                    <button class="tab-button" data-tab="advanced">Advanced</button>
                 </div>
 
                 <div class="tab-content active" id="generalTab">
@@ -300,12 +279,6 @@ Or just the server entry:
                         <small class="form-help">Path to Claude configuration file</small>
                     </div>
 
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="autoSave" class="form-checkbox">
-                            Auto-save changes
-                        </label>
-                    </div>
 
                     <div class="form-group">
                         <label>
@@ -316,52 +289,17 @@ Or just the server entry:
                 </div>
 
                 <div class="tab-content hidden" id="appearanceTab">
-                    <div class="form-group">
-                        <label for="theme">Theme</label>
-                        <select id="theme" class="form-select">
-                            <option value="dark">Dark</option>
-                            <option value="light">Light</option>
-                            <option value="auto">System</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="accentColor">Accent Color</label>
-                        <div class="color-picker">
-                            <button class="color-option" data-color="blue" style="background: #58a6ff"></button>
-                            <button class="color-option" data-color="green" style="background: #3fb950"></button>
-                            <button class="color-option" data-color="purple" style="background: #a371f7"></button>
-                            <button class="color-option" data-color="orange" style="background: #f0883e"></button>
-                            <button class="color-option" data-color="red" style="background: #f85149"></button>
-                        </div>
-                    </div>
 
                     <div class="form-group">
                         <label>
-                            <input type="checkbox" id="animations" class="form-checkbox" checked>
-                            Enable animations
+                            <input type="checkbox" id="cyberpunkMode" class="form-checkbox">
+                            CYBERPUNK MODE 🤖
                         </label>
+                        <small class="form-help">Transform into hacker aesthetic with neon glows and matrix vibes</small>
                     </div>
+
                 </div>
 
-                <div class="tab-content hidden" id="advancedTab">
-                    <div class="form-group">
-                        <label for="backupLocation">Backup Location</label>
-                        <input type="text" id="backupLocation" class="form-input" placeholder="~/.mcp-manager/backups">
-                        <small class="form-help">Directory for configuration backups</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="debugMode" class="form-checkbox">
-                            Enable debug mode
-                        </label>
-                    </div>
-
-                    <div class="form-group">
-                        <button id="resetBtn" class="btn btn-danger">Reset All Settings</button>
-                    </div>
-                </div>
             </div>
             <div class="modal-footer">
                 <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>

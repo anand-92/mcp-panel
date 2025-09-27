@@ -12,7 +12,7 @@ const notyf = new Notyf({
 // State Management
 const state = {
     servers: {},
-    serverConfigs: {}, // Permanent storage of all server configs
+    serverConfigs: {}, // Permanent storage of all server configs (including disabled)
     serverStates: {}, // enabled/disabled state for each server
     serverTags: {}, // tags for each server
     selectedSidebarTags: new Set(), // currently selected sidebar tags
@@ -23,11 +23,8 @@ const state = {
     selectedServers: new Set(),
     isLoading: false,
     settings: {
-        autoSave: true,
         confirmDelete: true,
-        animations: true,
-        theme: 'dark',
-        accentColor: 'blue'
+        cyberpunkMode: false
     }
 };
 
@@ -131,12 +128,26 @@ const servers = {
             ui.showLoading();
             const loadedServers = await mcpApi.getServers();
 
-            // Initialize serverConfigs and serverStates from loaded servers
+            // Load saved configs from localStorage if they exist
+            const savedConfigs = localStorage.getItem('mcp-all-configs');
+            const savedTags = localStorage.getItem('mcp-server-tags');
+            if (savedConfigs) {
+                state.serverConfigs = JSON.parse(savedConfigs);
+            }
+            if (savedTags) {
+                state.serverTags = JSON.parse(savedTags);
+            }
+
+            // Update states based on what's in the file
+            // First, mark all known servers as disabled
+            Object.keys(state.serverConfigs).forEach(name => {
+                state.serverStates[name] = false;
+            });
+
+            // Then update/add configs for servers in the file and mark as enabled
             Object.entries(loadedServers).forEach(([name, config]) => {
-                if (config !== null) {
-                    state.serverConfigs[name] = config;
-                    state.serverStates[name] = true; // enabled if in claude.json
-                }
+                state.serverConfigs[name] = config; // Update or add config
+                state.serverStates[name] = true; // Mark as enabled
             });
 
             // state.servers remains the view of what's currently in claude.json
@@ -165,11 +176,12 @@ const servers = {
             await mcpApi.saveServers(enabledServers);
             state.servers = enabledServers; // Update view state
 
-            if (state.settings.autoSave) {
-                notyf.success('Changes saved automatically');
-            } else {
-                notyf.success('Servers saved successfully');
-            }
+            // Save all configs (including disabled) to localStorage for persistence
+            localStorage.setItem('mcp-all-configs', JSON.stringify(state.serverConfigs));
+            localStorage.setItem('mcp-server-tags', JSON.stringify(state.serverTags));
+
+            // Re-render to update UI
+            this.render();
 
         } catch (error) {
             notyf.error(`Failed to save servers: ${error.message}`);
@@ -190,9 +202,7 @@ const servers = {
             state.serverStates[name] = true;
             state.serverTags[name] = tags;
 
-            if (state.settings.autoSave) {
-                await this.save();
-            }
+            await this.save();
             this.render();
 
             notyf.success(`Server "${name}" added successfully`);
@@ -210,11 +220,8 @@ const servers = {
             // Update the permanent config storage
             state.serverConfigs[name] = configObj;
 
-            if (state.settings.autoSave) {
-                await this.save();
-            } else {
-                this.render();
-            }
+            await this.save();
+            this.render();
 
             notyf.success(`Server "${name}" updated successfully`);
             return true;
@@ -236,11 +243,8 @@ const servers = {
             delete state.serverStates[name];
             delete state.serverTags[name];
 
-            if (state.settings.autoSave) {
-                await this.save();
-            } else {
-                this.render();
-                }
+            await this.save();
+            this.render();
 
             notyf.success(`Server "${name}" deleted successfully`);
         } catch (error) {
@@ -256,11 +260,9 @@ const servers = {
             const action = state.serverStates[name] ? 'enabled' : 'disabled';
             notyf.success(`Server "${name}" ${action}`);
 
-            if (state.settings.autoSave) {
-                await this.save();
-            } else {
-                this.render();
-            }
+            // Always render to update the toggle visual immediately
+            this.render();
+            await this.save();
         } catch (error) {
             notyf.error(`Failed to toggle server: ${error.message}`);
         }
@@ -290,15 +292,19 @@ const servers = {
     },
 
     getFiltered() {
-        let servers = Object.entries(state.servers);
+        // Show all servers from serverConfigs (always pass the actual config, not null)
+        let servers = Object.entries(state.serverConfigs).map(([name, config]) => [
+            name,
+            config  // Always pass the actual config, the enabled state is in serverStates
+        ]);
 
         // Apply filter
         switch (state.filter) {
             case 'active':
-                servers = servers.filter(([_, config]) => config !== null);
+                servers = servers.filter(([name, _]) => state.serverStates[name]);
                 break;
             case 'disabled':
-                servers = servers.filter(([_, config]) => config === null);
+                servers = servers.filter(([name, _]) => !state.serverStates[name]);
                 break;
             case 'recent':
                 // TODO: Implement recent sorting based on modification time
@@ -316,9 +322,9 @@ const servers = {
     },
 
     updateSearch() {
-        const searchData = Object.keys(state.servers).map(name => ({
+        const searchData = Object.keys(state.serverConfigs).map(name => ({
             name,
-            config: JSON.stringify(state.servers[name])
+            config: JSON.stringify(state.serverConfigs[name])
         }));
 
         fuseInstance = new Fuse(searchData, {
@@ -328,14 +334,13 @@ const servers = {
     },
 
     render() {
-        const container = document.getElementById('serversContainer');
         const emptyState = document.getElementById('emptyState');
         const gridContainer = document.getElementById('serversGrid');
         const listContainer = document.getElementById('serversList');
 
         const filtered = this.getFiltered();
 
-        if (filtered.length === 0 && Object.keys(state.servers).length === 0) {
+        if (filtered.length === 0 && Object.keys(state.serverConfigs).length === 0) {
             emptyState.classList.remove('hidden');
             gridContainer.classList.add('hidden');
             listContainer.classList.add('hidden');
@@ -374,7 +379,6 @@ const servers = {
             card.innerHTML = `
                 <div class="server-card-header">
                     <h3 class="server-card-title">${name}</h3>
-                    <div class="server-card-status ${config === null ? 'disabled' : ''}"></div>
                 </div>
                 <div class="server-card-body">
                     <pre class="server-card-config">${ui.syntaxHighlight(config)}</pre>
@@ -386,7 +390,7 @@ const servers = {
                     </button>
                     <button class="btn-icon" data-action="delete" data-tooltip="Delete">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M2 0a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V2a2 2 0 00-2-2H2zm3.354 4.646L8 7.293l2.646-2.647a.5.5 0 01.708.708L8.707 8l2.647 2.646a.5.5 0 01-.708.708L8 8.707l-2.646 2.647a.5.5 0 01-.708-.708L7.293 8 4.646 5.354a.5.5 0 11.708-.708z"/>
+                             <path d="M2.5 1a1 1 0 00-1 1v1a1 1 0 001 1H3v9a2 2 0 002 2h6a2 2 0 002-2V4h.5a1 1 0 001-1V2a1 1 0 00-1-1H10a1 1 0 00-1-1H7a1 1 0 00-1 1H2.5z"/>
                         </svg>
                     </button>
                 </div>
@@ -424,21 +428,18 @@ const servers = {
             const configStr = isDisabled ? 'Disabled' : JSON.stringify(config).substring(0, 50) + '...';
 
             item.innerHTML = `
-                <input type="checkbox" class="server-list-checkbox" data-server="${name}">
-                <div class="server-list-status ${isDisabled ? 'disabled' : ''}"></div>
                 <div class="server-list-info">
                     <div class="server-list-name">${name}</div>
                     <div class="server-list-meta">${configStr}</div>
                 </div>
                 <div class="server-list-actions">
-                    <button class="btn-icon" data-action="toggle" data-tooltip="${isDisabled ? 'Enable' : 'Disable'}">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M${isDisabled ? '8 5v6M5 8h6' : '11 8H5'}"/>
-                        </svg>
+                    <button class="toggle-switch ${state.serverStates[name] ? 'active' : ''}" data-action="toggle" data-tooltip="${state.serverStates[name] ? 'Disable' : 'Enable'}">
+                        <span class="toggle-switch-track"></span>
+                        <span class="toggle-switch-thumb"></span>
                     </button>
                     <button class="btn-icon" data-action="delete" data-tooltip="Delete">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/>
+                             <path d="M2.5 1a1 1 0 00-1 1v1a1 1 0 001 1H3v9a2 2 0 002 2h6a2 2 0 002-2V4h.5a1 1 0 001-1V2a1 1 0 00-1-1H10a1 1 0 00-1-1H7a1 1 0 00-1 1H2.5z"/>
                         </svg>
                     </button>
                 </div>
@@ -453,16 +454,6 @@ const servers = {
                 });
             });
 
-            // Checkbox handler
-            const checkbox = item.querySelector('.server-list-checkbox');
-            checkbox.addEventListener('change', () => {
-                if (checkbox.checked) {
-                    state.selectedServers.add(name);
-                } else {
-                    state.selectedServers.delete(name);
-                }
-                this.updateBulkActions();
-            });
 
             container.appendChild(item);
         });
@@ -501,20 +492,6 @@ const servers = {
         document.addEventListener('click', () => {
             menu.classList.add('hidden');
         }, { once: true });
-    },
-
-    updateBulkActions() {
-        const btn = document.getElementById('bulkActionsBtn');
-        btn.disabled = state.selectedServers.size === 0;
-
-        if (state.selectedServers.size > 0) {
-            btn.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M2.5 1a1 1 0 00-1 1v1a1 1 0 001 1H3v9a2 2 0 002 2h6a2 2 0 002-2V4h.5a1 1 0 001-1V2a1 1 0 00-1-1H10a1 1 0 00-1-1H7a1 1 0 00-1 1H2.5z"/>
-                </svg>
-                Bulk Actions (${state.selectedServers.size})
-            `;
-        }
     }
 };
 
@@ -724,8 +701,11 @@ function initEventListeners() {
     // Settings modal
     document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
         state.configPath = document.getElementById('configPath').value || '~/.claude.json';
-        state.settings.autoSave = document.getElementById('autoSave').checked;
         state.settings.confirmDelete = document.getElementById('confirmDelete').checked;
+        state.settings.cyberpunkMode = document.getElementById('cyberpunkMode').checked;
+
+        // Toggle cyberpunk mode
+        document.body.classList.toggle('cyberpunk', state.settings.cyberpunkMode);
 
         localStorage.setItem('mcp-settings', JSON.stringify(state.settings));
         localStorage.setItem('mcp-configPath', state.configPath);
@@ -772,10 +752,26 @@ function initEventListeners() {
                 reader.onload = async (event) => {
                     try {
                         const config = JSON.parse(event.target.result);
-                        state.servers = config.mcpServers || config;
+                        const importedServers = config.mcpServers || config;
+
+                        // Import each server properly
+                        let importedCount = 0;
+                        for (const [name, serverConfig] of Object.entries(importedServers)) {
+                            if (serverConfig && typeof serverConfig === 'object' && serverConfig.command) {
+                                state.serverConfigs[name] = serverConfig;
+                                state.serverStates[name] = true; // Enable imported servers by default
+                                importedCount++;
+                            }
+                        }
+
                         await servers.save();
                         servers.render();
-                        notyf.success('Configuration imported successfully');
+
+                        if (importedCount > 0) {
+                            notyf.success(`Imported ${importedCount} server${importedCount > 1 ? 's' : ''} successfully`);
+                        } else {
+                            notyf.error('No valid servers found in file');
+                        }
                     } catch (error) {
                         notyf.error('Invalid configuration file');
                     }
@@ -807,54 +803,6 @@ function initEventListeners() {
             ui.hideModal(modal.id);
         });
     });
-
-    // Bulk actions
-    document.getElementById('bulkActionsBtn').addEventListener('click', () => {
-        if (state.selectedServers.size > 0) {
-            const action = prompt(`What would you like to do with ${state.selectedServers.size} selected servers?\n\n1. Delete\n2. Disable\n3. Enable\n4. Export`);
-
-            switch (action) {
-                case '1':
-                case 'delete':
-                    if (confirm(`Delete ${state.selectedServers.size} servers?`)) {
-                        state.selectedServers.forEach(name => delete state.servers[name]);
-                        servers.save();
-                        state.selectedServers.clear();
-                        servers.render();
-                    }
-                    break;
-                case '2':
-                case 'disable':
-                    state.selectedServers.forEach(name => state.servers[name] = null);
-                    servers.save();
-                    state.selectedServers.clear();
-                    servers.render();
-                    break;
-                case '3':
-                case 'enable':
-                    // Would need stored configs to re-enable
-                    notyf.error('Cannot re-enable servers without stored configurations');
-                    break;
-                case '4':
-                case 'export':
-                    const selected = {};
-                    state.selectedServers.forEach(name => {
-                        selected[name] = state.servers[name];
-                    });
-                    const data = JSON.stringify(selected, null, 2);
-                    const blob = new Blob([data], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'selected-servers.json';
-                    a.click();
-
-                    URL.revokeObjectURL(url);
-                    break;
-            }
-        }
-    });
 }
 
 // Initialize Application
@@ -873,8 +821,13 @@ async function init() {
 
         // Apply settings
         document.getElementById('configPath').value = state.configPath;
-        document.getElementById('autoSave').checked = state.settings.autoSave;
         document.getElementById('confirmDelete').checked = state.settings.confirmDelete;
+
+        // Apply cyberpunk mode if enabled
+        if (state.settings.cyberpunkMode) {
+            document.body.classList.add('cyberpunk');
+            document.getElementById('cyberpunkMode').checked = true;
+        }
 
         // Initialize UI
         initEventListeners();

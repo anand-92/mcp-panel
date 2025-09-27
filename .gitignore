@@ -70,3 +70,4 @@ test-results/
 creds.md
 *.p12
 Certificates.p12
+package-mac-signed.sh
