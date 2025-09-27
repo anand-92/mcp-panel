@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require('fs').promises;
+const { existsSync } = require('fs');
 const path = require('path');
 const os = require('os');
 const open = require('open');
@@ -7,26 +8,18 @@ const open = require('open');
 const app = express();
 const PORT = 3000;
 
+const rendererDistPath = path.join(__dirname, 'renderer', 'dist');
+const rendererIndexPath = path.join(rendererDistPath, 'index.html');
+const hasRendererBuild = existsSync(rendererIndexPath);
+
+if (!hasRendererBuild) {
+    console.warn('Renderer build not found at', rendererIndexPath, '\nRun "npm run build:renderer" or start the Vite dev server.');
+}
+
 app.use(express.json());
-// Serve static files with custom routing for app.js
-app.use(express.static('public', {
-    index: false // Don't serve index.html automatically
-}));
-
-// Route for the main page
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Redirect app-electron.js to app.js for web version
-app.get('/app-electron.js', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'app.js'));
-});
-
-// Redirect style-dark.css to style.css for now (or serve dark CSS)
-app.get('/style-dark.css', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'style-dark.css'));
-});
+if (hasRendererBuild) {
+    app.use(express.static(rendererDistPath));
+}
 
 const getDefaultConfigPath = () => {
     return path.join(os.homedir(), '.claude.json');
@@ -259,6 +252,28 @@ app.post('/api/global-configs', async (req, res) => {
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
+});
+
+// React renderer fallback routes
+app.get('/', (req, res) => {
+    if (!hasRendererBuild) {
+        res.status(500).send('Renderer build not found. Run "npm run build:renderer" or start the Vite dev server.');
+        return;
+    }
+    res.sendFile(rendererIndexPath);
+});
+
+app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+        return next();
+    }
+
+    if (!hasRendererBuild) {
+        res.status(500).send('Renderer build not found. Run "npm run build:renderer" or start the Vite dev server.');
+        return;
+    }
+
+    res.sendFile(rendererIndexPath);
 });
 
 app.listen(PORT, async () => {

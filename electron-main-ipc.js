@@ -5,6 +5,11 @@ const os = require('os');
 
 let mainWindow;
 
+const isDev = !app.isPackaged;
+const rendererDistPath = path.join(__dirname, 'renderer', 'dist');
+const rendererIndexPath = path.join(rendererDistPath, 'index.html');
+const devServerUrl = process.env.VITE_DEV_SERVER_URL || process.env.ELECTRON_RENDERER_URL;
+
 // Helper functions
 const getDefaultConfigPath = () => {
     return path.join(os.homedir(), '.claude.json');
@@ -262,8 +267,11 @@ function createWindow() {
         title: 'MCP Server Manager'
     });
 
-    // Load the HTML file directly
-    mainWindow.loadFile(path.join(__dirname, 'public', 'index.html'));
+    if (isDev && devServerUrl) {
+        mainWindow.loadURL(devServerUrl);
+    } else {
+        mainWindow.loadFile(rendererIndexPath);
+    }
 
     // Create application menu
     const template = [
