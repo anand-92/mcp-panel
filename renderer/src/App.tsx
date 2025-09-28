@@ -1,17 +1,9 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, MouseEvent as ReactMouseEvent, RefObject } from 'react';
 import Fuse from 'fuse.js';
 import { Notyf } from 'notyf';
 import { fetchConfig, getConfigPath, saveConfig, testConfigPath } from './api';
 import type { FilterMode, ServerConfig, ServerModel, SettingsState, ViewMode } from './types';
-import {
-  fetchRegistryServers,
-  formatRegistryError,
-  normalizeRegistryServers,
-  type RegistryPackage,
-  type RegistryRemote,
-  type RegistryServer
-} from './registry';
 
 const DEFAULT_TAGS = ['Deploy', 'Dev', 'DB', 'Debug', 'Docs', 'API'];
 const DEFAULT_SETTINGS: SettingsState = { confirmDelete: true, cyberpunkMode: false };
@@ -131,131 +123,6 @@ const formatUrlHost = (value: string): string => {
   }
 };
 
-interface RegistryConfigResult {
-  config: ServerConfig;
-  tags: string[];
-  notice?: string;
-  source: 'remote' | 'package';
-  remote?: RegistryRemote;
-  pkg?: RegistryPackage;
-}
-
-interface PackageCommandResult {
-  command: string;
-  args?: string[];
-}
-
-const selectPreferredRemote = (remotes?: RegistryRemote[] | null): RegistryRemote | undefined => {
-  if (!remotes || remotes.length === 0) return undefined;
-  const byPreference = remotes.find(remote => remote.type === 'streamable-http')
-    ?? remotes.find(remote => remote.type.includes('http'))
-    ?? remotes.find(remote => remote.type === 'sse');
-  return byPreference ?? remotes[0];
-};
-
-const selectPreferredPackage = (packages?: RegistryPackage[] | null): RegistryPackage | undefined => {
-  if (!packages || packages.length === 0) return undefined;
-  const preference = ['npm', 'pypi', 'nuget', 'mcpb', 'oci'];
-  return [...packages].sort((a, b) => {
-    const rank = (value: string) => {
-      const index = preference.indexOf(value.toLowerCase());
-      return index === -1 ? preference.length + 1 : index;
-    };
-    return rank(a.registryType) - rank(b.registryType);
-  })[0];
-};
-
-const commandFromPackage = (pkg: RegistryPackage): PackageCommandResult | null => {
-  const identifier = pkg.identifier;
-  const version = pkg.version;
-  const registryType = pkg.registryType.toLowerCase();
-
-  switch (registryType) {
-    case 'npm': {
-      const specifier = `${identifier}@${version ?? 'latest'}`;
-      return { command: 'npx', args: [specifier] };
-    }
-    case 'pypi': {
-      const specifier = version ? `${identifier}==${version}` : identifier;
-      return { command: 'uvx', args: [specifier] };
-    }
-    case 'nuget':
-      return { command: 'dotnet', args: ['tool', 'run', identifier] };
-    default:
-      return null;
-  }
-};
-
-const buildServerConfigFromRegistry = (server: RegistryServer): RegistryConfigResult | null => {
-  const remote = selectPreferredRemote(server.remotes ?? undefined);
-  if (remote) {
-    const headers = (remote.headers ?? []).reduce<Record<string, string>>((acc, header) => {
-      if (header.name) {
-        acc[header.name] = '';
-      }
-      return acc;
-    }, {});
-
-    const transport: ServerConfig['transport'] = {
-      type: remote.type,
-      url: remote.url
-    };
-
-    if (Object.keys(headers).length > 0) {
-      transport.headers = headers;
-    }
-
-    return {
-      config: { transport },
-      tags: ['Registry', 'Remote'],
-      notice: Object.keys(headers).length > 0 ? 'Fill in required headers before using this remote MCP server.' : undefined,
-      source: 'remote',
-      remote
-    };
-  }
-
-  const pkg = selectPreferredPackage(server.packages ?? undefined);
-  if (pkg) {
-    const packageCommand = commandFromPackage(pkg);
-    if (!packageCommand) {
-      return null;
-    }
-
-    const env = (pkg.environmentVariables ?? []).reduce<Record<string, string>>((acc, variable) => {
-      if (variable.name) {
-        acc[variable.name] = '';
-      }
-      return acc;
-    }, {});
-
-    const config: ServerConfig = {
-      command: packageCommand.command
-    };
-
-    if (packageCommand.args && packageCommand.args.length > 0) {
-      config.args = packageCommand.args;
-    }
-
-    if (Object.keys(env).length > 0) {
-      config.env = env;
-    }
-
-    if (pkg.transport) {
-      config.transport = { ...pkg.transport } as ServerConfig['transport'];
-    }
-
-    return {
-      config,
-      tags: Array.from(new Set(['Registry', 'Package', pkg.registryType.toUpperCase()])),
-      notice: Object.keys(env).length > 0 ? 'Review environment variables for this package before launching it.' : undefined,
-      source: 'package',
-      pkg
-    };
-  }
-
-  return null;
-};
-
 const summarizeServerConfig = (config: ServerConfig): string => {
   if (config.command && config.command.trim().length > 0) {
     return config.command.trim();
@@ -292,10 +159,6 @@ const isValidServerConfig = (config: unknown): config is ServerConfig => {
   const hasRemotes = Array.isArray(candidate.remotes) && candidate.remotes.length > 0;
 
   return hasCommand || Boolean(hasTransport) || hasRemotes;
-};
-
-const filterActiveServers = (servers: RegistryServer[]): RegistryServer[] => {
-  return servers.filter(server => (server.status ?? 'active').toLowerCase() === 'active');
 };
 
 const extractServerEntries = (raw: string): Record<string, ServerConfig> => {
@@ -351,14 +214,6 @@ const App = (): JSX.Element => {
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({ visible: false, x: 0, y: 0 });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [ready, setReady] = useState(false);
-  const [isBrowserOpen, setBrowserOpen] = useState(false);
-  const [registryLoading, setRegistryLoading] = useState(false);
-  const [registryError, setRegistryError] = useState<string | null>(null);
-  const [registryCursor, setRegistryCursor] = useState<string | null>(null);
-  const [registryServers, setRegistryServers] = useState<RegistryServer[]>([]);
-  const [registryFetched, setRegistryFetched] = useState(false);
-  const [registrySearch, setRegistrySearch] = useState('');
-  const [browserSelectionPending, setBrowserSelectionPending] = useState<string | null>(null);
   const [rawEditorValue, setRawEditorValue] = useState('');
   const [rawEditorDirty, setRawEditorDirty] = useState(false);
   const [rawEditorError, setRawEditorError] = useState<string | null>(null);
@@ -392,63 +247,6 @@ const App = (): JSX.Element => {
       threshold: 0.3
     });
   }, [serverArray]);
-
-  const registryFuse = useMemo(() => {
-    if (registryServers.length === 0) return null;
-    return new Fuse(registryServers, {
-      keys: ['name', 'description'],
-      threshold: 0.35
-    });
-  }, [registryServers]);
-
-  const visibleRegistryServers = useMemo(() => {
-    const query = registrySearch.trim();
-    if (query.length === 0) {
-      return registryServers;
-    }
-
-    if (!registryFuse) {
-      return registryServers;
-    }
-
-    return registryFuse.search(query).map(result => result.item);
-  }, [registrySearch, registryFuse, registryServers]);
-
-  const existingServerNames = useMemo(() => new Set(Object.keys(servers)), [servers]);
-
-  const hasMoreRegistry = useMemo(() => Boolean(registryCursor), [registryCursor]);
-
-  const loadRegistryData = useCallback(async ({ reset = false }: { reset?: boolean } = {}) => {
-    if (reset) {
-      setRegistryCursor(null);
-      setRegistrySearch('');
-      setRegistryFetched(false);
-    }
-
-    const cursor = reset ? undefined : registryCursor ?? undefined;
-
-    setRegistryLoading(true);
-    setRegistryError(null);
-
-    try {
-      const response = await fetchRegistryServers({ limit: 50, cursor });
-      const nextCursor = response.metadata?.next_cursor ?? null;
-
-      setRegistryCursor(nextCursor);
-      setRegistryServers(prev => {
-        const base = reset ? [] : prev;
-        const combined = [...base, ...filterActiveServers(response.servers ?? [])];
-        return normalizeRegistryServers(combined);
-      });
-
-      setRegistryFetched(true);
-    } catch (error) {
-      setRegistryError(formatRegistryError(error));
-      setRegistryFetched(true);
-    } finally {
-      setRegistryLoading(false);
-    }
-  }, [registryCursor]);
 
   const filteredServers = useMemo(() => {
     let collection = serverArray;
@@ -613,12 +411,6 @@ const App = (): JSX.Element => {
       window.removeEventListener('contextmenu', handleClose);
     };
   }, [contextMenu.visible]);
-
-  useEffect(() => {
-    if (!isBrowserOpen) return;
-    if (registryFetched || registryLoading) return;
-    void loadRegistryData({ reset: true });
-  }, [isBrowserOpen, registryFetched, registryLoading, loadRegistryData]);
 
   useEffect(() => {
     if (viewMode === 'list' && previousViewModeRef.current !== 'list') {
@@ -1008,87 +800,6 @@ const App = (): JSX.Element => {
     }
   }, [rawEditorValue]);
 
-  const handleOpenBrowser = useCallback(() => {
-    setBrowserOpen(true);
-  }, []);
-
-  const handleCloseBrowser = useCallback(() => {
-    setBrowserOpen(false);
-    setBrowserSelectionPending(null);
-  }, []);
-
-  const handleRefreshBrowser = useCallback(() => {
-    void loadRegistryData({ reset: true });
-  }, [loadRegistryData]);
-
-  const handleLoadMoreBrowser = useCallback(() => {
-    if (!registryCursor) return;
-    void loadRegistryData({ reset: false });
-  }, [registryCursor, loadRegistryData]);
-
-  const handleSelectRegistryServer = useCallback((server: RegistryServer) => {
-    const name = server.name;
-    setBrowserSelectionPending(name);
-
-    type Outcome =
-      | { type: 'duplicate'; message: string }
-      | { type: 'invalid'; message: string }
-      | { type: 'added'; message: string }
-      | { type: 'none' };
-
-    let outcome: Outcome = { type: 'none' };
-
-    setServers(prev => {
-      if (prev[name]) {
-        outcome = { type: 'duplicate', message: `Server "${name}" already exists` };
-        return prev;
-      }
-
-      const build = buildServerConfigFromRegistry(server);
-      if (!build) {
-        outcome = { type: 'invalid', message: `Unable to generate configuration for "${name}" automatically` };
-        return prev;
-      }
-
-      const tagSet = new Set(build.tags);
-      if (build.remote) {
-        tagSet.add('Remote');
-        tagSet.add(build.remote.type.toUpperCase());
-        tagSet.add(formatUrlHost(build.remote.url));
-      }
-      if (build.pkg) {
-        tagSet.add('Package');
-        tagSet.add(build.pkg.registryType.toUpperCase());
-      }
-
-      const now = Date.now();
-      const next: ServerMap = {
-        ...prev,
-        [name]: {
-          name,
-          config: build.config,
-          enabled: true,
-          tags: Array.from(tagSet),
-          updatedAt: now
-        }
-      };
-
-      const detail = build.source === 'remote' ? 'remote endpoint' : 'package';
-      const suffix = build.notice ? ` — ${build.notice}` : '';
-      outcome = { type: 'added', message: `Added "${name}" using ${detail}${suffix}` };
-
-      return next;
-    });
-
-    setBrowserSelectionPending(null);
-
-    if (outcome.type === 'duplicate' || outcome.type === 'invalid') {
-      notyfRef.current?.error(outcome.message);
-    } else if (outcome.type === 'added') {
-      notyfRef.current?.success(outcome.message);
-    }
-  }, []);
-
   useEffect(() => {
     if (!ready) return;
 
@@ -1119,8 +830,6 @@ const App = (): JSX.Element => {
         setServerModalOpen(false);
         setSettingsModalOpen(false);
         setContextMenu({ visible: false, x: 0, y: 0 });
-        setBrowserOpen(false);
-        setBrowserSelectionPending(null);
       }
     };
 
@@ -1190,7 +899,6 @@ const App = (): JSX.Element => {
             }}
             onImport={() => fileInputRef.current?.click()}
             onExport={handleExport}
-            onBrowse={handleOpenBrowser}
             tags={availableTags}
             selectedTags={selectedTags}
             onToggleTag={handleToggleSidebarTag}
@@ -1250,22 +958,6 @@ const App = (): JSX.Element => {
         tags={availableTags}
         selectedTags={serverModalTags}
         onToggleTag={handleToggleModalTag}
-      />
-
-      <McpBrowserModal
-        open={isBrowserOpen}
-        loading={registryLoading}
-        error={registryError}
-        servers={visibleRegistryServers}
-        hasMore={hasMoreRegistry}
-        searchValue={registrySearch}
-        onSearchChange={setRegistrySearch}
-        onClose={handleCloseBrowser}
-        onReload={handleRefreshBrowser}
-        onLoadMore={handleLoadMoreBrowser}
-        onSelect={handleSelectRegistryServer}
-        existingNames={existingServerNames}
-        busyName={browserSelectionPending}
       />
 
       <SettingsModal
@@ -1395,13 +1087,16 @@ interface SidebarProps {
   onNewServer: () => void;
   onImport: () => void;
   onExport: () => void;
-  onBrowse: () => void;
   tags: string[];
   selectedTags: string[];
   onToggleTag: (tag: string) => void;
 }
 
-const Sidebar = ({ open, onNewServer, onImport, onExport, onBrowse, tags, selectedTags, onToggleTag }: SidebarProps) => {
+const Sidebar = ({ open, onNewServer, onImport, onExport, tags, selectedTags, onToggleTag }: SidebarProps) => {
+  const handleExploreClick = () => {
+    window.open('https://lobehub.com/mcp', '_blank', 'noopener');
+  };
+
   return (
     <aside
       className={`glass-panel z-40 w-full max-h-[calc(100vh-12rem)] overflow-y-auto p-6 shadow-2xl transition-all duration-200 ${open ? 'block' : 'hidden lg:block'} lg:sticky lg:top-10 lg:w-72`}
@@ -1413,10 +1108,10 @@ const Sidebar = ({ open, onNewServer, onImport, onExport, onBrowse, tags, select
           <div className="mt-4 space-y-2">
             <button
               type="button"
-              onClick={onBrowse}
+              onClick={handleExploreClick}
               className="w-full rounded-xl border border-sky-400/30 bg-sky-500/10 px-4 py-2 text-sm font-semibold text-sky-100 shadow-lg shadow-sky-500/20 transition hover:bg-sky-500/20 hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-400/50"
             >
-              Browse Registry
+              Explore New MCPs
             </button>
             <button
               type="button"
@@ -1687,139 +1382,6 @@ const LoadingOverlay = () => {
   );
 };
 
-interface McpBrowserModalProps {
-  open: boolean;
-  loading: boolean;
-  error: string | null;
-  servers: RegistryServer[];
-  hasMore: boolean;
-  searchValue: string;
-  onSearchChange: (value: string) => void;
-  onClose: () => void;
-  onReload: () => void;
-  onLoadMore: () => void;
-  onSelect: (server: RegistryServer) => void;
-  existingNames: Set<string>;
-  busyName: string | null;
-}
-
-interface RegistryCardProps {
-  server: RegistryServer;
-  isAdded: boolean;
-  isBusy: boolean;
-  onSelect: (server: RegistryServer) => void;
-}
-
-const RegistryCard = memo(({ server, isAdded, isBusy, onSelect }: RegistryCardProps) => {
-  const statusLabel = (server.status ?? 'unknown').toLowerCase();
-  const statusClass = statusLabel === 'active'
-    ? 'bg-emerald-500/15 text-emerald-200'
-    : statusLabel === 'deprecated'
-      ? 'bg-amber-500/20 text-amber-100'
-      : 'bg-slate-500/20 text-slate-200';
-  const remoteList = (server.remotes ?? []).slice(0, 2);
-  const extraRemotes = Math.max(0, (server.remotes?.length ?? 0) - remoteList.length);
-  const packageList = (server.packages ?? []).slice(0, 2);
-  const extraPackages = Math.max(0, (server.packages?.length ?? 0) - packageList.length);
-  const disableAdd = isAdded || isBusy;
-
-  return (
-    <div
-      className="glass-panel flex h-full flex-col gap-4 p-5 transition hover:border-sky-400/40 hover:shadow-sky-500/20"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-white line-clamp-2">{server.name}</h3>
-            {server.version && (
-              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-300">
-                v{server.version}
-              </span>
-            )}
-          </div>
-          {server.description && (
-            <p className="text-xs leading-relaxed text-slate-300 line-clamp-3">{server.description}</p>
-          )}
-        </div>
-        <span className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${statusClass}`}>
-          {statusLabel}
-        </span>
-      </div>
-
-      {remoteList.length > 0 && (
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-400">Remote endpoints</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {remoteList.map(remote => (
-              <span
-                key={`${server.name}-${remote.type}-${remote.url}`}
-                className="inline-flex items-center gap-2 rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-[11px] font-medium text-sky-100"
-              >
-                <span className="rounded-full bg-sky-500/30 px-2 py-0.5 text-[10px] uppercase tracking-wide">{remote.type}</span>
-                <span>{formatUrlHost(remote.url)}</span>
-              </span>
-            ))}
-          </div>
-          {extraRemotes > 0 && (
-            <p className="mt-2 text-[11px] text-slate-500">+{extraRemotes} more remote option{extraRemotes > 1 ? 's' : ''}</p>
-          )}
-        </div>
-      )}
-
-      {packageList.length > 0 && (
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-400">Packages</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {packageList.map(pkg => (
-              <span
-                key={`${server.name}-${pkg.registryType}-${pkg.identifier}`}
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium text-slate-200"
-              >
-                {pkg.registryType.toUpperCase()} · {pkg.identifier}
-              </span>
-            ))}
-          </div>
-          {extraPackages > 0 && (
-            <p className="mt-2 text-[11px] text-slate-500">+{extraPackages} more package option{extraPackages > 1 ? 's' : ''}</p>
-          )}
-        </div>
-      )}
-
-      <div className="mt-auto flex items-center justify-between gap-3">
-        <div className="flex flex-col gap-1 text-[11px] text-slate-400">
-          {server.repository?.url && (
-            <a
-              href={server.repository.url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-sky-200 hover:text-white hover:underline"
-            >
-              Repository
-              <svg className="h-3 w-3" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M10.5 2a.5.5 0 010 1H5.707l6.147 6.146a.5.5 0 01-.708.708L5 3.707V8.5a.5.5 0 01-1 0v-6A.5.5 0 014.5 2h6z" />
-                <path d="M13.5 5a.5.5 0 00-.5.5v7a1 1 0 01-1 1h-7a1 1 0 01-1-1v-7a.5.5 0 00-1 0v7a2 2 0 002 2h7a2 2 0 002-2v-7a.5.5 0 00-.5-.5z" />
-              </svg>
-            </a>
-          )}
-          <span className="text-[11px] uppercase tracking-[0.3em] text-slate-500">{(server.remotes?.length ?? 0)} remote · {(server.packages?.length ?? 0)} package</span>
-        </div>
-        <button
-          type="button"
-          onClick={() => onSelect(server)}
-          disabled={disableAdd}
-          className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-sky-400/50 ${disableAdd
-            ? 'cursor-not-allowed border border-white/10 bg-white/5 text-slate-400 opacity-60'
-            : 'border border-sky-400/30 bg-sky-500/20 text-sky-100 hover:bg-sky-500/30'
-          }`}
-        >
-          {isAdded ? 'Already added' : isBusy ? 'Adding…' : 'Add to config'}
-        </button>
-      </div>
-    </div>
-  );
-});
-RegistryCard.displayName = 'RegistryCard';
-
 interface RawJsonEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -1895,140 +1457,6 @@ const RawJsonEditor = ({ value, onChange, onApply, onReset, onFormat, dirty, err
         >
           Apply changes
         </button>
-      </div>
-    </div>
-  );
-};
-
-const McpBrowserModal = ({
-  open,
-  loading,
-  error,
-  servers,
-  hasMore,
-  searchValue,
-  onSearchChange,
-  onClose,
-  onReload,
-  onLoadMore,
-  onSelect,
-  existingNames,
-  busyName
-}: McpBrowserModalProps) => {
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm p-4">
-      <div className="glass-panel w-full max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-slate-950/95">
-        <div className="flex flex-col gap-4 border-b border-white/5 px-8 py-6 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Registry</p>
-            <h2 className="mt-1 text-2xl font-semibold text-white">Browse MCP servers</h2>
-            <p className="mt-1 text-sm text-slate-400">
-              Discover servers from the official Model Context Protocol registry and add them directly to your config.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 self-stretch md:self-auto">
-            <button
-              type="button"
-              onClick={onReload}
-              disabled={loading}
-              className={`inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-slate-100 transition focus:outline-none focus:ring-2 focus:ring-sky-400/50 ${loading ? 'cursor-not-allowed opacity-50' : 'hover:border-sky-400/40 hover:text-white'}`}
-            >
-              <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
-                <path fillRule="evenodd" d="M8 3a5 5 0 104.546 2.914.5.5 0 01.908-.417A6 6 0 118 2v1z" />
-                <path d="M8 4.466V.534a.25.25 0 01.41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 018 4.466z" />
-              </svg>
-              Refresh
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-full border border-white/10 bg-white/10 p-2 text-slate-300 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-400/50"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-
-        <div className="border-b border-white/5 px-8 py-5">
-          <div className="relative">
-            <svg className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-sky-300/60" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 1 0 1.414-1.415l-3.85-3.85a1 1 0 0 0-.017-.012zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
-            </svg>
-            <input
-              value={searchValue}
-              onChange={event => onSearchChange(event.target.value)}
-              placeholder="Search by name or description"
-              className="w-full rounded-full border border-white/10 bg-white/10 py-2.5 pl-11 pr-4 text-sm text-slate-100 shadow-inner shadow-slate-950/40 placeholder:text-slate-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
-            />
-          </div>
-          <p className="mt-3 text-[11px] uppercase tracking-[0.28em] text-slate-500">
-            {servers.length} matching entr{servers.length === 1 ? 'y' : 'ies'}
-          </p>
-        </div>
-
-        {error && (
-          <div className="mx-8 mt-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <span>{error}</span>
-              <button
-                type="button"
-                onClick={onReload}
-                className="inline-flex items-center gap-2 rounded-full border border-rose-300/40 px-3 py-1.5 text-xs font-semibold text-rose-50 transition hover:border-rose-200/60 hover:text-white focus:outline-none focus:ring-2 focus:ring-rose-300/50"
-              >
-                Try again
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="max-h-[60vh] overflow-y-auto px-8 py-6">
-          {loading && servers.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 py-12 text-sm text-slate-300">
-              <span className="inline-flex h-12 w-12 animate-spin rounded-full border-2 border-transparent border-l-sky-500 border-t-sky-400" />
-              Fetching registry entries…
-            </div>
-          ) : servers.length > 0 ? (
-            <div className="grid gap-5 md:grid-cols-2">
-              {servers.map(server => (
-                <RegistryCard
-                  key={server.name}
-                  server={server}
-                  isAdded={existingNames.has(server.name)}
-                  isBusy={busyName === server.name}
-                  onSelect={onSelect}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 p-12 text-center">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-white/10 text-xl">🔍</div>
-              <h3 className="text-lg font-semibold text-white">No registry servers found</h3>
-              <p className="mt-2 text-sm text-slate-300">
-                Try adjusting your search query or refresh to fetch the latest catalog from the registry.
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-3 border-t border-white/5 px-8 py-6 md:flex-row md:items-center md:justify-between">
-          <p className="text-xs text-slate-400">
-            Showing {servers.length} entr{servers.length === 1 ? 'y' : 'ies'} from the registry snapshot.
-          </p>
-          <div className="flex items-center gap-2">
-            {hasMore && (
-              <button
-                type="button"
-                onClick={onLoadMore}
-                disabled={loading}
-                className={`rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-slate-100 transition focus:outline-none focus:ring-2 focus:ring-sky-400/50 ${loading ? 'cursor-not-allowed opacity-50' : 'hover:border-sky-400/40 hover:text-white'}`}
-              >
-                Load more
-              </button>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   );
