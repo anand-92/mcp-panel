@@ -27,9 +27,9 @@ export async function saveConfig(servers: Record<string, ServerConfig>, configPa
   return response;
 }
 
-export async function getConfigPath(): Promise<string> {
+export async function getConfigPath(configType?: string): Promise<string> {
   const api = ensureApi();
-  return api.getConfigPath();
+  return api.getConfigPath(configType);
 }
 
 export async function testConfigPath(path: string): Promise<ConfigResponse> {

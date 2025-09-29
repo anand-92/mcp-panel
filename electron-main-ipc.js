@@ -12,8 +12,18 @@ const devServerUrl = process.env.VITE_DEV_SERVER_URL || process.env.ELECTRON_REN
 const REGISTRY_BASE_URL = 'https://registry.modelcontextprotocol.io';
 
 // Helper functions
-const getDefaultConfigPath = () => {
+const getDefaultConfigPath = (configType = 'copilot') => {
+    if (configType === 'copilot') {
+        return path.join(process.cwd(), '.vscode', 'mcp.json');
+    }
     return path.join(os.homedir(), '.claude.json');
+};
+
+const detectConfigType = (configPath) => {
+    if (configPath && (configPath.includes('.vscode/mcp.json') || configPath.endsWith('mcp.json'))) {
+        return 'copilot';
+    }
+    return 'claude';
 };
 
 const getProfilesDir = () => {
@@ -35,8 +45,8 @@ const ensureProfilesDir = async () => {
 };
 
 // IPC Handlers
-ipcMain.handle('get-config-path', () => {
-    return getDefaultConfigPath();
+ipcMain.handle('get-config-path', (event, configType) => {
+    return getDefaultConfigPath(configType);
 });
 
 ipcMain.handle('get-config', async (event, configPath) => {
@@ -50,20 +60,35 @@ ipcMain.handle('get-config', async (event, configPath) => {
     try {
         const data = await fs.readFile(targetPath, 'utf8');
         const config = JSON.parse(data);
-        const mcpServers = config.mcpServers || {};
+        const configType = detectConfigType(targetPath);
+
+        let servers = {};
+        if (configType === 'copilot') {
+            // Convert Copilot format to Claude format for internal use
+            servers = config.servers || {};
+        } else {
+            servers = config.mcpServers || {};
+        }
 
         return {
             success: true,
-            servers: mcpServers,
-            fullConfig: config
+            servers: servers,
+            fullConfig: config,
+            configType: configType
         };
     } catch (error) {
         if (error.code === 'ENOENT') {
+            const configType = detectConfigType(targetPath);
+            const emptyConfig = configType === 'copilot'
+                ? { inputs: [], servers: {} }
+                : { mcpServers: {} };
+
             return {
                 success: true,
                 servers: {},
-                fullConfig: { mcpServers: {} },
-                isNew: true
+                fullConfig: emptyConfig,
+                isNew: true,
+                configType: configType
             };
         } else {
             return {
@@ -83,15 +108,34 @@ ipcMain.handle('save-config', async (event, servers, configPath) => {
     }
 
     try {
+        const configType = detectConfigType(targetPath);
         let config;
+
         try {
             const data = await fs.readFile(targetPath, 'utf8');
             config = JSON.parse(data);
         } catch (error) {
-            config = {};
+            // Initialize with appropriate structure based on config type
+            config = configType === 'copilot'
+                ? { inputs: [{ type: "promptString" }], servers: {} }
+                : {};
         }
 
-        config.mcpServers = servers;
+        // Update the appropriate field based on config type
+        if (configType === 'copilot') {
+            config.servers = servers;
+            // Ensure inputs array exists
+            if (!config.inputs) {
+                config.inputs = [{ type: "promptString" }];
+            }
+        } else {
+            config.mcpServers = servers;
+        }
+
+        // Create directory if it doesn't exist (for Copilot .vscode folder)
+        const dir = path.dirname(targetPath);
+        await fs.mkdir(dir, { recursive: true });
+
         await fs.writeFile(targetPath, JSON.stringify(config, null, 2));
 
         return { success: true };
@@ -112,19 +156,35 @@ ipcMain.handle('add-server', async (event, name, serverConfig, configPath) => {
     }
 
     try {
+        const configType = detectConfigType(targetPath);
         let config;
+
         try {
             const data = await fs.readFile(targetPath, 'utf8');
             config = JSON.parse(data);
         } catch (error) {
-            config = {};
+            config = configType === 'copilot'
+                ? { inputs: [{ type: "promptString" }], servers: {} }
+                : {};
         }
 
-        if (!config.mcpServers) {
-            config.mcpServers = {};
+        // Add server based on config type
+        if (configType === 'copilot') {
+            if (!config.servers) {
+                config.servers = {};
+            }
+            config.servers[name] = serverConfig;
+        } else {
+            if (!config.mcpServers) {
+                config.mcpServers = {};
+            }
+            config.mcpServers[name] = serverConfig;
         }
 
-        config.mcpServers[name] = serverConfig;
+        // Create directory if it doesn't exist
+        const dir = path.dirname(targetPath);
+        await fs.mkdir(dir, { recursive: true });
+
         await fs.writeFile(targetPath, JSON.stringify(config, null, 2));
 
         return { success: true };
@@ -147,9 +207,22 @@ ipcMain.handle('delete-server', async (event, name, configPath) => {
     try {
         const data = await fs.readFile(targetPath, 'utf8');
         const config = JSON.parse(data);
+        const configType = detectConfigType(targetPath);
 
-        if (config.mcpServers && config.mcpServers[name]) {
-            delete config.mcpServers[name];
+        let deleted = false;
+        if (configType === 'copilot') {
+            if (config.servers && config.servers[name]) {
+                delete config.servers[name];
+                deleted = true;
+            }
+        } else {
+            if (config.mcpServers && config.mcpServers[name]) {
+                delete config.mcpServers[name];
+                deleted = true;
+            }
+        }
+
+        if (deleted) {
             await fs.writeFile(targetPath, JSON.stringify(config, null, 2));
             return { success: true };
         } else {

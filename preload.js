@@ -4,7 +4,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('api', {
     // Config operations
-    getConfigPath: () => ipcRenderer.invoke('get-config-path'),
+    getConfigPath: (configType) => ipcRenderer.invoke('get-config-path', configType),
     getConfig: (path) => ipcRenderer.invoke('get-config', path),
     saveConfig: (servers, configPath) => ipcRenderer.invoke('save-config', servers, configPath),
 

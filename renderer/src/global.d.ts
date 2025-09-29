@@ -3,7 +3,7 @@ import type { FetchRegistryOptions, RegistryListResponse } from './registry';
 
 declare global {
   interface WindowApi {
-    getConfigPath: () => Promise<string>;
+    getConfigPath: (configType?: string) => Promise<string>;
     getConfig: (path?: string) => Promise<ConfigResponse>;
     saveConfig: (servers: Record<string, ServerConfig>, configPath?: string) => Promise<SaveResponse>;
     addServer: (name: string, config: ServerConfig, configPath?: string) => Promise<SaveResponse>;
