@@ -17,10 +17,6 @@ find . -name "*.map" -delete
 find . -name "*.test.js" -delete
 find . -name "*.spec.js" -delete
 find . -name ".DS_Store" -delete
-rm -rf public/*-original.*
-rm -rf public/*-modern.*
-rm -rf public/app.js.backup
-rm -rf public/app-web.js
 
 # Install dev dependencies for building only
 echo "Installing build tools..."

@@ -1,81 +1,74 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working in this repository.
 
 ## Project Overview
 
-MCP Server Manager is a desktop application for managing Model Context Protocol (MCP) servers in Claude configuration files. It operates in two modes:
-1. **Web mode**: Express server serving a web interface
-2. **Electron mode**: Native desktop app using IPC for file operations
+MCP Server Manager is a desktop + web companion for managing Claude MCP server definitions. The project now uses a React + Tailwind renderer (Vite) that is shared between the Electron shell and an Express web host.
 
 ## Commands
 
 ### Development
 ```bash
-npm install              # Install dependencies
-npm start               # Run web version (Express server on port 3000)
-npm run electron        # Run Electron desktop app
-npm run dev            # Run with nodemon for auto-reload
+npm install                    # Install dependencies
+npm run dev:renderer           # Optional: start Vite dev server (http://localhost:5173)
+npm run dev                    # Express API with nodemon (serves built assets if present)
+VITE_DEV_SERVER_URL=... npm run electron  # Point Electron at the Vite dev server
 ```
 
-### Building
+### Running Bundled Builds
 ```bash
-npm run build-mac      # Build macOS .app and .dmg
-./build.sh             # Alternative build script with setup
+npm start                      # Build renderer then serve on http://localhost:3000
+npm run electron               # Build renderer then launch Electron with local files
 ```
 
-### Quick Launch
+### Packaging
 ```bash
-./mcp-manager.command  # Double-click launcher for end users
+npm run build-mac              # Build renderer + macOS app bundles
+npm run dist                   # Build renderer + cross-platform artifacts
 ```
 
 ## Architecture
 
-### Dual-Mode Operation
-The app supports both web and Electron modes with shared UI code:
+- **Renderer**: React + Tailwind located in `renderer/src`. Built with Vite into `renderer/dist`.
+- **Web Mode** (`server.js`): Express serves REST APIs and, when available, the static bundle from `renderer/dist`.
+- **Electron Mode** (`electron-main-ipc.js`): Loads either the Vite dev server (`VITE_DEV_SERVER_URL`) or the static bundle. Uses IPC + `preload.js` to expose file-system helpers in `window.api`.
+- **Config storage**: JSON manipulation happens entirely in the main/Electron process or Express routes; the renderer is UI only.
 
-- **Web Mode** (`npm start`): Uses `server.js` with Express API endpoints
-- **Electron Mode** (`npm run electron`): Uses `electron-main-ipc.js` with IPC handlers
-- **Runtime Detection**: `app-electron.js` checks `window.api` to determine mode and routes calls appropriately
+## Frontend Notes
 
-### File Operations
-All config file operations target the outermost `mcpServers` object in JSON files:
-- Default path: `~/.claude.json`
-- Preserves all other JSON content
-- Profiles stored in: `~/.mcp-manager/profiles/`
+- Primary entry point: `renderer/src/App.tsx`.
+- State is managed with React hooks; notifications use Notyf; search uses Fuse.js.
+- Styling is Tailwind-first with a light `index.css` overlay for shared tokens (including the cyberpunk mode helper classes).
+- Renderer build output is consumed by both Electron and the Express server (`renderer/dist`).
 
-### IPC Architecture (Electron)
-- **Main Process**: `electron-main-ipc.js` handles file I/O via IPC
-- **Preload Script**: `preload.js` exposes secure API via contextBridge
-- **Renderer**: Accesses file system through `window.api` methods
+## IPC / API Contracts
 
-### Frontend Structure
-- **UI**: Dark mode design with sidebar layout
-- **State**: Managed in `currentServers` object
-- **Rendering**: Dynamic card generation with syntax-highlighted JSON
-- **Validation**: JSON parsing before save operations
+Key operations exposed through `window.api` / Express:
+- `getConfig`, `saveConfig`, `addServer`, `deleteServer`
+- Profile helpers: `getProfiles`, `saveProfile`, etc.
+- Global config helpers: `getGlobalConfigs`, `saveGlobalConfigs`
 
-## Key Implementation Details
-
-### Server Toggle Logic
-Servers can be disabled (set to null) without deletion, preserving configuration for re-enabling.
-
-### Profile System
-Profiles are complete snapshots of the `mcpServers` object, stored as separate JSON files.
-
-### CSS Architecture
-`style-dark.css` uses CSS variables for theming, making color changes centralized.
-
-### JSON Syntax Highlighting
-Custom regex-based highlighting in `syntaxHighlightJSON()` function for better readability.
+All methods expect/return JSON objects shaped like Claude's `mcpServers` map.
 
 ## Important Files
 
-- `electron-main-ipc.js`: Electron main process with IPC handlers
-- `server.js`: Express server for web mode
-- `app-electron.js`: Frontend logic with dual-mode support
-- `preload.js`: Electron security bridge
-- `public/style-dark.css`: Dark theme styling
+- `renderer/src/App.tsx`: React application shell + state management
+- `renderer/src/types.ts`: Shared renderer types
+- `renderer/src/api.ts`: Thin wrapper around `window.api`
+- `electron-main-ipc.js`: Electron main process + IPC handlers
+- `preload.js`: Secure bridge exposing IPC calls to the renderer
+- `server.js`: Express API and static asset host for web mode
 
-## Port Configuration
-Default port 3000 can be modified in `server.js` if conflicts occur.
+## Ports & Paths
+
+- Web server default: `http://localhost:3000`
+- Vite dev server default: `http://localhost:5173`
+- Default Claude config path: `~/.claude.json`
+- Profiles directory: `~/.mcp-manager/profiles`
+
+## Development Tips
+
+- When using the Vite dev server with Electron, set `VITE_DEV_SERVER_URL=http://localhost:5173` before launching Electron so it loads HMR-enabled assets.
+- React build artifacts are required for both `npm start` and packaging. Run `npm run build:renderer` when modifying renderer code outside the dev server.
+- The renderer assumes the `window.api` bridge exists; if running purely in the browser, mock these methods or run through the Express server.

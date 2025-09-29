@@ -6,6 +6,7 @@ yarn-error.log*
 
 # Build outputs
 dist/
+renderer/dist/
 *.app
 *.dmg
 *.pkg

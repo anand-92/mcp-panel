@@ -1,0 +1,62 @@
+@import 'notyf/notyf.min.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply min-h-screen bg-slate-950 text-slate-100 antialiased;
+  background: linear-gradient(160deg, #040712 0%, #07111f 50%, #030510 100%);
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system;
+}
+
+::selection {
+  background-color: rgba(56, 189, 248, 0.35);
+  color: #f8fafc;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+  border: 2px solid rgba(15, 23, 42, 0.9);
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.glass-panel {
+  @apply rounded-2xl border border-white/10 bg-slate-900/80;
+  box-shadow: 0 14px 28px rgba(8, 15, 40, 0.28);
+}
+
+.glass-panel:hover {
+  box-shadow: 0 18px 34px rgba(12, 18, 38, 0.32);
+}
+
+body.cyberpunk {
+  background: linear-gradient(160deg, #090018 0%, #0b0142 60%, #02000f 100%);
+  color: #e2e8f0;
+}
+
+body.cyberpunk .glass-panel {
+  @apply border-cyan-400/30;
+  background: linear-gradient(135deg, rgba(17, 36, 70, 0.82), rgba(9, 11, 44, 0.88));
+  box-shadow: 0 22px 50px rgba(34, 211, 238, 0.32);
+}
+
+body.cyberpunk .glass-panel:hover {
+  box-shadow: 0 26px 60px rgba(34, 211, 238, 0.38);
+}
+
+body.cyberpunk .status-dot {
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.75);
+}

@@ -4,12 +4,15 @@
   "description": "A local desktop app to manage MCP servers in Claude config",
   "main": "electron-main-ipc.js",
   "scripts": {
-    "start": "node server.js",
-    "start-web": "node server.js",
+    "start": "npm run build:renderer && node server.js",
+    "start-web": "npm run build:renderer && node server.js",
     "dev": "nodemon server.js",
-    "electron": "electron .",
-    "build-mac": "electron-builder --mac",
-    "dist": "electron-builder"
+    "dev:renderer": "vite --config renderer/vite.config.mjs",
+    "build:renderer": "vite build --config renderer/vite.config.mjs",
+    "preview:renderer": "vite preview --config renderer/vite.config.mjs",
+    "electron": "npm run build:renderer && electron .",
+    "build-mac": "npm run build:renderer && electron-builder --mac",
+    "dist": "npm run build:renderer && electron-builder"
   },
   "keywords": [
     "mcp",
@@ -28,14 +31,27 @@
     "notyf": "^3.10.0",
     "open": "^8.4.2",
     "prismjs": "^1.30.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-virtualized-auto-sizer": "^1.0.26",
+    "react-window": "^2.1.2",
     "sortablejs": "^1.15.6",
     "tippy.js": "^6.3.7"
   },
   "devDependencies": {
     "@electron/notarize": "^3.1.0",
+    "@types/node": "^22.7.4",
+    "@types/react": "^18.3.6",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
     "electron": "^27.3.11",
     "electron-builder": "^26.0.12",
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.13",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.6"
   },
   "build": {
     "appId": "com.mcpmanager.app",
@@ -89,12 +105,8 @@
     "files": [
       "electron-main-ipc.js",
       "preload.js",
-      "public/**/*",
+      "renderer/dist/**/*",
       "assets/**/*",
-      "!public/**/*.backup",
-      "!public/**/*-original.*",
-      "!public/**/*-modern.*",
-      "!public/app.js.backup",
       "!**/*.map",
       "!**/node_modules/**"
     ],

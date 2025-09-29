@@ -102,10 +102,11 @@ Or for Docker-based servers:
 
 ## File Structure
 
-- `server.js` - Express backend handling file operations and API
-- `public/index.html` - Main UI interface
-- `public/app.js` - Frontend JavaScript logic
-- `public/style.css` - Application styling
+- `renderer/src/App.tsx` – React UI shell and state management
+- `renderer/src/components/` – Reusable Tailwind-styled UI components
+- `renderer/src/index.css` – Global Tailwind layers and custom tokens
+- `server.js` – Express backend handling file operations and API routes
+- `electron-main-ipc.js` – Electron main process and IPC handlers
 - Profiles stored in: `~/.mcp-manager/profiles/`
 
 ## Notes
