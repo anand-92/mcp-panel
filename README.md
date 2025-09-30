@@ -2,11 +2,11 @@
 
 <div align="center">
 
-[![Download Latest DMG](https://img.shields.io/badge/Download-Latest%20DMG-blue?style=for-the-badge&logo=apple)](https://github.com/nikhilanand/mcp-panel/releases/download/latest/MCP-Server-Manager.dmg)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/nikhilanand/mcp-panel?style=for-the-badge)](https://github.com/nikhilanand/mcp-panel/releases)
+[![Download Latest DMG](https://img.shields.io/badge/Download-Latest%20DMG-blue?style=for-the-badge&logo=apple)](https://github.com/anand-92/mcp-panel/releases/download/v1.2/MCP-Server-Manager.dmg)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/nikhilanand/mcp-panel?style=for-the-badge)](https://github.com/anand-92/mcp-panel/releases/download/v1.2)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/nikhilanand/mcp-panel/build-dmg.yml?branch=main&style=for-the-badge)](https://github.com/nikhilanand/mcp-panel/actions)
 
-**[⬇️ Download MCP Server Manager for macOS](https://github.com/nikhilanand/mcp-panel/releases/download/latest/MCP-Server-Manager.dmg)**
+**[⬇️ Download MCP Server Manager for macOS](https://github.com/anand-92/mcp-panel/releases/download/v1.2/MCP-Server-Manager.dmg)**
 
 </div>
 
@@ -19,7 +19,7 @@ A lightweight local desktop application for managing MCP (Model Context Protocol
 - **Add New Servers**: Easily add new MCP servers with JSON configuration
 - **Edit Configurations**: Modify existing server settings
 - **Profile Management**: Save and load different server configurations as profiles
-- **Custom Config Path**: Support for custom Claude config file locations (defaults to `~/.claude.json`)
+- **Custom Config Path**: Support for custom Claude/Copilot config file locations (defaults to `~/.claude.json`)
 
 ## Installation
 
@@ -78,8 +78,9 @@ Profiles let you save and switch between different server configurations:
 
 If your Claude config is not at the default location (`~/.claude.json`):
 1. Click the ⚙️ Settings button
-2. Enter your custom config file path
-3. Click "Save"
+2. Enter your custom config file path (Copilot is sometimes ~/Library/Application Support/Code/User/mcp.json)
+3. You can get path by going to your config file within your editor and copying path.
+4. Test Connection and "Save"
 
 ## Server Configuration Format
 
@@ -111,7 +112,7 @@ Or for Docker-based servers:
 
 ## Notes
 
-- The app modifies only the outermost `mcpServers` object in your Claude config
+- The app modifies only the outermost `mcpServers` object in your Claude config or `servers` object in Copilot mcp config.
 - All other configuration settings are preserved
 - Profiles are stored locally in your home directory
 - Changes are saved immediately to the config file
