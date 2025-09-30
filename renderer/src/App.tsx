@@ -155,6 +155,13 @@ const isValidServerConfig = (config: unknown): config is ServerConfig => {
   }
 
   const candidate = config as Record<string, unknown>;
+
+  // Check for stdio-type servers (with type field)
+  if (candidate.type === 'stdio') {
+    return typeof candidate.command === 'string' && candidate.command.trim().length > 0;
+  }
+
+  // Check for standard command-based servers (without type field)
   const hasCommand = typeof candidate.command === 'string' && candidate.command.trim().length > 0;
   const hasTransport = candidate.transport && typeof candidate.transport === 'object';
   const hasRemotes = Array.isArray(candidate.remotes) && candidate.remotes.length > 0;
