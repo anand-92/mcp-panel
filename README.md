@@ -10,7 +10,7 @@
 
 </div>
 
-A lightweight local desktop application for managing MCP (Model Context Protocol) servers in your Claude configuration file.
+A lightweight local desktop application for managing MCP (Model Context Protocol) servers in your Claude or Copilot MCP configuration file.
 
 ## Features
 
