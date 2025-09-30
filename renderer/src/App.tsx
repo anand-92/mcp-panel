@@ -155,6 +155,13 @@ const isValidServerConfig = (config: unknown): config is ServerConfig => {
   }
 
   const candidate = config as Record<string, unknown>;
+
+  // Check for stdio-type servers (with type field)
+  if (candidate.type === 'stdio') {
+    return typeof candidate.command === 'string' && candidate.command.trim().length > 0;
+  }
+
+  // Check for standard command-based servers (without type field)
   const hasCommand = typeof candidate.command === 'string' && candidate.command.trim().length > 0;
   const hasTransport = candidate.transport && typeof candidate.transport === 'object';
   const hasRemotes = Array.isArray(candidate.remotes) && candidate.remotes.length > 0;
@@ -163,7 +170,17 @@ const isValidServerConfig = (config: unknown): config is ServerConfig => {
 };
 
 const extractServerEntries = (raw: string): Record<string, ServerConfig> => {
-  const parsed = JSON.parse(raw);
+  let normalized = raw.trim();
+
+  // Handle JSON fragments: if it doesn't start with {, try wrapping it
+  if (!normalized.startsWith('{')) {
+    normalized = `{${normalized}}`;
+  }
+
+  // Remove trailing commas before closing braces (common copy-paste issue)
+  normalized = normalized.replace(/,(\s*[}\]])/g, '$1');
+
+  const parsed = JSON.parse(normalized);
 
   if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
     if ('mcpServers' in parsed && typeof (parsed as Record<string, unknown>).mcpServers === 'object') {
