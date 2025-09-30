@@ -170,7 +170,17 @@ const isValidServerConfig = (config: unknown): config is ServerConfig => {
 };
 
 const extractServerEntries = (raw: string): Record<string, ServerConfig> => {
-  const parsed = JSON.parse(raw);
+  let normalized = raw.trim();
+
+  // Handle JSON fragments: if it doesn't start with {, try wrapping it
+  if (!normalized.startsWith('{')) {
+    normalized = `{${normalized}}`;
+  }
+
+  // Remove trailing commas before closing braces (common copy-paste issue)
+  normalized = normalized.replace(/,(\s*[}\]])/g, '$1');
+
+  const parsed = JSON.parse(normalized);
 
   if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
     if ('mcpServers' in parsed && typeof (parsed as Record<string, unknown>).mcpServers === 'object') {
