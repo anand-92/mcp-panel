@@ -161,6 +161,11 @@ const isValidServerConfig = (config: unknown): config is ServerConfig => {
     return typeof candidate.command === 'string' && candidate.command.trim().length > 0;
   }
 
+  // Check for HTTP-type servers (with type and url fields)
+  if (candidate.type === 'http') {
+    return typeof candidate.url === 'string' && candidate.url.trim().length > 0;
+  }
+
   // Check for standard command-based servers (without type field)
   const hasCommand = typeof candidate.command === 'string' && candidate.command.trim().length > 0;
   const hasTransport = candidate.transport && typeof candidate.transport === 'object';
