@@ -12,6 +12,7 @@
     "preview:renderer": "vite preview --config renderer/vite.config.mjs",
     "electron": "npm run build:renderer && electron .",
     "build-mac": "npm run build:renderer && electron-builder --mac",
+    "build-mas": "npm run build:renderer && electron-builder --mac mas",
     "dist": "npm run build:renderer && electron-builder"
   },
   "keywords": [
@@ -20,7 +21,10 @@
     "config",
     "manager"
   ],
-  "author": "",
+  "author": {
+    "name": "Nikhil Anand",
+    "email": "nik.anand.1998@gmail.com"
+  },
   "license": "MIT",
   "dependencies": {
     "@floating-ui/dom": "^1.7.4",
@@ -78,6 +82,27 @@
           "target": "zip",
           "arch": [
             "arm64"
+          ]
+        }
+      ]
+    },
+    "mas": {
+      "type": "distribution",
+      "category": "public.app-category.developer-tools",
+      "icon": "assets/icon.icns",
+      "entitlements": "build/entitlements.mas.plist",
+      "entitlementsInherit": "build/entitlements.mas.inherit.plist",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "asarUnpack": [
+        "**/*.node"
+      ],
+      "target": [
+        {
+          "target": "mas",
+          "arch": [
+            "arm64",
+            "x64"
           ]
         }
       ]

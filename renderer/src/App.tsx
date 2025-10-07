@@ -229,8 +229,7 @@ const App = (): JSX.Element => {
   const [serverModalTags, setServerModalTags] = useState<string[]>([]);
   const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState({
-    configPath: DEFAULT_CONFIG_PATH,
-    configType: 'copilot' as 'claude' | 'copilot',
+    configPath: DEFAULT_CLAUDE_CONFIG_PATH,
     confirmDelete: true,
     cyberpunkMode: false
   });
@@ -862,8 +861,7 @@ const App = (): JSX.Element => {
   }, [ready, handleManualSave, loadServers]);
 
   const handleTestConnection = useCallback(async () => {
-    const normalizedPath = settingsDraft.configPath.trim() ||
-      (settingsDraft.configType === 'copilot' ? DEFAULT_CONFIG_PATH : DEFAULT_CLAUDE_CONFIG_PATH);
+    const normalizedPath = settingsDraft.configPath.trim() || DEFAULT_CLAUDE_CONFIG_PATH;
     setTestingConnection(true);
     try {
       const response = await testConfigPath(normalizedPath);
@@ -875,11 +873,10 @@ const App = (): JSX.Element => {
     } finally {
       setTestingConnection(false);
     }
-  }, [settingsDraft.configPath, settingsDraft.configType]);
+  }, [settingsDraft.configPath]);
 
   const handleSaveSettings = useCallback(() => {
-    const normalizedPath = settingsDraft.configPath.trim() ||
-      (settingsDraft.configType === 'copilot' ? DEFAULT_CONFIG_PATH : DEFAULT_CLAUDE_CONFIG_PATH);
+    const normalizedPath = settingsDraft.configPath.trim() || DEFAULT_CLAUDE_CONFIG_PATH;
 
     setSettings({
       confirmDelete: settingsDraft.confirmDelete,
@@ -1608,7 +1605,6 @@ interface SettingsModalProps {
   onClose: () => void;
   draft: {
     configPath: string;
-    configType: 'claude' | 'copilot';
     confirmDelete: boolean;
     cyberpunkMode: boolean;
   };
@@ -1641,31 +1637,12 @@ const SettingsModal = ({ open, onClose, draft, onChangeDraft, onSave, onTestConn
         <div className="space-y-5 px-8 py-6 text-sm">
           <div className="space-y-4">
             <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Config Type</span>
-              <select
-                value={draft.configType}
-                onChange={event => {
-                  const newType = event.target.value as 'claude' | 'copilot';
-                  onChangeDraft({
-                    ...draft,
-                    configType: newType,
-                    configPath: newType === 'copilot' ? DEFAULT_CONFIG_PATH : DEFAULT_CLAUDE_CONFIG_PATH
-                  });
-                }}
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-2 text-sm text-slate-100 shadow-inner shadow-slate-950/50 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
-              >
-                <option value="claude">Claude (claude.json)</option>
-                <option value="copilot">GitHub Copilot (.vscode/mcp.json)</option>
-              </select>
-            </label>
-
-            <label className="block">
               <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Config Path</span>
               <input
                 value={draft.configPath}
                 onChange={event => onChangeDraft({ ...draft, configPath: event.target.value })}
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-2 text-sm text-slate-100 shadow-inner shadow-slate-950/50 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
-                placeholder={draft.configType === 'copilot' ? '.vscode/mcp.json' : '~/.claude.json'}
+                placeholder="~/.claude.json"
               />
             </label>
           </div>

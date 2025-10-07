@@ -10,7 +10,7 @@
 
 </div>
 
-A lightweight local desktop application for managing MCP (Model Context Protocol) servers in your Claude or Copilot MCP configuration file.
+A lightweight local desktop application for managing MCP (Model Context Protocol) servers in your Claude configuration file.
 
 ## Features
 
@@ -19,7 +19,7 @@ A lightweight local desktop application for managing MCP (Model Context Protocol
 - **Add New Servers**: Easily add new MCP servers with JSON configuration
 - **Edit Configurations**: Modify existing server settings
 - **Profile Management**: Save and load different server configurations as profiles
-- **Custom Config Path**: Support for custom Claude/Copilot config file locations (defaults to `~/.claude.json`)
+- **Custom Config Path**: Support for custom Claude config file locations (defaults to `~/.claude.json`)
 
 ## Installation
 
@@ -78,8 +78,8 @@ Profiles let you save and switch between different server configurations:
 
 If your Claude config is not at the default location (`~/.claude.json`):
 1. Click the ⚙️ Settings button
-2. Enter your custom config file path (Copilot is sometimes ~/Library/Application Support/Code/User/mcp.json)
-3. You can get path by going to your config file within your editor and copying path.
+2. Enter your custom config file path
+3. You can get the path by going to your config file within your editor and copying the path
 4. Test Connection and "Save"
 
 ## Server Configuration Format
@@ -112,7 +112,7 @@ Or for Docker-based servers:
 
 ## Notes
 
-- The app modifies only the outermost `mcpServers` object in your Claude config or `servers` object in Copilot mcp config.
+- The app modifies only the outermost `mcpServers` object in your Claude config
 - All other configuration settings are preserved
 - Profiles are stored locally in your home directory
 - Changes are saved immediately to the config file
