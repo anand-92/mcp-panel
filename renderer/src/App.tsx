@@ -8,7 +8,7 @@ import type { FilterMode, ServerConfig, ServerModel, SettingsState, ViewMode } f
 const DEFAULT_TAGS = ['Deploy', 'Dev', 'DB', 'Debug', 'Docs', 'API'];
 const DEFAULT_SETTINGS: SettingsState = { confirmDelete: true, cyberpunkMode: false };
 const DEFAULT_CLAUDE_CONFIG_PATH = '~/.claude.json';
-const DEFAULT_CONFIG_PATH = '.vscode/mcp.json';
+const DEFAULT_CONFIG_PATH = DEFAULT_CLAUDE_CONFIG_PATH;
 
 interface StatusState {
   connected: boolean;
@@ -237,6 +237,7 @@ const App = (): JSX.Element => {
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({ visible: false, x: 0, y: 0 });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [ready, setReady] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [rawEditorValue, setRawEditorValue] = useState('');
   const [rawEditorDirty, setRawEditorDirty] = useState(false);
   const [rawEditorError, setRawEditorError] = useState<string | null>(null);
@@ -317,6 +318,17 @@ const App = (): JSX.Element => {
         const storedSettings = parseJSON<SettingsState>(localStorage.getItem('mcp-settings'), DEFAULT_SETTINGS);
         if (!cancelled) {
           setSettings({ ...DEFAULT_SETTINGS, ...storedSettings });
+        }
+
+        // Check if user has explicitly selected config file before
+        const hasSelectedFile = localStorage.getItem('mcp-config-selected');
+        if (!hasSelectedFile) {
+          // First run - show onboarding
+          if (!cancelled) {
+            setLoading(false);
+            setShowOnboarding(true);
+          }
+          return;
         }
 
         const storedConfigPath = localStorage.getItem('mcp-configPath');
@@ -888,6 +900,16 @@ const App = (): JSX.Element => {
     void loadServers({ path: normalizedPath });
   }, [loadServers, settingsDraft]);
 
+  const handleOnboardingComplete = useCallback(async (filePath: string) => {
+    localStorage.setItem('mcp-config-selected', 'true');
+    localStorage.setItem('mcp-configPath', filePath);
+    setConfigPath(filePath);
+    setShowOnboarding(false);
+    await loadServers({ path: filePath, silent: true });
+    setReady(true);
+    notyfRef.current?.success('Configuration loaded successfully');
+  }, [loadServers]);
+
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-[#070b1f] via-[#0f172a] to-[#05060f] text-slate-100">
       {loading && <LoadingOverlay />}
@@ -1009,6 +1031,11 @@ const App = (): JSX.Element => {
         }}
       />
 
+      <OnboardingModal
+        open={showOnboarding}
+        onComplete={handleOnboardingComplete}
+      />
+
       <input
         type="file"
         accept=".json,application/json"
@@ -1016,6 +1043,99 @@ const App = (): JSX.Element => {
         ref={fileInputRef}
         onChange={handleImportFile}
       />
+    </div>
+  );
+};
+
+interface OnboardingModalProps {
+  open: boolean;
+  onComplete: (filePath: string) => void;
+}
+
+const OnboardingModal = ({ open, onComplete }: OnboardingModalProps) => {
+  const [selectedPath, setSelectedPath] = useState<string>('');
+  const [selecting, setSelecting] = useState(false);
+
+  if (!open) return null;
+
+  const handleSelectFile = async () => {
+    if (!window.api?.selectConfigFile) {
+      console.error('File picker not available');
+      return;
+    }
+
+    setSelecting(true);
+    try {
+      const result = await window.api.selectConfigFile();
+      if (!result.canceled && result.filePath) {
+        setSelectedPath(result.filePath);
+      }
+    } catch (error) {
+      console.error('Failed to select file:', error);
+    } finally {
+      setSelecting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-sm p-4">
+      <div className="glass-panel w-full max-w-lg overflow-hidden rounded-3xl border border-white/10 bg-slate-950/95">
+        <div className="border-b border-white/5 px-8 py-6">
+          <h2 className="text-2xl font-semibold text-white">Welcome to MCP Server Manager</h2>
+          <p className="mt-2 text-sm text-slate-300">
+            Let's get started by locating your Claude Code configuration file.
+          </p>
+        </div>
+
+        <div className="space-y-6 px-8 py-6">
+          <div className="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-4">
+            <p className="text-sm text-slate-200">
+              <strong>Your config file is usually located at:</strong>
+            </p>
+            <p className="mt-2 font-mono text-xs text-sky-400">
+              ~/.claude.json
+            </p>
+            <p className="mt-3 text-xs text-slate-400">
+              Click "Select Config File" below to browse to this location. Hidden files will be shown automatically.
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              💡 Tip: If you don't see hidden files, press <kbd className="rounded bg-slate-700 px-2 py-1 text-sm font-semibold text-white">⌘</kbd>+<kbd className="rounded bg-slate-700 px-2 py-1 text-sm font-semibold text-white">⇧</kbd>+<kbd className="rounded bg-slate-700 px-2 py-1 text-sm font-semibold text-white">.</kbd>
+            </p>
+          </div>
+
+          {selectedPath && (
+            <div className="rounded-2xl border border-green-500/20 bg-green-500/5 p-4">
+              <p className="text-sm font-medium text-green-400">✓ File selected:</p>
+              <p className="mt-1 truncate font-mono text-xs text-slate-300">{selectedPath}</p>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleSelectFile}
+            disabled={selecting}
+            className="w-full rounded-full bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 px-6 py-3 font-semibold text-white shadow-lg shadow-sky-500/30 transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-sky-400/50 disabled:opacity-50"
+          >
+            {selecting ? 'Opening...' : 'Select Config File'}
+          </button>
+
+          {selectedPath && (
+            <button
+              type="button"
+              onClick={() => onComplete(selectedPath)}
+              className="w-full rounded-full border border-white/10 bg-white/5 px-6 py-3 font-semibold text-white transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-sky-400/50"
+            >
+              Continue
+            </button>
+          )}
+        </div>
+
+        <div className="border-t border-white/5 px-8 py-4">
+          <p className="text-xs text-slate-400">
+            This step is required for App Store security compliance. Your file selection is stored locally and never shared.
+          </p>
+        </div>
+      </div>
     </div>
   );
 };

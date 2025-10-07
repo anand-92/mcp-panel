@@ -43,7 +43,7 @@ ipcMain.handle('select-config-file', async (event) => {
     const result = await dialog.showOpenDialog(mainWindow, {
         title: 'Select Claude Config File',
         defaultPath: path.join(os.homedir(), '.claude.json'),
-        properties: ['openFile'],
+        properties: ['openFile', 'showHiddenFiles'],
         filters: [
             { name: 'JSON Files', extensions: ['json'] },
             { name: 'All Files', extensions: ['*'] }
@@ -109,13 +109,18 @@ ipcMain.handle('save-config', async (event, servers, configPath) => {
             const data = await fs.readFile(targetPath, 'utf8');
             config = JSON.parse(data);
         } catch (error) {
-            config = {};
+            // File doesn't exist - don't create it!
+            // User needs Claude Code installed first
+            if (error.code === 'ENOENT') {
+                return {
+                    success: false,
+                    error: 'Config file not found. Please ensure Claude Code is installed and has created your config file first.'
+                };
+            }
+            throw error;
         }
 
         config.mcpServers = servers;
-
-        const dir = path.dirname(targetPath);
-        await fs.mkdir(dir, { recursive: true });
 
         await fs.writeFile(targetPath, JSON.stringify(config, null, 2));
 
@@ -143,16 +148,20 @@ ipcMain.handle('add-server', async (event, name, serverConfig, configPath) => {
             const data = await fs.readFile(targetPath, 'utf8');
             config = JSON.parse(data);
         } catch (error) {
-            config = {};
+            // File doesn't exist - don't create it!
+            if (error.code === 'ENOENT') {
+                return {
+                    success: false,
+                    error: 'Config file not found. Please ensure Claude Code is installed and has created your config file first.'
+                };
+            }
+            throw error;
         }
 
         if (!config.mcpServers) {
             config.mcpServers = {};
         }
         config.mcpServers[name] = serverConfig;
-
-        const dir = path.dirname(targetPath);
-        await fs.mkdir(dir, { recursive: true });
 
         await fs.writeFile(targetPath, JSON.stringify(config, null, 2));
 

@@ -8,16 +8,9 @@
     <key>com.apple.security.app-sandbox</key>
     <true/>
 
-    <!-- File access for reading/writing Claude config -->
+    <!-- File access for reading/writing user-selected config files -->
     <key>com.apple.security.files.user-selected.read-write</key>
     <true/>
-
-    <!-- Allow read/write to home directory for .claude.json -->
-    <key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
-    <array>
-        <string>.claude.json</string>
-        <string>.mcp-manager/</string>
-    </array>
 
     <!-- Required for Electron to function -->
     <key>com.apple.security.cs.allow-jit</key>

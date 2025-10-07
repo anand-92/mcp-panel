@@ -116,13 +116,17 @@ app.post('/api/config', async (req, res) => {
             const data = await fs.readFile(targetPath, 'utf8');
             config = JSON.parse(data);
         } catch (error) {
-            config = {};
+            // File doesn't exist - don't create it!
+            if (error.code === 'ENOENT') {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Config file not found. Please ensure Claude Code is installed and has created your config file first.'
+                });
+            }
+            throw error;
         }
 
         config.mcpServers = servers;
-
-        const dir = path.dirname(targetPath);
-        await fs.mkdir(dir, { recursive: true });
 
         await fs.writeFile(targetPath, JSON.stringify(config, null, 2));
 
@@ -146,16 +150,20 @@ app.post('/api/server', async (req, res) => {
             const data = await fs.readFile(targetPath, 'utf8');
             config = JSON.parse(data);
         } catch (error) {
-            config = {};
+            // File doesn't exist - don't create it!
+            if (error.code === 'ENOENT') {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Config file not found. Please ensure Claude Code is installed and has created your config file first.'
+                });
+            }
+            throw error;
         }
 
         if (!config.mcpServers) {
             config.mcpServers = {};
         }
         config.mcpServers[name] = serverConfig;
-
-        const dir = path.dirname(targetPath);
-        await fs.mkdir(dir, { recursive: true });
 
         await fs.writeFile(targetPath, JSON.stringify(config, null, 2));
 
