@@ -1638,12 +1638,34 @@ const SettingsModal = ({ open, onClose, draft, onChangeDraft, onSave, onTestConn
           <div className="space-y-4">
             <label className="block">
               <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Config Path</span>
-              <input
-                value={draft.configPath}
-                onChange={event => onChangeDraft({ ...draft, configPath: event.target.value })}
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-2 text-sm text-slate-100 shadow-inner shadow-slate-950/50 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
-                placeholder="~/.claude.json"
-              />
+              <div className="mt-2 flex gap-2">
+                <input
+                  value={draft.configPath}
+                  onChange={event => onChangeDraft({ ...draft, configPath: event.target.value })}
+                  className="flex-1 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-2 text-sm text-slate-100 shadow-inner shadow-slate-950/50 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                  placeholder="~/.claude.json"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!window.api?.selectConfigFile) {
+                      console.error('File picker not available in browser mode');
+                      return;
+                    }
+                    try {
+                      const result = await window.api.selectConfigFile();
+                      if (!result.canceled && result.filePath) {
+                        onChangeDraft({ ...draft, configPath: result.filePath });
+                      }
+                    } catch (error) {
+                      console.error('Failed to select file:', error);
+                    }
+                  }}
+                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                >
+                  Browse
+                </button>
+              </div>
             </label>
           </div>
 

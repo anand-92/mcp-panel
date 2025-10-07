@@ -19,10 +19,6 @@
         <string>.mcp-manager/</string>
     </array>
 
-    <!-- Network client for registry lookups -->
-    <key>com.apple.security.network.client</key>
-    <true/>
-
     <!-- Required for Electron to function -->
     <key>com.apple.security.cs.allow-jit</key>
     <true/>

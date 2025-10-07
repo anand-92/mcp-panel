@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 const os = require('os');
@@ -37,6 +37,24 @@ const ensureProfilesDir = async () => {
 // IPC Handlers
 ipcMain.handle('get-config-path', (event) => {
     return getDefaultConfigPath();
+});
+
+ipcMain.handle('select-config-file', async (event) => {
+    const result = await dialog.showOpenDialog(mainWindow, {
+        title: 'Select Claude Config File',
+        defaultPath: path.join(os.homedir(), '.claude.json'),
+        properties: ['openFile'],
+        filters: [
+            { name: 'JSON Files', extensions: ['json'] },
+            { name: 'All Files', extensions: ['*'] }
+        ]
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+        return { canceled: true };
+    }
+
+    return { canceled: false, filePath: result.filePaths[0] };
 });
 
 ipcMain.handle('get-config', async (event, configPath) => {

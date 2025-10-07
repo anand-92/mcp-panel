@@ -5,6 +5,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('api', {
     // Config operations
     getConfigPath: (configType) => ipcRenderer.invoke('get-config-path', configType),
+    selectConfigFile: () => ipcRenderer.invoke('select-config-file'),
     getConfig: (path) => ipcRenderer.invoke('get-config', path),
     saveConfig: (servers, configPath) => ipcRenderer.invoke('save-config', servers, configPath),
 
