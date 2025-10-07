@@ -72,3 +72,5 @@ creds.md
 *.p12
 Certificates.p12
 package-mac-signed.sh
+embedded.provisionprofile
+*.provisionprofile
