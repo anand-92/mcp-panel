@@ -71,6 +71,9 @@
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "LSMinimumSystemVersion": "12.0"
+      },
       "target": [
         {
           "target": "dmg",
@@ -94,6 +97,11 @@
       "entitlementsInherit": "build/entitlements.mas.inherit.plist",
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
+      "provisioningProfile": "embedded.provisionprofile",
+      "minimumSystemVersion": "12.0",
+      "extendInfo": {
+        "LSMinimumSystemVersion": "12.0"
+      },
       "asarUnpack": [
         "**/*.node"
       ],
@@ -101,8 +109,7 @@
         {
           "target": "mas",
           "arch": [
-            "arm64",
-            "x64"
+            "arm64"
           ]
         }
       ]
