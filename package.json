@@ -1,6 +1,6 @@
 {
   "name": "mcp-server-manager",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "A local desktop app to manage MCP servers in Claude config",
   "main": "electron-main-ipc.js",
   "scripts": {

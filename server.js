@@ -120,7 +120,7 @@ app.post('/api/config', async (req, res) => {
             if (error.code === 'ENOENT') {
                 return res.status(400).json({
                     success: false,
-                    error: 'Config file not found. Please ensure Claude Code is installed and has created your config file first.'
+                    error: 'Config file not found. Please create a config file at the specified location first.'
                 });
             }
             throw error;
@@ -154,7 +154,7 @@ app.post('/api/server', async (req, res) => {
             if (error.code === 'ENOENT') {
                 return res.status(400).json({
                     success: false,
-                    error: 'Config file not found. Please ensure Claude Code is installed and has created your config file first.'
+                    error: 'Config file not found. Please create a config file at the specified location first.'
                 });
             }
             throw error;

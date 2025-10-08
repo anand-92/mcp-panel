@@ -4,8 +4,6 @@ import Fuse from 'fuse.js';
 import { Notyf } from 'notyf';
 import { fetchConfig, getConfigPath, saveConfig, testConfigPath } from './api';
 import type { FilterMode, ServerConfig, ServerModel, SettingsState, ViewMode } from './types';
-
-const DEFAULT_TAGS = ['Deploy', 'Dev', 'DB', 'Debug', 'Docs', 'API'];
 const DEFAULT_SETTINGS: SettingsState = { confirmDelete: true, cyberpunkMode: false };
 const DEFAULT_CLAUDE_CONFIG_PATH = '~/.claude.json';
 const DEFAULT_CONFIG_PATH = DEFAULT_CLAUDE_CONFIG_PATH;
@@ -32,8 +30,7 @@ const parseJSON = <T,>(value: string | null, fallback: T): T => {
 };
 
 const buildServerMapFromLocal = (
-  configs: Record<string, ServerConfig>,
-  tags: Record<string, string[]>
+  configs: Record<string, ServerConfig>
 ): ServerMap => {
   const now = Date.now();
   return Object.entries(configs).reduce<ServerMap>((acc, [name, config]) => {
@@ -41,7 +38,6 @@ const buildServerMapFromLocal = (
       name,
       config,
       enabled: false,
-      tags: tags[name] ?? [],
       updatedAt: now
     };
     return acc;
@@ -62,7 +58,6 @@ const mergeLocalWithRemote = (local: ServerMap, remote: Record<string, ServerCon
       name,
       config,
       enabled: true,
-      tags: existing?.tags ?? [],
       updatedAt: existing?.updatedAt ?? now
     };
   });
@@ -86,19 +81,11 @@ const toAllServerConfigs = (map: ServerMap): Record<string, ServerConfig> => {
   }, {});
 };
 
-const toTagsMap = (map: ServerMap): Record<string, string[]> => {
-  return Object.entries(map).reduce<Record<string, string[]>>((acc, [name, server]) => {
-    acc[name] = server.tags;
-    return acc;
-  }, {});
-};
-
 const serializeServers = (map: ServerMap): Record<string, Omit<ServerModel, 'name'>> => {
   return Object.entries(map).reduce<Record<string, Omit<ServerModel, 'name'>>>((acc, [name, server]) => {
     acc[name] = {
       config: server.config,
       enabled: server.enabled,
-      tags: server.tags,
       updatedAt: server.updatedAt
     };
     return acc;
@@ -223,10 +210,8 @@ const App = (): JSX.Element => {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [filter, setFilter] = useState<FilterMode>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isServerModalOpen, setServerModalOpen] = useState(false);
   const [serverModalJson, setServerModalJson] = useState('');
-  const [serverModalTags, setServerModalTags] = useState<string[]>([]);
   const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState({
     configPath: DEFAULT_CLAUDE_CONFIG_PATH,
@@ -251,14 +236,6 @@ const App = (): JSX.Element => {
   const serverArray = useMemo(() => {
     return Object.values(servers).sort((a, b) => a.name.localeCompare(b.name));
   }, [servers]);
-
-  const availableTags = useMemo(() => {
-    const tagSet = new Set<string>(DEFAULT_TAGS);
-    serverArray.forEach(server => {
-      server.tags.forEach(tag => tagSet.add(tag));
-    });
-    return Array.from(tagSet).sort((a, b) => a.localeCompare(b));
-  }, [serverArray]);
 
   const fuse = useMemo(() => {
     if (serverArray.length === 0) return null;
@@ -293,7 +270,6 @@ const App = (): JSX.Element => {
 
   const persistLocal = useCallback((map: ServerMap) => {
     localStorage.setItem('mcp-all-configs', JSON.stringify(toAllServerConfigs(map)));
-    localStorage.setItem('mcp-server-tags', JSON.stringify(toTagsMap(map)));
   }, []);
 
   const syncServers = useCallback(async (map: ServerMap) => {
@@ -344,8 +320,7 @@ const App = (): JSX.Element => {
         }
 
         const localConfigs = parseJSON<Record<string, ServerConfig>>(localStorage.getItem('mcp-all-configs'), {});
-        const localTags = parseJSON<Record<string, string[]>>(localStorage.getItem('mcp-server-tags'), {});
-        const localMap = buildServerMapFromLocal(localConfigs, localTags);
+        const localMap = buildServerMapFromLocal(localConfigs);
 
         if (!cancelled) {
           skipSyncRef.current = true;
@@ -413,27 +388,6 @@ const App = (): JSX.Element => {
     persistLocal(servers);
     void syncServers(servers);
   }, [servers, ready, persistLocal, syncServers]);
-
-  useEffect(() => {
-    if (!ready) return;
-    if (selectedTags.length === 0) return;
-
-    setServers(prev => {
-      let modified = false;
-      const next: ServerMap = { ...prev };
-      const now = Date.now();
-
-      Object.entries(prev).forEach(([name, server]) => {
-        const hasTag = server.tags.some(tag => selectedTags.includes(tag));
-        if (server.enabled !== hasTag) {
-          modified = true;
-          next[name] = { ...server, enabled: hasTag, updatedAt: now };
-        }
-      });
-
-      return modified ? next : prev;
-    });
-  }, [selectedTags, ready]);
 
   useEffect(() => {
     if (!contextMenu.visible) return;
@@ -530,7 +484,6 @@ const App = (): JSX.Element => {
             name,
             config,
             enabled: true,
-            tags: existing?.tags ?? [],
             updatedAt: existing?.updatedAt ?? now
           };
         });
@@ -630,7 +583,6 @@ const App = (): JSX.Element => {
             name,
             config,
             enabled: true,
-            tags: [...serverModalTags],
             updatedAt: now
           };
         });
@@ -639,14 +591,13 @@ const App = (): JSX.Element => {
 
       const addedCount = Object.keys(entries).length;
       setServerModalJson('');
-      setServerModalTags([]);
       setServerModalOpen(false);
       notyfRef.current?.success(`Added ${addedCount} server${addedCount > 1 ? 's' : ''} successfully`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       notyfRef.current?.error(`Failed to add server: ${message}`);
     }
-  }, [serverModalJson, serverModalTags, servers]);
+  }, [serverModalJson, servers]);
 
   const handleFormatJson = useCallback(() => {
     try {
@@ -698,7 +649,6 @@ const App = (): JSX.Element => {
             name,
             config,
             enabled: true,
-            tags: existing?.tags ?? [],
             updatedAt: now
           };
         });
@@ -731,14 +681,6 @@ const App = (): JSX.Element => {
     URL.revokeObjectURL(url);
     notyfRef.current?.success('Configuration exported');
   }, [servers]);
-
-  const handleToggleSidebarTag = useCallback((tag: string) => {
-    setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
-  }, []);
-
-  const handleToggleModalTag = useCallback((tag: string) => {
-    setServerModalTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
-  }, []);
 
   const handleContextMenu = useCallback((event: ReactMouseEvent, server: ServerModel) => {
     event.preventDefault();
@@ -810,16 +752,12 @@ const App = (): JSX.Element => {
         }
 
         const enabled = typeof candidate.enabled === 'boolean' ? candidate.enabled : true;
-        const tags = Array.isArray(candidate.tags)
-          ? candidate.tags.filter((tag): tag is string => typeof tag === 'string')
-          : [];
         const updatedAt = typeof candidate.updatedAt === 'number' ? candidate.updatedAt : now;
 
         next[name] = {
           name,
           config,
           enabled,
-          tags,
           updatedAt
         };
       });
@@ -847,7 +785,6 @@ const App = (): JSX.Element => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'n') {
         event.preventDefault();
         setServerModalJson('');
-        setServerModalTags([]);
         setServerModalOpen(true);
       }
 
@@ -938,15 +875,11 @@ const App = (): JSX.Element => {
             open={sidebarOpen}
             onNewServer={() => {
               setServerModalJson('');
-              setServerModalTags([]);
               setServerModalOpen(true);
               setSidebarOpen(false);
             }}
             onImport={() => fileInputRef.current?.click()}
             onExport={handleExport}
-            tags={availableTags}
-            selectedTags={selectedTags}
-            onToggleTag={handleToggleSidebarTag}
           />
 
           <main className="flex flex-1 flex-col gap-6">
@@ -964,7 +897,6 @@ const App = (): JSX.Element => {
                 <EmptyState
                   onCreate={() => {
                     setServerModalJson('');
-                    setServerModalTags([]);
                     setServerModalOpen(true);
                   }}
                 />
@@ -1000,9 +932,6 @@ const App = (): JSX.Element => {
         onSubmit={handleServerModalSubmit}
         onFormat={handleFormatJson}
         onValidate={handleValidateJson}
-        tags={availableTags}
-        selectedTags={serverModalTags}
-        onToggleTag={handleToggleModalTag}
       />
 
       <SettingsModal
@@ -1083,7 +1012,7 @@ const OnboardingModal = ({ open, onComplete }: OnboardingModalProps) => {
         <div className="border-b border-white/5 px-8 py-6">
           <h2 className="text-2xl font-semibold text-white">Welcome to MCP Server Manager</h2>
           <p className="mt-2 text-sm text-slate-300">
-            Let's get started by locating your Claude Code configuration file.
+            Let's get started by locating your Claude configuration file.
           </p>
         </div>
 
@@ -1230,12 +1159,9 @@ interface SidebarProps {
   onNewServer: () => void;
   onImport: () => void;
   onExport: () => void;
-  tags: string[];
-  selectedTags: string[];
-  onToggleTag: (tag: string) => void;
 }
 
-const Sidebar = ({ open, onNewServer, onImport, onExport, tags, selectedTags, onToggleTag }: SidebarProps) => {
+const Sidebar = ({ open, onNewServer, onImport, onExport }: SidebarProps) => {
   const handleExploreClick = () => {
     window.open('https://lobehub.com/mcp', '_blank', 'noopener');
   };
@@ -1280,25 +1206,6 @@ const Sidebar = ({ open, onNewServer, onImport, onExport, tags, selectedTags, on
           </div>
         </div>
 
-        <div>
-          <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Tag filters</h2>
-          <p className="mt-2 text-xs text-slate-400">Tap a tag to spotlight servers that match.</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {tags.map(tag => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => onToggleTag(tag)}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition focus:outline-none focus:ring-2 focus:ring-sky-400/50 ${selectedTags.includes(tag)
-                  ? 'border border-sky-400 bg-sky-500/25 text-sky-100 shadow-sm shadow-sky-500/40'
-                  : 'border border-white/10 bg-white/5 text-slate-300 hover:border-sky-300/60 hover:text-slate-100'
-                }`}
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
     </aside>
   );
@@ -1401,14 +1308,6 @@ const ServerGrid = ({ servers, onToggle, onDelete, onContextMenu }: ServerCollec
             <p className="text-xs text-slate-400">{summarizeServerConfig(server.config)}</p>
           </div>
 
-          {server.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {server.tags.map(tag => (
-                <TagBadge key={tag} label={tag} />
-              ))}
-            </div>
-          )}
-
           <pre className="max-h-52 overflow-auto rounded-2xl border border-white/5 bg-slate-950/70 p-4 text-xs leading-relaxed text-slate-200 shadow-inner shadow-slate-950/60">
 {JSON.stringify(server.config, null, 2)}
           </pre>
@@ -1448,14 +1347,6 @@ const ToggleSwitch = ({ active, onClick }: { active: boolean; onClick: () => voi
         className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-all duration-200 ${active ? 'translate-x-6' : 'translate-x-1'}`}
       />
     </button>
-  );
-};
-
-const TagBadge = ({ label }: { label: string }) => {
-  return (
-    <span className="inline-flex items-center rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[11px] font-medium tracking-wide text-slate-200">
-      {label}
-    </span>
   );
 };
 
@@ -1543,7 +1434,7 @@ const RawJsonEditor = ({ value, onChange, onApply, onReset, onFormat, dirty, err
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-sm font-semibold text-white">Raw server JSON</h3>
-            <p className="text-xs text-slate-400">Edit the complete server map, including enabled state, tags, and transports.</p>
+            <p className="text-xs text-slate-400">Edit the complete server map, including enabled state and transports.</p>
           </div>
           {dirty && (
             <span className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-100">
@@ -1553,7 +1444,7 @@ const RawJsonEditor = ({ value, onChange, onApply, onReset, onFormat, dirty, err
           )}
         </div>
         <p className="mt-3 text-[11px] text-slate-500">
-          Expecting an object keyed by server name: <code>{'{ "server-name": { config, enabled, tags, updatedAt } }'}</code>.
+          Expecting an object keyed by server name: <code>{'{ "server-name": { config, enabled, updatedAt } }'}</code>.
         </p>
       </div>
 
@@ -1613,9 +1504,6 @@ interface ServerModalProps {
   onSubmit: () => void;
   onFormat: () => void;
   onValidate: () => void;
-  tags: string[];
-  selectedTags: string[];
-  onToggleTag: (tag: string) => void;
 }
 
 const ServerModal = ({
@@ -1625,10 +1513,7 @@ const ServerModal = ({
   onClose,
   onSubmit,
   onFormat,
-  onValidate,
-  tags,
-  selectedTags,
-  onToggleTag
+  onValidate
 }: ServerModalProps) => {
   if (!open) return null;
 
@@ -1659,26 +1544,6 @@ const ServerModal = ({
               placeholder="Paste server configuration JSON here"
             />
           </label>
-
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Tags</p>
-            <p className="mt-2 text-xs text-slate-400">Optional: apply shared tags to every server in this batch.</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {tags.map(tag => (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => onToggleTag(tag)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition focus:outline-none focus:ring-2 focus:ring-sky-400/50 ${selectedTags.includes(tag)
-                    ? 'border border-sky-400 bg-sky-500/25 text-sky-100 shadow shadow-sky-500/30'
-                    : 'border border-white/10 bg-white/5 text-slate-300 hover:border-sky-400/40 hover:text-slate-100'
-                  }`}
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         <div className="flex flex-col gap-3 border-t border-white/5 px-8 py-6 sm:flex-row sm:items-center sm:justify-between">

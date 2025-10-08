@@ -29,7 +29,6 @@ export interface ServerModel {
   name: string;
   config: ServerConfig;
   enabled: boolean;
-  tags: string[];
   updatedAt: number;
 }
 

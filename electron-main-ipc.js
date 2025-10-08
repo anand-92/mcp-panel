@@ -110,11 +110,10 @@ ipcMain.handle('save-config', async (event, servers, configPath) => {
             config = JSON.parse(data);
         } catch (error) {
             // File doesn't exist - don't create it!
-            // User needs Claude Code installed first
             if (error.code === 'ENOENT') {
                 return {
                     success: false,
-                    error: 'Config file not found. Please ensure Claude Code is installed and has created your config file first.'
+                    error: 'Config file not found. Please create a config file at the specified location first.'
                 };
             }
             throw error;
@@ -152,7 +151,7 @@ ipcMain.handle('add-server', async (event, name, serverConfig, configPath) => {
             if (error.code === 'ENOENT') {
                 return {
                     success: false,
-                    error: 'Config file not found. Please ensure Claude Code is installed and has created your config file first.'
+                    error: 'Config file not found. Please create a config file at the specified location first.'
                 };
             }
             throw error;

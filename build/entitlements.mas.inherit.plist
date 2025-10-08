@@ -8,6 +8,10 @@
     <key>com.apple.security.app-sandbox</key>
     <true/>
 
+    <!-- Critical: Allow child processes to inherit parent entitlements -->
+    <key>com.apple.security.inherit</key>
+    <true/>
+
     <!-- Required for Electron renderer processes -->
     <key>com.apple.security.cs.allow-jit</key>
     <true/>

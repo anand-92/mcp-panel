@@ -20,7 +20,7 @@ MCP Server Manager ("the App") is committed to protecting your privacy. This Pri
 
 The App stores configuration data locally on your device:
 
-- **Configuration Files**: The App reads and writes to your Claude Code configuration file (typically located at `~/.claude.json`) as specified by you.
+- **Configuration Files**: The App reads and writes to your Claude configuration file (typically located at `~/.claude.json`) as specified by you.
 - **Local Profiles**: Any configuration profiles you create are stored locally in `~/.mcp-manager/` on your device.
 - **No Cloud Storage**: All data remains on your device. We do not have access to your files or configurations.
 
