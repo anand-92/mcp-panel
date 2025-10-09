@@ -6,7 +6,7 @@
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/nikhilanand/mcp-panel?style=for-the-badge)](https://github.com/anand-92/mcp-panel/releases/download/v1.2)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/nikhilanand/mcp-panel/build-dmg.yml?branch=main&style=for-the-badge)](https://github.com/nikhilanand/mcp-panel/actions)
 
-**[⬇️ Download MCP Server Manager for macOS](https://github.com/anand-92/mcp-panel/releases/download/v1.2/MCP-Server-Manager.dmg)**
+**[⬇️ Download MCP Server Manager for macOS](https://apps.apple.com/us/app/mcp-server-manager/id6753700883?mt=12)**
 
 </div>
 
