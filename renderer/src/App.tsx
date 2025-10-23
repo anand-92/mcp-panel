@@ -698,6 +698,28 @@ const App = (): JSX.Element => {
     notyfRef.current?.success('Configuration saved');
   }, [persistLocal, servers, syncServers]);
 
+  const handleToggleAllServers = useCallback(() => {
+    const allEnabled = Object.values(servers).every(server => server.enabled);
+    const shouldEnable = !allEnabled;
+
+    setServers(prev => {
+      const next: ServerMap = {};
+      const now = Date.now();
+
+      Object.entries(prev).forEach(([name, server]) => {
+        next[name] = {
+          ...server,
+          enabled: shouldEnable,
+          updatedAt: now
+        };
+      });
+
+      return next;
+    });
+
+    notyfRef.current?.success(`All servers ${shouldEnable ? 'enabled' : 'disabled'}`);
+  }, [servers]);
+
   const handleRawEditorChange = useCallback((value: string) => {
     setRawEditorValue(value);
     setRawEditorDirty(true);
@@ -890,6 +912,8 @@ const App = (): JSX.Element => {
               onFilterChange={setFilter}
               onRefresh={() => void loadServers()}
               onSave={handleManualSave}
+              onToggleAll={handleToggleAllServers}
+              allServersEnabled={Object.values(servers).every(server => server.enabled)}
             />
 
             <div className="glass-panel flex-1 overflow-hidden p-6">
@@ -1218,9 +1242,11 @@ interface ToolbarProps {
   onFilterChange: (mode: FilterMode) => void;
   onRefresh: () => void;
   onSave: () => void;
+  onToggleAll: () => void;
+  allServersEnabled: boolean;
 }
 
-const Toolbar = ({ viewMode, onViewChange, filter, onFilterChange, onRefresh, onSave }: ToolbarProps) => {
+const Toolbar = ({ viewMode, onViewChange, filter, onFilterChange, onRefresh, onSave, onToggleAll, allServersEnabled }: ToolbarProps) => {
   return (
     <div className="glass-panel flex flex-wrap items-center justify-between gap-4 p-5">
       <div className="flex flex-wrap items-center gap-3">
@@ -1260,6 +1286,10 @@ const Toolbar = ({ viewMode, onViewChange, filter, onFilterChange, onRefresh, on
       </div>
 
       <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2">
+          <span className="text-xs font-medium text-slate-300">Toggle All</span>
+          <ToggleSwitch active={allServersEnabled} onClick={onToggleAll} />
+        </div>
         <button
           type="button"
           onClick={onSave}
