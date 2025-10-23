@@ -43,36 +43,56 @@ const buildServerMapFromLocal = (
       name,
       config,
       enabled: false,
-      updatedAt: now
+      updatedAt: now,
+      inConfigs: [false, false]
     };
     return acc;
   }, {});
 };
 
-const mergeLocalWithRemote = (local: ServerMap, remote: Record<string, ServerConfig>): ServerMap => {
+const mergeServersFromConfigs = (
+  local: ServerMap,
+  config1Servers: Record<string, ServerConfig>,
+  config2Servers: Record<string, ServerConfig>
+): ServerMap => {
   const now = Date.now();
   const merged: ServerMap = {};
 
+  // Start with local servers
   Object.values(local).forEach(server => {
-    merged[server.name] = { ...server, enabled: false };
+    merged[server.name] = { ...server, inConfigs: [false, false] };
   });
 
-  Object.entries(remote).forEach(([name, config]) => {
+  // Add servers from config 1
+  Object.entries(config1Servers).forEach(([name, config]) => {
     const existing = merged[name];
     merged[name] = {
       name,
       config,
-      enabled: true,
-      updatedAt: existing?.updatedAt ?? now
+      enabled: existing?.enabled ?? false,
+      updatedAt: existing?.updatedAt ?? now,
+      inConfigs: [true, existing?.inConfigs[1] ?? false]
+    };
+  });
+
+  // Add servers from config 2
+  Object.entries(config2Servers).forEach(([name, config]) => {
+    const existing = merged[name];
+    merged[name] = {
+      name,
+      config: existing?.config ?? config, // Prefer existing config if already present
+      enabled: existing?.enabled ?? false,
+      updatedAt: existing?.updatedAt ?? now,
+      inConfigs: [existing?.inConfigs[0] ?? false, true]
     };
   });
 
   return merged;
 };
 
-const toEnabledServerConfigs = (map: ServerMap): Record<string, ServerConfig> => {
+const toEnabledServerConfigs = (map: ServerMap, configIndex: 0 | 1): Record<string, ServerConfig> => {
   return Object.entries(map).reduce<Record<string, ServerConfig>>((acc, [name, server]) => {
-    if (server.enabled) {
+    if (server.inConfigs[configIndex]) {
       acc[name] = server.config;
     }
     return acc;
@@ -91,7 +111,8 @@ const serializeServers = (map: ServerMap): Record<string, Omit<ServerModel, 'nam
     acc[name] = {
       config: server.config,
       enabled: server.enabled,
-      updatedAt: server.updatedAt
+      updatedAt: server.updatedAt,
+      inConfigs: server.inConfigs
     };
     return acc;
   }, {});
@@ -258,9 +279,9 @@ const App = (): JSX.Element => {
     let collection = serverArray;
 
     if (filter === 'active') {
-      collection = collection.filter(server => server.enabled);
+      collection = collection.filter(server => server.inConfigs[settings.activeConfigIndex]);
     } else if (filter === 'disabled') {
-      collection = collection.filter(server => !server.enabled);
+      collection = collection.filter(server => !server.inConfigs[settings.activeConfigIndex]);
     } else if (filter === 'recent') {
       collection = [...collection].sort((a, b) => b.updatedAt - a.updatedAt);
     }
@@ -271,7 +292,7 @@ const App = (): JSX.Element => {
     }
 
     return collection;
-  }, [serverArray, filter, searchQuery, fuse]);
+  }, [serverArray, filter, searchQuery, fuse, settings.activeConfigIndex]);
 
   const persistLocal = useCallback((map: ServerMap) => {
     localStorage.setItem('mcp-all-configs', JSON.stringify(toAllServerConfigs(map)));
@@ -280,7 +301,7 @@ const App = (): JSX.Element => {
   const syncServers = useCallback(async (map: ServerMap) => {
     try {
       const activeConfigPath = settings.configPaths[settings.activeConfigIndex];
-      await saveConfig(toEnabledServerConfigs(map), activeConfigPath);
+      await saveConfig(toEnabledServerConfigs(map, settings.activeConfigIndex), activeConfigPath);
       setStatus({ connected: true, message: shortPath(activeConfigPath) });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -349,15 +370,20 @@ const App = (): JSX.Element => {
           }));
         }
 
-        // Load servers from the active config
-        const activeConfigPath = activeIndex === 0 ? resolvedPath1 : resolvedPath2;
+        // Load servers from BOTH config files
         try {
-          const response = await fetchConfig(activeConfigPath ?? DEFAULT_CLAUDE_CONFIG_PATH);
-          const remoteServers = response.servers ?? {};
-          const merged = mergeLocalWithRemote(localMap, remoteServers);
+          const response1 = await fetchConfig(resolvedPath1 ?? DEFAULT_CLAUDE_CONFIG_PATH);
+          const config1Servers = response1.servers ?? {};
+
+          const response2 = await fetchConfig(resolvedPath2 ?? DEFAULT_SETTINGS_CONFIG_PATH);
+          const config2Servers = response2.servers ?? {};
+
+          const merged = mergeServersFromConfigs(localMap, config1Servers, config2Servers);
+
           if (!cancelled) {
             skipSyncRef.current = true;
             setServers(merged);
+            const activeConfigPath = activeIndex === 0 ? resolvedPath1 : resolvedPath2;
             setStatus({ connected: true, message: shortPath(activeConfigPath ?? DEFAULT_CLAUDE_CONFIG_PATH) });
           }
         } catch (error) {
@@ -481,38 +507,24 @@ const App = (): JSX.Element => {
     });
   }, [viewMode, searchQuery, rawEditorValue]);
 
-  const loadServers = useCallback(async ({ silent = false, path }: { silent?: boolean; path?: string } = {}) => {
-    const targetPath = path ?? settings.configPaths[settings.activeConfigIndex];
+  const loadServers = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     setLoading(true);
     setStatus({ connected: false, message: 'Loading...' });
 
     try {
-      const response = await fetchConfig(targetPath);
-      const remoteServers = response.servers ?? {};
+      const response1 = await fetchConfig(settings.configPaths[0]);
+      const config1Servers = response1.servers ?? {};
+
+      const response2 = await fetchConfig(settings.configPaths[1]);
+      const config2Servers = response2.servers ?? {};
 
       skipSyncRef.current = true;
       setServers(prev => {
-        const next: ServerMap = {};
-        const now = Date.now();
-
-        Object.values(prev).forEach(server => {
-          next[server.name] = { ...server, enabled: false };
-        });
-
-        Object.entries(remoteServers).forEach(([name, config]) => {
-          const existing = next[name];
-          next[name] = {
-            name,
-            config,
-            enabled: true,
-            updatedAt: existing?.updatedAt ?? now
-          };
-        });
-
-        return next;
+        return mergeServersFromConfigs(prev, config1Servers, config2Servers);
       });
 
-      setStatus({ connected: true, message: shortPath(targetPath) });
+      const activeConfigPath = settings.configPaths[settings.activeConfigIndex];
+      setStatus({ connected: true, message: shortPath(activeConfigPath) });
       if (!silent) {
         notyfRef.current?.success('Servers loaded successfully');
       }
@@ -538,29 +550,32 @@ const App = (): JSX.Element => {
 
   const handleToggleServer = useCallback((name: string) => {
     let changed = false;
-    let nextEnabled = false;
+    let nextInActiveConfig = false;
 
     setServers(prev => {
       const server = prev[name];
       if (!server) return prev;
 
       changed = true;
-      nextEnabled = !server.enabled;
+      const newInConfigs: [boolean, boolean] = [...server.inConfigs];
+      nextInActiveConfig = !newInConfigs[settings.activeConfigIndex];
+      newInConfigs[settings.activeConfigIndex] = nextInActiveConfig;
 
       return {
         ...prev,
         [name]: {
           ...server,
-          enabled: nextEnabled,
+          inConfigs: newInConfigs,
           updatedAt: Date.now()
         }
       };
     });
 
     if (changed) {
-      notyfRef.current?.success(`Server "${name}" ${nextEnabled ? 'enabled' : 'disabled'}`);
+      const configName = shortPath(settings.configPaths[settings.activeConfigIndex]);
+      notyfRef.current?.success(`Server "${name}" ${nextInActiveConfig ? 'added to' : 'removed from'} ${configName}`);
     }
-  }, []);
+  }, [settings.activeConfigIndex, settings.configPaths]);
 
   const handleDeleteServer = useCallback((name: string) => {
     if (settings.confirmDelete) {
@@ -601,11 +616,16 @@ const App = (): JSX.Element => {
       setServers(prev => {
         const next = { ...prev };
         Object.entries(entries).forEach(([name, config]) => {
+          const existing = next[name];
+          const newInConfigs: [boolean, boolean] = existing?.inConfigs ?? [false, false];
+          newInConfigs[settings.activeConfigIndex] = true;
+
           next[name] = {
             name,
             config,
-            enabled: true,
-            updatedAt: now
+            enabled: existing?.enabled ?? false,
+            updatedAt: now,
+            inConfigs: newInConfigs
           };
         });
         return next;
@@ -619,7 +639,7 @@ const App = (): JSX.Element => {
       const message = error instanceof Error ? error.message : String(error);
       notyfRef.current?.error(`Failed to add server: ${message}`);
     }
-  }, [serverModalJson, servers]);
+  }, [serverModalJson, servers, settings.activeConfigIndex]);
 
   const handleFormatJson = useCallback(() => {
     try {
@@ -667,11 +687,15 @@ const App = (): JSX.Element => {
           }
           importedCount += 1;
           const existing = next[name];
+          const newInConfigs: [boolean, boolean] = existing?.inConfigs ?? [false, false];
+          newInConfigs[settings.activeConfigIndex] = true;
+
           next[name] = {
             name,
             config,
-            enabled: true,
-            updatedAt: now
+            enabled: existing?.enabled ?? false,
+            updatedAt: now,
+            inConfigs: newInConfigs
           };
         });
         return next;
@@ -688,21 +712,21 @@ const App = (): JSX.Element => {
     } finally {
       event.target.value = '';
     }
-  }, []);
+  }, [settings.activeConfigIndex]);
 
   const handleExport = useCallback(() => {
-    const data = JSON.stringify({ mcpServers: toEnabledServerConfigs(servers) }, null, 2);
+    const data = JSON.stringify({ mcpServers: toEnabledServerConfigs(servers, settings.activeConfigIndex) }, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
 
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = 'mcp-servers-config.json';
+    anchor.download = `mcp-servers-${shortPath(settings.configPaths[settings.activeConfigIndex])}.json`;
     anchor.click();
 
     URL.revokeObjectURL(url);
     notyfRef.current?.success('Configuration exported');
-  }, [servers]);
+  }, [servers, settings.activeConfigIndex, settings.configPaths]);
 
   const handleContextMenu = useCallback((event: ReactMouseEvent, server: ServerModel) => {
     event.preventDefault();
@@ -775,12 +799,16 @@ const App = (): JSX.Element => {
 
         const enabled = typeof candidate.enabled === 'boolean' ? candidate.enabled : true;
         const updatedAt = typeof candidate.updatedAt === 'number' ? candidate.updatedAt : now;
+        const inConfigs: [boolean, boolean] = Array.isArray(candidate.inConfigs) && candidate.inConfigs.length === 2
+          ? [Boolean(candidate.inConfigs[0]), Boolean(candidate.inConfigs[1])]
+          : [false, false];
 
         next[name] = {
           name,
           config,
           enabled,
-          updatedAt
+          updatedAt,
+          inConfigs
         };
       });
 
@@ -874,12 +902,30 @@ const App = (): JSX.Element => {
       activeConfigIndex: 0
     }));
     setShowOnboarding(false);
-    await loadServers({ path: filePath, silent: true });
+
+    // Load from both configs
+    try {
+      const response1 = await fetchConfig(filePath);
+      const config1Servers = response1.servers ?? {};
+
+      const response2 = await fetchConfig(DEFAULT_SETTINGS_CONFIG_PATH);
+      const config2Servers = response2.servers ?? {};
+
+      const localConfigs = parseJSON<Record<string, ServerConfig>>(localStorage.getItem('mcp-all-configs'), {});
+      const localMap = buildServerMapFromLocal(localConfigs);
+      const merged = mergeServersFromConfigs(localMap, config1Servers, config2Servers);
+
+      skipSyncRef.current = true;
+      setServers(merged);
+    } catch (error) {
+      console.error('Failed to load configs:', error);
+    }
+
     setReady(true);
     notyfRef.current?.success('Configuration loaded successfully');
-  }, [loadServers]);
+  }, []);
 
-  const handleSwitchConfig = useCallback(async (index: 0 | 1) => {
+  const handleSwitchConfig = useCallback((index: 0 | 1) => {
     if (index === settings.activeConfigIndex) return;
 
     setSettings(prev => ({
@@ -887,9 +933,9 @@ const App = (): JSX.Element => {
       activeConfigIndex: index
     }));
 
-    await loadServers({ path: settings.configPaths[index], silent: true });
-    notyfRef.current?.success(`Switched to ${shortPath(settings.configPaths[index])}`);
-  }, [settings.activeConfigIndex, settings.configPaths, loadServers]);
+    setStatus({ connected: true, message: shortPath(settings.configPaths[index]) });
+    notyfRef.current?.success(`Now modifying ${shortPath(settings.configPaths[index])}`);
+  }, [settings.activeConfigIndex, settings.configPaths]);
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-[#070b1f] via-[#0f172a] to-[#05060f] text-slate-100">
@@ -953,6 +999,7 @@ const App = (): JSX.Element => {
                   onToggle={handleToggleServer}
                   onDelete={handleDeleteServer}
                   onContextMenu={handleContextMenu}
+                  activeConfigIndex={settings.activeConfigIndex}
                 />
               ) : (
                 <RawJsonEditor
@@ -1369,9 +1416,10 @@ interface ServerCollectionProps {
   onToggle: (name: string) => void;
   onDelete: (name: string) => void;
   onContextMenu: (event: ReactMouseEvent, server: ServerModel) => void;
+  activeConfigIndex: 0 | 1;
 }
 
-const ServerGrid = ({ servers, onToggle, onDelete, onContextMenu }: ServerCollectionProps) => {
+const ServerGrid = ({ servers, onToggle, onDelete, onContextMenu, activeConfigIndex }: ServerCollectionProps) => {
   return (
     <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       {servers.map(server => (
@@ -1381,7 +1429,21 @@ const ServerGrid = ({ servers, onToggle, onDelete, onContextMenu }: ServerCollec
           className="group glass-panel flex h-full flex-col gap-4 p-5 transition-all duration-200 hover:-translate-y-1.5 hover:border-sky-400/40 hover:shadow-sky-500/20"
         >
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold text-white line-clamp-2">{server.name}</h3>
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="text-lg font-semibold text-white line-clamp-2">{server.name}</h3>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {server.inConfigs[0] && (
+                  <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${activeConfigIndex === 0 ? 'bg-sky-500/30 text-sky-100 ring-1 ring-sky-400/50' : 'bg-slate-700/50 text-slate-400'}`}>
+                    1
+                  </span>
+                )}
+                {server.inConfigs[1] && (
+                  <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${activeConfigIndex === 1 ? 'bg-sky-500/30 text-sky-100 ring-1 ring-sky-400/50' : 'bg-slate-700/50 text-slate-400'}`}>
+                    2
+                  </span>
+                )}
+              </div>
+            </div>
             <p className="text-xs text-slate-400">{summarizeServerConfig(server.config)}</p>
           </div>
 
@@ -1390,7 +1452,7 @@ const ServerGrid = ({ servers, onToggle, onDelete, onContextMenu }: ServerCollec
           </pre>
 
           <div className="flex items-center justify-between gap-3">
-            <ToggleSwitch active={server.enabled} onClick={() => onToggle(server.name)} />
+            <ToggleSwitch active={server.inConfigs[activeConfigIndex]} onClick={() => onToggle(server.name)} />
             <button
               type="button"
               onClick={() => onDelete(server.name)}

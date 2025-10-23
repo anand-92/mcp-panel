@@ -30,6 +30,7 @@ export interface ServerModel {
   config: ServerConfig;
   enabled: boolean;
   updatedAt: number;
+  inConfigs: [boolean, boolean]; // [inConfig1, inConfig2]
 }
 
 export interface SettingsState {
