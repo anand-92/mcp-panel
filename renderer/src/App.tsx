@@ -562,6 +562,28 @@ const App = (): JSX.Element => {
     }
   }, [settings.confirmDelete]);
 
+  const handleUpdateServerConfig = useCallback((name: string, config: ServerConfig) => {
+    let updated = false;
+    setServers(prev => {
+      const server = prev[name];
+      if (!server) return prev;
+
+      updated = true;
+      return {
+        ...prev,
+        [name]: {
+          ...server,
+          config,
+          updatedAt: Date.now()
+        }
+      };
+    });
+
+    if (updated) {
+      notyfRef.current?.success(`Server "${name}" updated`);
+    }
+  }, []);
+
   const handleServerModalSubmit = useCallback(() => {
     try {
       const entries = extractServerEntries(serverModalJson);
@@ -906,6 +928,7 @@ const App = (): JSX.Element => {
                   onToggle={handleToggleServer}
                   onDelete={handleDeleteServer}
                   onContextMenu={handleContextMenu}
+                  onUpdateConfig={handleUpdateServerConfig}
                 />
               ) : (
                 <RawJsonEditor
@@ -1292,42 +1315,150 @@ interface ServerCollectionProps {
   onToggle: (name: string) => void;
   onDelete: (name: string) => void;
   onContextMenu: (event: ReactMouseEvent, server: ServerModel) => void;
+  onUpdateConfig?: (name: string, config: ServerConfig) => void;
 }
 
-const ServerGrid = ({ servers, onToggle, onDelete, onContextMenu }: ServerCollectionProps) => {
+const ServerGrid = ({ servers, onToggle, onDelete, onContextMenu, onUpdateConfig }: ServerCollectionProps) => {
+  const [editingServer, setEditingServer] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const handleStartEdit = (server: ServerModel) => {
+    setEditingServer(server.name);
+    setEditValue(JSON.stringify(server.config, null, 2));
+    setEditError(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingServer(null);
+    setEditValue('');
+    setEditError(null);
+  };
+
+  const handleSaveEdit = (serverName: string) => {
+    try {
+      const parsed = JSON.parse(editValue);
+      if (!isValidServerConfig(parsed)) {
+        throw new Error('Invalid server configuration');
+      }
+
+      if (onUpdateConfig) {
+        onUpdateConfig(serverName, parsed as ServerConfig);
+      }
+
+      setEditingServer(null);
+      setEditValue('');
+      setEditError(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setEditError(message);
+    }
+  };
+
+  const handleFormatEdit = () => {
+    try {
+      const parsed = JSON.parse(editValue);
+      setEditValue(JSON.stringify(parsed, null, 2));
+      setEditError(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setEditError(message);
+    }
+  };
+
   return (
     <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-      {servers.map(server => (
-        <div
-          key={server.name}
-          onContextMenu={event => onContextMenu(event, server)}
-          className="group glass-panel flex h-full flex-col gap-4 p-5 transition-all duration-200 hover:-translate-y-1.5 hover:border-sky-400/40 hover:shadow-sky-500/20"
-        >
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold text-white line-clamp-2">{server.name}</h3>
-            <p className="text-xs text-slate-400">{summarizeServerConfig(server.config)}</p>
-          </div>
+      {servers.map(server => {
+        const isEditing = editingServer === server.name;
 
-          <pre className="max-h-52 overflow-auto rounded-2xl border border-white/5 bg-slate-950/70 p-4 text-xs leading-relaxed text-slate-200 shadow-inner shadow-slate-950/60">
+        return (
+          <div
+            key={server.name}
+            onContextMenu={event => onContextMenu(event, server)}
+            className="group glass-panel flex h-full flex-col gap-4 p-5 transition-all duration-200 hover:-translate-y-1.5 hover:border-sky-400/40 hover:shadow-sky-500/20"
+          >
+            <div className="space-y-1">
+              <h3 className="text-lg font-semibold text-white line-clamp-2">{server.name}</h3>
+              <p className="text-xs text-slate-400">{summarizeServerConfig(server.config)}</p>
+            </div>
+
+            {isEditing ? (
+              <div className="flex flex-col gap-2">
+                {editError && (
+                  <div className="rounded-lg border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-[10px] text-rose-100">
+                    {editError}
+                  </div>
+                )}
+                <textarea
+                  value={editValue}
+                  onChange={e => setEditValue(e.target.value)}
+                  className="max-h-52 min-h-[200px] flex-1 rounded-2xl border border-sky-400/40 bg-slate-950/90 p-3 font-mono text-[11px] leading-relaxed text-slate-100 shadow-inner shadow-slate-950/60 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                  spellCheck={false}
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleFormatEdit}
+                    className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-slate-200 transition hover:border-sky-300/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                  >
+                    Format
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSaveEdit(server.name)}
+                    className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-emerald-500 to-sky-500 px-3 py-1 text-[11px] font-semibold text-white shadow-lg shadow-emerald-500/20 transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
+                  >
+                    <svg className="h-3 w-3" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z" />
+                    </svg>
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-slate-200 transition hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="relative flex-1">
+                  <pre className="max-h-52 overflow-auto rounded-2xl border border-white/5 bg-slate-950/70 p-4 text-xs leading-relaxed text-slate-200 shadow-inner shadow-slate-950/60">
 {JSON.stringify(server.config, null, 2)}
-          </pre>
+                  </pre>
+                  <button
+                    type="button"
+                    onClick={() => handleStartEdit(server)}
+                    className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-lg border border-sky-400/30 bg-sky-500/10 px-2 py-1 text-[10px] font-semibold text-sky-100 opacity-0 shadow-lg shadow-sky-500/10 transition-all group-hover:opacity-100 hover:bg-sky-500/20 focus:outline-none focus:ring-2 focus:ring-sky-400/50"
+                  >
+                    <svg className="h-3 w-3" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M11.013 1.427a1.75 1.75 0 012.474 0l1.086 1.086a1.75 1.75 0 010 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 01-.927-.928l.929-3.25a1.75 1.75 0 01.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 00-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 000-.354l-1.086-1.086zM11.189 6.25L9.75 4.81l-6.286 6.287a.25.25 0 00-.064.108l-.558 1.953 1.953-.558a.249.249 0 00.108-.064l6.286-6.286z" />
+                    </svg>
+                    Edit
+                  </button>
+                </div>
 
-          <div className="flex items-center justify-between gap-3">
-            <ToggleSwitch active={server.enabled} onClick={() => onToggle(server.name)} />
-            <button
-              type="button"
-              onClick={() => onDelete(server.name)}
-              className="inline-flex items-center gap-2 rounded-full border border-rose-400/40 bg-rose-500/10 px-4 py-1.5 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/20 focus:outline-none focus:ring-2 focus:ring-rose-400/40"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z" />
-                <path fillRule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
-              </svg>
-              Delete
-            </button>
+                <div className="flex items-center justify-between gap-3">
+                  <ToggleSwitch active={server.enabled} onClick={() => onToggle(server.name)} />
+                  <button
+                    type="button"
+                    onClick={() => onDelete(server.name)}
+                    className="inline-flex items-center gap-2 rounded-full border border-rose-400/40 bg-rose-500/10 px-4 py-1.5 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/20 focus:outline-none focus:ring-2 focus:ring-rose-400/40"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z" />
+                      <path fillRule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
+                    </svg>
+                    Delete
+                  </button>
+                </div>
+              </>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
