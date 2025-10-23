@@ -81,6 +81,13 @@ const toAllServerConfigs = (map: ServerMap): Record<string, ServerConfig> => {
   }, {});
 };
 
+const toRawServerConfigs = (map: ServerMap): Record<string, ServerConfig> => {
+  return Object.entries(map).reduce<Record<string, ServerConfig>>((acc, [name, server]) => {
+    acc[name] = server.config;
+    return acc;
+  }, {});
+};
+
 const serializeServers = (map: ServerMap): Record<string, Omit<ServerModel, 'name'>> => {
   return Object.entries(map).reduce<Record<string, Omit<ServerModel, 'name'>>>((acc, [name, server]) => {
     acc[name] = {
@@ -403,7 +410,7 @@ const App = (): JSX.Element => {
 
   useEffect(() => {
     if (viewMode === 'list' && previousViewModeRef.current !== 'list') {
-      const serialized = JSON.stringify(serializeServers(servers), null, 2);
+      const serialized = JSON.stringify(toRawServerConfigs(servers), null, 2);
       setRawEditorValue(serialized);
       setRawEditorDirty(false);
       setRawEditorError(null);
@@ -414,7 +421,7 @@ const App = (): JSX.Element => {
   useEffect(() => {
     if (viewMode !== 'list') return;
     if (rawEditorDirty) return;
-    const serialized = JSON.stringify(serializeServers(servers), null, 2);
+    const serialized = JSON.stringify(toRawServerConfigs(servers), null, 2);
     setRawEditorValue(serialized);
   }, [viewMode, servers, rawEditorDirty]);
 
@@ -727,7 +734,7 @@ const App = (): JSX.Element => {
   }, []);
 
   const handleRawEditorReset = useCallback(() => {
-    setRawEditorValue(JSON.stringify(serializeServers(servers), null, 2));
+    setRawEditorValue(JSON.stringify(toRawServerConfigs(servers), null, 2));
     setRawEditorDirty(false);
     setRawEditorError(null);
   }, [servers]);
@@ -766,15 +773,18 @@ const App = (): JSX.Element => {
           throw new Error(`Server "${name}" must be an object`);
         }
 
-        const candidate = value as Partial<ServerModel> & { config?: ServerConfig };
-        const config = candidate.config;
+        // Raw JSON view now shows just the config object, not wrapped
+        // Treat the value directly as the config
+        const config = value as ServerConfig;
 
         if (!isValidServerConfig(config)) {
           throw new Error(`Server "${name}" has an invalid config`);
         }
 
-        const enabled = typeof candidate.enabled === 'boolean' ? candidate.enabled : true;
-        const updatedAt = typeof candidate.updatedAt === 'number' ? candidate.updatedAt : now;
+        // Preserve existing enabled/updatedAt if the server exists, otherwise default to enabled
+        const existing = servers[name];
+        const enabled = existing ? existing.enabled : true;
+        const updatedAt = existing ? existing.updatedAt : now;
 
         next[name] = {
           name,
@@ -793,7 +803,7 @@ const App = (): JSX.Element => {
       setRawEditorError(message);
       notyfRef.current?.error(`Failed to apply JSON: ${message}`);
     }
-  }, [rawEditorValue]);
+  }, [rawEditorValue, servers]);
 
   useEffect(() => {
     if (!ready) return;
@@ -1565,7 +1575,7 @@ const RawJsonEditor = ({ value, onChange, onApply, onReset, onFormat, dirty, err
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-sm font-semibold text-white">Raw server JSON</h3>
-            <p className="text-xs text-slate-400">Edit the complete server map, including enabled state and transports.</p>
+            <p className="text-xs text-slate-400">Edit the raw MCP server configurations as they appear in the config file.</p>
           </div>
           {dirty && (
             <span className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-100">
@@ -1575,7 +1585,7 @@ const RawJsonEditor = ({ value, onChange, onApply, onReset, onFormat, dirty, err
           )}
         </div>
         <p className="mt-3 text-[11px] text-slate-500">
-          Expecting an object keyed by server name: <code>{'{ "server-name": { config, enabled, updatedAt } }'}</code>.
+          Expecting an object keyed by server name: <code>{'{ "server-name": { command: "...", args: [...], ... } }'}</code>.
         </p>
       </div>
 
