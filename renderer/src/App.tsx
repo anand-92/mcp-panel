@@ -4,9 +4,14 @@ import Fuse from 'fuse.js';
 import { Notyf } from 'notyf';
 import { fetchConfig, getConfigPath, saveConfig, testConfigPath } from './api';
 import type { FilterMode, ServerConfig, ServerModel, SettingsState, ViewMode } from './types';
-const DEFAULT_SETTINGS: SettingsState = { confirmDelete: true, cyberpunkMode: false };
 const DEFAULT_CLAUDE_CONFIG_PATH = '~/.claude.json';
-const DEFAULT_CONFIG_PATH = DEFAULT_CLAUDE_CONFIG_PATH;
+const DEFAULT_SETTINGS_CONFIG_PATH = '~/.settings.json';
+const DEFAULT_SETTINGS: SettingsState = {
+  confirmDelete: true,
+  cyberpunkMode: false,
+  configPaths: [DEFAULT_CLAUDE_CONFIG_PATH, DEFAULT_SETTINGS_CONFIG_PATH],
+  activeConfigIndex: 0
+};
 
 interface StatusState {
   connected: boolean;
@@ -203,7 +208,6 @@ const App = (): JSX.Element => {
   }
 
   const [servers, setServers] = useState<ServerMap>({});
-  const [configPath, setConfigPath] = useState<string>(DEFAULT_CONFIG_PATH);
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
   const [status, setStatus] = useState<StatusState>({ connected: false, message: 'Connecting...' });
   const [loading, setLoading] = useState<boolean>(true);
@@ -214,7 +218,8 @@ const App = (): JSX.Element => {
   const [serverModalJson, setServerModalJson] = useState('');
   const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState({
-    configPath: DEFAULT_CLAUDE_CONFIG_PATH,
+    configPath1: DEFAULT_CLAUDE_CONFIG_PATH,
+    configPath2: DEFAULT_SETTINGS_CONFIG_PATH,
     confirmDelete: true,
     cyberpunkMode: false
   });
@@ -274,14 +279,15 @@ const App = (): JSX.Element => {
 
   const syncServers = useCallback(async (map: ServerMap) => {
     try {
-      await saveConfig(toEnabledServerConfigs(map), configPath);
-      setStatus({ connected: true, message: shortPath(configPath) });
+      const activeConfigPath = settings.configPaths[settings.activeConfigIndex];
+      await saveConfig(toEnabledServerConfigs(map), activeConfigPath);
+      setStatus({ connected: true, message: shortPath(activeConfigPath) });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       notyfRef.current?.error(`Failed to save servers: ${message}`);
       setStatus({ connected: false, message: 'Save failed' });
     }
-  }, [configPath]);
+  }, [settings.configPaths, settings.activeConfigIndex]);
 
   useEffect(() => {
     let cancelled = false;
@@ -307,17 +313,28 @@ const App = (): JSX.Element => {
           return;
         }
 
-        const storedConfigPath = localStorage.getItem('mcp-configPath');
-        let resolvedPath = storedConfigPath;
+        // Load config paths from localStorage or use defaults
+        const storedConfigPath1 = localStorage.getItem('mcp-configPath1');
+        const storedConfigPath2 = localStorage.getItem('mcp-configPath2');
+        const storedActiveIndex = localStorage.getItem('mcp-activeConfigIndex');
 
-        if (!resolvedPath) {
+        let resolvedPath1 = storedConfigPath1;
+        let resolvedPath2 = storedConfigPath2;
+
+        if (!resolvedPath1) {
           try {
-            resolvedPath = await getConfigPath();
+            resolvedPath1 = await getConfigPath();
           } catch (error) {
             console.warn('Failed to resolve config path from bridge', error);
-            resolvedPath = DEFAULT_CONFIG_PATH;
+            resolvedPath1 = DEFAULT_CLAUDE_CONFIG_PATH;
           }
         }
+
+        if (!resolvedPath2) {
+          resolvedPath2 = DEFAULT_SETTINGS_CONFIG_PATH;
+        }
+
+        const activeIndex = storedActiveIndex ? parseInt(storedActiveIndex, 10) as 0 | 1 : 0;
 
         const localConfigs = parseJSON<Record<string, ServerConfig>>(localStorage.getItem('mcp-all-configs'), {});
         const localMap = buildServerMapFromLocal(localConfigs);
@@ -325,17 +342,23 @@ const App = (): JSX.Element => {
         if (!cancelled) {
           skipSyncRef.current = true;
           setServers(localMap);
-          setConfigPath(resolvedPath ?? DEFAULT_CONFIG_PATH);
+          setSettings(prev => ({
+            ...prev,
+            configPaths: [resolvedPath1 ?? DEFAULT_CLAUDE_CONFIG_PATH, resolvedPath2 ?? DEFAULT_SETTINGS_CONFIG_PATH],
+            activeConfigIndex: activeIndex
+          }));
         }
 
+        // Load servers from the active config
+        const activeConfigPath = activeIndex === 0 ? resolvedPath1 : resolvedPath2;
         try {
-          const response = await fetchConfig(resolvedPath ?? DEFAULT_CONFIG_PATH);
+          const response = await fetchConfig(activeConfigPath ?? DEFAULT_CLAUDE_CONFIG_PATH);
           const remoteServers = response.servers ?? {};
           const merged = mergeLocalWithRemote(localMap, remoteServers);
           if (!cancelled) {
             skipSyncRef.current = true;
             setServers(merged);
-            setStatus({ connected: true, message: shortPath(resolvedPath ?? DEFAULT_CONFIG_PATH) });
+            setStatus({ connected: true, message: shortPath(activeConfigPath ?? DEFAULT_CLAUDE_CONFIG_PATH) });
           }
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
@@ -371,12 +394,10 @@ const App = (): JSX.Element => {
   useEffect(() => {
     if (!ready) return;
     localStorage.setItem('mcp-settings', JSON.stringify(settings));
+    localStorage.setItem('mcp-configPath1', settings.configPaths[0]);
+    localStorage.setItem('mcp-configPath2', settings.configPaths[1]);
+    localStorage.setItem('mcp-activeConfigIndex', String(settings.activeConfigIndex));
   }, [settings, ready]);
-
-  useEffect(() => {
-    if (!ready) return;
-    localStorage.setItem('mcp-configPath', configPath);
-  }, [configPath, ready]);
 
   useEffect(() => {
     if (!ready) return;
@@ -461,7 +482,7 @@ const App = (): JSX.Element => {
   }, [viewMode, searchQuery, rawEditorValue]);
 
   const loadServers = useCallback(async ({ silent = false, path }: { silent?: boolean; path?: string } = {}) => {
-    const targetPath = path ?? configPath;
+    const targetPath = path ?? settings.configPaths[settings.activeConfigIndex];
     setLoading(true);
     setStatus({ connected: false, message: 'Loading...' });
 
@@ -502,17 +523,18 @@ const App = (): JSX.Element => {
     } finally {
       setLoading(false);
     }
-  }, [configPath]);
+  }, [settings.configPaths, settings.activeConfigIndex]);
 
   useEffect(() => {
     if (isSettingsModalOpen) {
       setSettingsDraft({
-        configPath,
+        configPath1: settings.configPaths[0],
+        configPath2: settings.configPaths[1],
         confirmDelete: settings.confirmDelete,
         cyberpunkMode: settings.cyberpunkMode
       });
     }
-  }, [isSettingsModalOpen, configPath, settings]);
+  }, [isSettingsModalOpen, settings]);
 
   const handleToggleServer = useCallback((name: string) => {
     let changed = false;
@@ -810,42 +832,64 @@ const App = (): JSX.Element => {
   }, [ready, handleManualSave, loadServers]);
 
   const handleTestConnection = useCallback(async () => {
-    const normalizedPath = settingsDraft.configPath.trim() || DEFAULT_CLAUDE_CONFIG_PATH;
+    const normalizedPath1 = settingsDraft.configPath1.trim() || DEFAULT_CLAUDE_CONFIG_PATH;
+    const normalizedPath2 = settingsDraft.configPath2.trim() || DEFAULT_SETTINGS_CONFIG_PATH;
     setTestingConnection(true);
     try {
-      const response = await testConfigPath(normalizedPath);
-      const count = Object.keys(response.servers ?? {}).length;
-      notyfRef.current?.success(`Connected! Found ${count} server${count === 1 ? '' : 's'}.`);
+      const response1 = await testConfigPath(normalizedPath1);
+      const count1 = Object.keys(response1.servers ?? {}).length;
+      const response2 = await testConfigPath(normalizedPath2);
+      const count2 = Object.keys(response2.servers ?? {}).length;
+      notyfRef.current?.success(`Config 1: ${count1} server${count1 === 1 ? '' : 's'}. Config 2: ${count2} server${count2 === 1 ? '' : 's'}.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       notyfRef.current?.error(`Connection failed: ${message}`);
     } finally {
       setTestingConnection(false);
     }
-  }, [settingsDraft.configPath]);
+  }, [settingsDraft.configPath1, settingsDraft.configPath2]);
 
   const handleSaveSettings = useCallback(() => {
-    const normalizedPath = settingsDraft.configPath.trim() || DEFAULT_CLAUDE_CONFIG_PATH;
+    const normalizedPath1 = settingsDraft.configPath1.trim() || DEFAULT_CLAUDE_CONFIG_PATH;
+    const normalizedPath2 = settingsDraft.configPath2.trim() || DEFAULT_SETTINGS_CONFIG_PATH;
 
-    setSettings({
+    setSettings(prev => ({
       confirmDelete: settingsDraft.confirmDelete,
-      cyberpunkMode: settingsDraft.cyberpunkMode
-    });
-    setConfigPath(normalizedPath);
+      cyberpunkMode: settingsDraft.cyberpunkMode,
+      configPaths: [normalizedPath1, normalizedPath2],
+      activeConfigIndex: prev.activeConfigIndex
+    }));
     setSettingsModalOpen(false);
     notyfRef.current?.success('Settings updated');
-    void loadServers({ path: normalizedPath });
+    void loadServers();
   }, [loadServers, settingsDraft]);
 
   const handleOnboardingComplete = useCallback(async (filePath: string) => {
     localStorage.setItem('mcp-config-selected', 'true');
-    localStorage.setItem('mcp-configPath', filePath);
-    setConfigPath(filePath);
+    localStorage.setItem('mcp-configPath1', filePath);
+    localStorage.setItem('mcp-configPath2', DEFAULT_SETTINGS_CONFIG_PATH);
+    setSettings(prev => ({
+      ...prev,
+      configPaths: [filePath, DEFAULT_SETTINGS_CONFIG_PATH],
+      activeConfigIndex: 0
+    }));
     setShowOnboarding(false);
     await loadServers({ path: filePath, silent: true });
     setReady(true);
     notyfRef.current?.success('Configuration loaded successfully');
   }, [loadServers]);
+
+  const handleSwitchConfig = useCallback(async (index: 0 | 1) => {
+    if (index === settings.activeConfigIndex) return;
+
+    setSettings(prev => ({
+      ...prev,
+      activeConfigIndex: index
+    }));
+
+    await loadServers({ path: settings.configPaths[index], silent: true });
+    notyfRef.current?.success(`Switched to ${shortPath(settings.configPaths[index])}`);
+  }, [settings.activeConfigIndex, settings.configPaths, loadServers]);
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-[#070b1f] via-[#0f172a] to-[#05060f] text-slate-100">
@@ -868,6 +912,9 @@ const App = (): JSX.Element => {
           onSearchChange={setSearchQuery}
           onOpenSettings={() => setSettingsModalOpen(true)}
           searchRef={searchInputRef}
+          configPaths={settings.configPaths}
+          activeConfigIndex={settings.activeConfigIndex}
+          onSwitchConfig={handleSwitchConfig}
         />
 
         <div className="mt-8 flex flex-1 flex-col gap-6 lg:flex-row">
@@ -1078,6 +1125,9 @@ interface HeaderProps {
   onSearchChange: (value: string) => void;
   onOpenSettings: () => void;
   searchRef: RefObject<HTMLInputElement>;
+  configPaths: [string, string];
+  activeConfigIndex: 0 | 1;
+  onSwitchConfig: (index: 0 | 1) => void;
 }
 
 const Header = ({
@@ -1086,7 +1136,10 @@ const Header = ({
   searchQuery,
   onSearchChange,
   onOpenSettings,
-  searchRef
+  searchRef,
+  configPaths,
+  activeConfigIndex,
+  onSwitchConfig
 }: HeaderProps) => {
   return (
     <header className="glass-panel flex flex-col gap-6 p-6 shadow-2xl lg:flex-row lg:items-center lg:justify-between">
@@ -1130,11 +1183,35 @@ const Header = ({
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
-        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-xs text-slate-200">
-          <span
-            className={`status-dot h-2.5 w-2.5 rounded-full shadow-sm shadow-emerald-400/40 ${status.connected ? 'bg-emerald-400' : 'bg-rose-400'}`}
-          />
-          <span className="font-medium tracking-wide">{status.message}</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onSwitchConfig(0)}
+            className={`flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-medium transition ${
+              activeConfigIndex === 0
+                ? 'border-sky-400/50 bg-sky-500/20 text-sky-100 shadow-lg shadow-sky-500/20'
+                : 'border-white/10 bg-white/5 text-slate-300 hover:border-sky-400/30 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            <span
+              className={`h-2.5 w-2.5 rounded-full shadow-sm ${status.connected && activeConfigIndex === 0 ? 'bg-emerald-400 shadow-emerald-400/40' : 'bg-slate-400'}`}
+            />
+            <span className="tracking-wide">{shortPath(configPaths[0])}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onSwitchConfig(1)}
+            className={`flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-medium transition ${
+              activeConfigIndex === 1
+                ? 'border-sky-400/50 bg-sky-500/20 text-sky-100 shadow-lg shadow-sky-500/20'
+                : 'border-white/10 bg-white/5 text-slate-300 hover:border-sky-400/30 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            <span
+              className={`h-2.5 w-2.5 rounded-full shadow-sm ${status.connected && activeConfigIndex === 1 ? 'bg-emerald-400 shadow-emerald-400/40' : 'bg-slate-400'}`}
+            />
+            <span className="tracking-wide">{shortPath(configPaths[1])}</span>
+          </button>
         </div>
         <button
           type="button"
@@ -1589,7 +1666,8 @@ interface SettingsModalProps {
   open: boolean;
   onClose: () => void;
   draft: {
-    configPath: string;
+    configPath1: string;
+    configPath2: string;
     confirmDelete: boolean;
     cyberpunkMode: boolean;
   };
@@ -1622,11 +1700,11 @@ const SettingsModal = ({ open, onClose, draft, onChangeDraft, onSave, onTestConn
         <div className="space-y-5 px-8 py-6 text-sm">
           <div className="space-y-4">
             <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Config Path</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Config Path 1</span>
               <div className="mt-2 flex gap-2">
                 <input
-                  value={draft.configPath}
-                  onChange={event => onChangeDraft({ ...draft, configPath: event.target.value })}
+                  value={draft.configPath1}
+                  onChange={event => onChangeDraft({ ...draft, configPath1: event.target.value })}
                   className="flex-1 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-2 text-sm text-slate-100 shadow-inner shadow-slate-950/50 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
                   placeholder="~/.claude.json"
                 />
@@ -1640,7 +1718,38 @@ const SettingsModal = ({ open, onClose, draft, onChangeDraft, onSave, onTestConn
                     try {
                       const result = await window.api.selectConfigFile();
                       if (!result.canceled && result.filePath) {
-                        onChangeDraft({ ...draft, configPath: result.filePath });
+                        onChangeDraft({ ...draft, configPath1: result.filePath });
+                      }
+                    } catch (error) {
+                      console.error('Failed to select file:', error);
+                    }
+                  }}
+                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-100 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                >
+                  Browse
+                </button>
+              </div>
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Config Path 2</span>
+              <div className="mt-2 flex gap-2">
+                <input
+                  value={draft.configPath2}
+                  onChange={event => onChangeDraft({ ...draft, configPath2: event.target.value })}
+                  className="flex-1 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-2 text-sm text-slate-100 shadow-inner shadow-slate-950/50 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                  placeholder="~/.settings.json"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!window.api?.selectConfigFile) {
+                      console.error('File picker not available in browser mode');
+                      return;
+                    }
+                    try {
+                      const result = await window.api.selectConfigFile();
+                      if (!result.canceled && result.filePath) {
+                        onChangeDraft({ ...draft, configPath2: result.filePath });
                       }
                     } catch (error) {
                       console.error('Failed to select file:', error);

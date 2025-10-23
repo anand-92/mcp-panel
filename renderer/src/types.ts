@@ -35,6 +35,8 @@ export interface ServerModel {
 export interface SettingsState {
   confirmDelete: boolean;
   cyberpunkMode: boolean;
+  configPaths: [string, string];
+  activeConfigIndex: 0 | 1;
 }
 
 export interface ConfigResponse {
