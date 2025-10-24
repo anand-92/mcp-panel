@@ -63,15 +63,9 @@ jobs:
         swift build -c release --arch arm64 --arch x86_64
 
     - name: Create .app bundle
-      env:
-        VERSION: ${{ github.ref_name }}
       run: |
-        # Extract version from tag or use default
-        if [[ "$VERSION" == appstore-v* ]]; then
-          VERSION_NUMBER="${VERSION#appstore-v}"
-        else
-          VERSION_NUMBER="2.0.0"
-        fi
+        # Auto-increment version based on run number
+        VERSION_NUMBER="2.0.${{ github.run_number }}"
 
         BUILD_DIR="MCPServerManager/build-appstore"
         APP_NAME="MCP Server Manager"
