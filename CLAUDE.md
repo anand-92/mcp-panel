@@ -55,7 +55,8 @@ All methods expect/return JSON objects shaped like Claude's `mcpServers` map.
 
 - `renderer/src/App.tsx`: React application shell + state management
 - `renderer/src/types.ts`: Shared renderer types
-- `renderer/src/api.ts`: Thin wrapper around `window.api`
+- `renderer/src/api.ts`: Wrapper for config operations (`getConfig`, `saveConfig`, `getConfigPath`, `testConfigPath`)
+- `renderer/src/global.d.ts`: TypeScript definitions for full `window.api` interface (includes profiles, server CRUD, etc.)
 - `electron-main-ipc.js`: Electron main process + IPC handlers
 - `preload.js`: Secure bridge exposing IPC calls to the renderer
 - `server.js`: Express API and static asset host for web mode
