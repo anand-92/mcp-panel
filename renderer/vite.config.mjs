@@ -12,7 +12,19 @@ export default defineConfig(() => {
     publicDir: false,
     build: {
       outDir: path.resolve(rootDir, 'dist'),
-      emptyOutDir: true
+      emptyOutDir: true,
+      minify: 'terser',
+      terserOptions: {
+        compress: {
+          drop_console: true,
+          drop_debugger: true
+        }
+      },
+      rollupOptions: {
+        output: {
+          manualChunks: undefined
+        }
+      }
     },
     server: {
       proxy: {
