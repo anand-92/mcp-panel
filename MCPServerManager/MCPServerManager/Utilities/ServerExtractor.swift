@@ -10,6 +10,7 @@ struct ServerExtractor {
         var normalized = raw.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // Handle JSON fragments: if it doesn't start with {, try wrapping it
+        // This includes cases like: "server-name": { ... } (missing outer braces)
         if !normalized.hasPrefix("{") {
             normalized = "{\(normalized)}"
         }

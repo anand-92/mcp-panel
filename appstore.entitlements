@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <!-- App identifier for TestFlight/App Store -->
+    <key>com.apple.application-identifier</key>
+    <string>NW6B3R27LQ.com.mcpmanager.app</string>
+    <key>com.apple.developer.team-identifier</key>
+    <string>NW6B3R27LQ</string>
+
     <!-- App Sandbox is REQUIRED for Mac App Store -->
     <key>com.apple.security.app-sandbox</key>
     <true/>

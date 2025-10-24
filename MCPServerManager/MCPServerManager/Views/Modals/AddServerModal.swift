@@ -3,6 +3,7 @@ import SwiftUI
 struct AddServerModal: View {
     @Binding var isPresented: Bool
     @ObservedObject var viewModel: ServerViewModel
+    @Environment(\.themeColors) private var themeColors
 
     @State private var jsonText: String = ""
     @State private var errorMessage: String = ""
@@ -79,28 +80,78 @@ struct AddServerModal: View {
 
             // Footer
             HStack(spacing: 12) {
-                Button("Format JSON") {
-                    formatJSON()
+                Button(action: formatJSON) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "text.alignleft")
+                        Text("Format JSON")
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.white.opacity(0.05))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                            )
+                    )
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.plain)
 
-                Button("Validate") {
-                    validateJSON()
+                Button(action: validateJSON) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.shield")
+                        Text("Validate")
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.white.opacity(0.05))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                            )
+                    )
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.plain)
 
                 Spacer()
 
-                Button("Cancel") {
+                Button(action: {
                     isPresented = false
+                }) {
+                    Text("Cancel")
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.white.opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                )
+                        )
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.plain)
 
-                Button("Add Servers") {
-                    addServers()
+                Button(action: addServers) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Add Servers")
+                    }
+                    .foregroundColor(Color(hex: "#1a1a1a"))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(themeColors.accentGradient)
+                    )
+                    .shadow(color: themeColors.primaryAccent.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.plain)
                 .disabled(jsonText.isEmpty)
+                .opacity(jsonText.isEmpty ? 0.5 : 1.0)
             }
             .padding(24)
         }
@@ -125,17 +176,26 @@ struct AddServerModal: View {
     }
 
     private func validateJSON() {
-        guard let data = jsonText.data(using: .utf8) else {
-            errorMessage = "Invalid text encoding"
+        // Use the same forgiving parser as addServers
+        guard let serverDict = ServerExtractor.extractServerEntries(from: jsonText) else {
+            errorMessage = "Could not parse JSON. Please check format."
             return
         }
 
-        do {
-            _ = try JSONDecoder().decode([String: ServerConfig].self, from: data)
-            errorMessage = ""
-        } catch {
-            errorMessage = "Validation failed: \(error.localizedDescription)"
+        guard !serverDict.isEmpty else {
+            errorMessage = "No servers found in JSON"
+            return
         }
+
+        // Check if any servers are invalid
+        let invalidServers = serverDict.filter { !$0.value.isValid }
+        if !invalidServers.isEmpty {
+            let names = invalidServers.map { $0.key }.joined(separator: ", ")
+            errorMessage = "Invalid server config(s): \(names)"
+            return
+        }
+
+        errorMessage = "✓ Valid! Found \(serverDict.count) server(s)"
     }
 
     private func addServers() {

@@ -21,7 +21,7 @@ echo ""
 APP_NAME="MCP Server Manager"
 BUNDLE_ID="com.mcpmanager.app"
 VERSION="2.0.0"
-BUILD_NUMBER="1"
+BUILD_NUMBER="2001"
 
 # Build directory
 BUILD_DIR="MCPServerManager/build-appstore"
@@ -54,6 +54,10 @@ cp MCPServerManager/icons/AppIcon.icns "$APP_PATH/Contents/Resources/AppIcon.icn
 echo "📄 Embedding provisioning profile..."
 cp embedded.provisionprofile "$APP_PATH/Contents/embedded.provisionprofile"
 
+# Remove quarantine attributes from all files
+echo "🧹 Removing quarantine attributes..."
+xattr -cr "$APP_PATH"
+
 # Create Info.plist
 cat > "$APP_PATH/Contents/Info.plist" << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -73,7 +77,7 @@ cat > "$APP_PATH/Contents/Info.plist" << 'EOF'
     <key>CFBundleShortVersionString</key>
     <string>2.0.0</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>2000</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>NSHighResolutionCapable</key>
