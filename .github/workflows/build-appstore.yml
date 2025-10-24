@@ -78,6 +78,9 @@ jobs:
         # Copy binary
         cp MCPServerManager/.build/release/MCPServerManager "$APP_PATH/Contents/MacOS/"
 
+        # Copy app icon
+        cp MCPServerManager/icons/AppIcon.icns "$APP_PATH/Contents/Resources/AppIcon.icns"
+
         # Copy provisioning profile
         cp embedded.provisionprofile "$APP_PATH/Contents/embedded.provisionprofile"
 
@@ -105,6 +108,8 @@ jobs:
             <string>13.0</string>
             <key>NSHighResolutionCapable</key>
             <true/>
+            <key>CFBundleIconFile</key>
+            <string>AppIcon</string>
             <key>LSApplicationCategoryType</key>
             <string>public.app-category.developer-tools</string>
             <key>NSHumanReadableCopyright</key>
@@ -144,8 +149,8 @@ jobs:
         APP_PATH="$BUILD_DIR/$APP_NAME.app"
         PKG_PATH="$BUILD_DIR/MCPServerManager-v${VERSION_NUMBER}.pkg"
 
-        # Find installer identity
-        INSTALLER_IDENTITY=$(security find-identity -v -p codesigning | grep "3rd Party Mac Developer Installer" | head -1 | awk -F'"' '{print $2}')
+        # Find installer identity (search all identities, not just codesigning)
+        INSTALLER_IDENTITY=$(security find-identity -v | grep "3rd Party Mac Developer Installer" | head -1 | awk -F'"' '{print $2}')
 
         echo "Creating PKG with: $INSTALLER_IDENTITY"
 

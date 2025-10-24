@@ -93,7 +93,7 @@ echo "✍️  Signing with App Store certificate..."
 
 # Find the signing identities
 APP_SIGNING_IDENTITY=$(security find-identity -v -p codesigning | grep "3rd Party Mac Developer Application" | head -1 | awk -F'"' '{print $2}')
-INSTALLER_IDENTITY=$(security find-identity -v -p codesigning | grep "3rd Party Mac Developer Installer" | head -1 | awk -F'"' '{print $2}')
+INSTALLER_IDENTITY=$(security find-identity -v | grep "3rd Party Mac Developer Installer" | head -1 | awk -F'"' '{print $2}')
 
 if [ -z "$APP_SIGNING_IDENTITY" ]; then
     echo "❌ Error: 3rd Party Mac Developer Application certificate not found in keychain"
