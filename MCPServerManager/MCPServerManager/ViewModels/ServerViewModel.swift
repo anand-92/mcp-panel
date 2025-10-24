@@ -383,17 +383,28 @@ class ServerViewModel: ObservableObject {
 
     // MARK: - Toast
 
+    private var toastTask: Task<Void, Never>?
+
     private func showToast(message: String, type: ToastType) {
+        // Cancel any existing toast timer
+        toastTask?.cancel()
+
         toastMessage = message
         toastType = type
         withAnimation {
             showToast = true
         }
 
-        Task {
-            try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
-            withAnimation {
-                showToast = false
+        toastTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
+                if !Task.isCancelled {
+                    withAnimation {
+                        showToast = false
+                    }
+                }
+            } catch {
+                // Task was cancelled, ignore
             }
         }
     }

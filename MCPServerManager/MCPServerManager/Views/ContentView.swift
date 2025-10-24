@@ -50,17 +50,20 @@ struct ContentView: View {
                 }
             }
 
-            // Toast notification
+            // Toast notification - positioned to not block UI
             if viewModel.showToast {
                 VStack {
                     Spacer()
                     HStack {
                         Spacer()
                         ToastView(message: viewModel.toastMessage, type: viewModel.toastType)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .transition(.move(edge: .trailing).combined(with: .opacity))
+                            .padding(.trailing, 20)
+                            .padding(.bottom, 80) // Keep away from bottom buttons
                     }
                 }
                 .animation(.spring(), value: viewModel.showToast)
+                .allowsHitTesting(false) // Let clicks pass through
             }
 
             // Onboarding overlay
