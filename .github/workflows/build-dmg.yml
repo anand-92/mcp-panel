@@ -62,7 +62,7 @@ jobs:
         EOF
 
     - name: Code sign (if secrets available)
-      if: ${{ secrets.MAC_CERTS != '' }}
+      if: secrets.MAC_CERTS != ''
       working-directory: MCPServerManager/build
       env:
         CSC_LINK: ${{ secrets.MAC_CERTS }}
