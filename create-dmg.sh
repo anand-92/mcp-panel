@@ -56,7 +56,7 @@ tell application "Finder"
         set viewOptions to the icon view options of container window
         set arrangement of viewOptions to not arranged
         set icon size of viewOptions to 100
-        set position of item "MCP Server Manager.app" of container window to {130, 150}
+        set position of item "MCP-Server-Manager.app" of container window to {130, 150}
         set position of item "Applications" of container window to {390, 150}
         close
         open
