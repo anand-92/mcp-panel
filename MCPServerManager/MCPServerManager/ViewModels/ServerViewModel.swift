@@ -34,10 +34,14 @@ class ServerViewModel: ObservableObject {
 
     init() {
         loadSettings()
-        loadServers()
 
         // Show onboarding if first time
         showOnboarding = !UserDefaults.standard.hasCompletedOnboarding
+
+        // Only load servers if onboarding is complete
+        if !showOnboarding {
+            loadServers()
+        }
     }
 
     // MARK: - Filtering & Searching

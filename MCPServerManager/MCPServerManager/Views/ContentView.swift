@@ -1,10 +1,13 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @StateObject private var viewModel = ServerViewModel()
     @State private var showSettings = false
     @State private var showAddServer = false
     @State private var showQuickActions = false
+    @State private var showImporter = false
+    @State private var showExporter = false
 
     var body: some View {
         ZStack {
@@ -110,6 +113,8 @@ struct ContentView: View {
                     QuickActionsMenu(
                         viewModel: viewModel,
                         showAddServer: $showAddServer,
+                        showImporter: $showImporter,
+                        showExporter: $showExporter,
                         isExpanded: $showQuickActions
                     )
                 }
@@ -144,9 +149,43 @@ struct ContentView: View {
         .environment(\.currentTheme, viewModel.currentTheme)
         .windowOpacity(viewModel.settings.windowOpacity)
         .frame(minWidth: 900, minHeight: 600)
+        .fileImporter(
+            isPresented: $showImporter,
+            allowedContentTypes: [.json],
+            onCompletion: handleImport
+        )
+        .fileExporter(
+            isPresented: $showExporter,
+            document: JSONDocument(content: viewModel.exportServers()),
+            contentType: .json,
+            defaultFilename: "mcp-servers.json"
+        ) { result in
+            if case .success = result {
+                // Success
+            }
+        }
     }
-}
 
-#Preview {
-    ContentView()
+    private func handleImport(_ result: Result<URL, Error>) {
+        switch result {
+        case .success(let url):
+            let accessing = url.startAccessingSecurityScopedResource()
+            defer {
+                if accessing {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            do {
+                let data = try Data(contentsOf: url)
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    viewModel.addServers(from: jsonString)
+                }
+            } catch {
+                print("ERROR: Import error: \(error)")
+            }
+        case .failure(let error):
+            print("ERROR: File picker error: \(error)")
+        }
+    }
 }

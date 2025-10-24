@@ -4,9 +4,9 @@ import UniformTypeIdentifiers
 struct QuickActionsMenu: View {
     @ObservedObject var viewModel: ServerViewModel
     @Binding var showAddServer: Bool
+    @Binding var showImporter: Bool
+    @Binding var showExporter: Bool
     @Binding var isExpanded: Bool
-    @State private var showImporter = false
-    @State private var showExporter = false
     @Environment(\.themeColors) private var themeColors
 
     var body: some View {
@@ -66,49 +66,11 @@ struct QuickActionsMenu: View {
         .frame(width: 220, alignment: .leading)
         .padding(.top, 60)
         .padding(.leading, 14)
-        .fileImporter(
-            isPresented: $showImporter,
-            allowedContentTypes: [.json],
-            onCompletion: handleImport
-        )
-        .fileExporter(
-            isPresented: $showExporter,
-            document: JSONDocument(content: viewModel.exportServers()),
-            contentType: .json,
-            defaultFilename: "mcp-servers.json"
-        ) { result in
-            if case .success = result {
-                // Success
-            }
-        }
     }
 
     private func openRegistry() {
         if let url = URL(string: AppConstants.mcpRegistryURL) {
             NSWorkspace.shared.open(url)
-        }
-    }
-
-    private func handleImport(_ result: Result<URL, Error>) {
-        switch result {
-        case .success(let url):
-            let accessing = url.startAccessingSecurityScopedResource()
-            defer {
-                if accessing {
-                    url.stopAccessingSecurityScopedResource()
-                }
-            }
-
-            do {
-                let data = try Data(contentsOf: url)
-                if let jsonString = String(data: data, encoding: .utf8) {
-                    viewModel.addServers(from: jsonString)
-                }
-            } catch {
-                print("ERROR: Import error: \(error)")
-            }
-        case .failure(let error):
-            print("ERROR: File picker error: \(error)")
         }
     }
 }

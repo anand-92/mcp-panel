@@ -32,30 +32,24 @@ struct OnboardingModal: View {
                 }
 
                 // Info panel
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: "info.circle.fill")
-                            .foregroundColor(.blue)
-                            .font(DesignTokens.Typography.title3)
+                VStack(spacing: 12) {
+                    Text("Your Claude Code config is typically located at:")
+                        .font(DesignTokens.Typography.body)
+                        .multilineTextAlignment(.center)
 
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Your Claude Code config is typically located at:")
-                                .font(DesignTokens.Typography.body)
+                    Text("~/.claude.json")
+                        .font(DesignTokens.Typography.codeLarge)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.black.opacity(0.3))
+                        )
 
-                            Text("~/.claude.json")
-                                .font(DesignTokens.Typography.codeLarge)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(Color.black.opacity(0.3))
-                                )
-
-                            Text("If you don't see hidden files, press ⌘⇧. (Command+Shift+Period)")
-                                .font(DesignTokens.Typography.bodySmall)
-                                .foregroundColor(.secondary)
-                        }
-                    }
+                    Text("If you don't see hidden files, press ⌘⇧. (Command+Shift+Period)")
+                        .font(DesignTokens.Typography.bodySmall)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
                 }
                 .padding(16)
                 .background(
@@ -100,7 +94,7 @@ struct OnboardingModal: View {
                                 RoundedRectangle(cornerRadius: 12)
                                     .fill(themeColors.accentGradient)
                             )
-                            .foregroundColor(themeColors.primaryText)
+                            .foregroundColor(Color(hex: "#0b0e14"))
                     }
                     .buttonStyle(.plain)
 
