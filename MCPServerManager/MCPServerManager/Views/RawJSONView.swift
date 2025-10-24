@@ -97,11 +97,21 @@ struct RawJSONView: View {
         .onAppear {
             jsonText = serversToJSON()
         }
+        .onChange(of: viewModel.filterMode) { _ in
+            if !isDirty {
+                jsonText = serversToJSON()
+            }
+        }
+        .onChange(of: viewModel.searchText) { _ in
+            if !isDirty {
+                jsonText = serversToJSON()
+            }
+        }
     }
 
     private func serversToJSON() -> String {
-        let activeServers = viewModel.servers
-            .filter { $0.inConfigs[safe: viewModel.settings.activeConfigIndex] ?? false }
+        // Use filteredServers to respect search and filter mode
+        let filteredServers = viewModel.filteredServers
             .reduce(into: [String: ServerConfig]()) { result, server in
                 result[server.name] = server.config
             }
@@ -109,7 +119,7 @@ struct RawJSONView: View {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
 
-        guard let data = try? encoder.encode(activeServers),
+        guard let data = try? encoder.encode(filteredServers),
               let string = String(data: data, encoding: .utf8) else {
             return "{}"
         }
