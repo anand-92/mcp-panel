@@ -57,12 +57,15 @@ struct ContentView: View {
                     HStack {
                         Spacer()
                         ToastView(message: viewModel.toastMessage, type: viewModel.toastType)
-                            .transition(.move(edge: .trailing).combined(with: .opacity))
                             .padding(.trailing, 20)
                             .padding(.bottom, 80) // Keep away from bottom buttons
                     }
                 }
-                .animation(.spring(), value: viewModel.showToast)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                    removal: .move(edge: .trailing).combined(with: .opacity)
+                ))
+                .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.showToast)
                 .allowsHitTesting(false) // Let clicks pass through
             }
 
