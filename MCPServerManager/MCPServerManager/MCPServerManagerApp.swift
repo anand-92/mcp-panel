@@ -8,7 +8,7 @@ struct MCPServerManagerApp: App {
         WindowGroup {
             ContentView()
                 .preferredColorScheme(.dark)
-                .environment(\.sizeCategory, .accessibilityMedium)
+                .environment(\.sizeCategory, .accessibilityLarge)
                 .onAppear {
                     // Ensure window accepts keyboard input
                     NSApp.activate(ignoringOtherApps: true)
