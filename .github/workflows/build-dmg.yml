@@ -35,6 +35,9 @@ jobs:
         # Copy binary
         cp .build/release/MCPServerManager build/MCP-Server-Manager.app/Contents/MacOS/
 
+        # Copy app icon
+        cp icons/AppIcon.icns build/MCP-Server-Manager.app/Contents/Resources/AppIcon.icns
+
         # Create Info.plist
         cat > build/MCP-Server-Manager.app/Contents/Info.plist << 'EOF'
         <?xml version="1.0" encoding="UTF-8"?>
@@ -57,6 +60,8 @@ jobs:
             <string>13.0</string>
             <key>NSHighResolutionCapable</key>
             <true/>
+            <key>CFBundleIconFile</key>
+            <string>AppIcon</string>
         </dict>
         </plist>
         EOF

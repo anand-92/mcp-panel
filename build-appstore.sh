@@ -46,6 +46,10 @@ mkdir -p "$APP_PATH/Contents/Resources"
 # Copy binary
 cp MCPServerManager/.build/release/MCPServerManager "$APP_PATH/Contents/MacOS/"
 
+# Copy app icon
+echo "🎨 Adding app icon..."
+cp MCPServerManager/icons/AppIcon.icns "$APP_PATH/Contents/Resources/AppIcon.icns"
+
 # Copy provisioning profile
 echo "📄 Embedding provisioning profile..."
 cp embedded.provisionprofile "$APP_PATH/Contents/embedded.provisionprofile"
@@ -74,6 +78,8 @@ cat > "$APP_PATH/Contents/Info.plist" << 'EOF'
     <string>13.0</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.developer-tools</string>
     <key>NSHumanReadableCopyright</key>
