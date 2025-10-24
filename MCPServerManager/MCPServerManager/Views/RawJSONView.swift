@@ -117,7 +117,7 @@ struct RawJSONView: View {
             }
 
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
 
         guard let data = try? encoder.encode(filteredServers),
               let string = String(data: data, encoding: .utf8) else {
