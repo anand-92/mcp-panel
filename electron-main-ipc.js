@@ -323,8 +323,8 @@ ipcMain.handle('fetch-registry', async (event, options = {}) => {
 
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 1200,
-        height: 800,
+        width: 1440,
+        height: 900,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,

@@ -302,8 +302,8 @@ const App = (): JSX.Element => {
   }, [serverArray, filter, searchQuery, fuse, settings.activeConfigIndex]);
 
   const allServersEnabled = useMemo(() => {
-    return Object.values(servers).every(server => server.enabled);
-  }, [servers]);
+    return Object.values(servers).every(server => server.inConfigs[settings.activeConfigIndex]);
+  }, [servers, settings.activeConfigIndex]);
 
   const persistLocal = useCallback((map: ServerMap) => {
     localStorage.setItem('mcp-all-configs', JSON.stringify(toAllServerConfigs(map)));
@@ -710,34 +710,48 @@ const App = (): JSX.Element => {
 
       const entries = imported as Record<string, ServerConfig>;
       const now = Date.now();
-      let importedCount = 0;
 
-      setServers(prev => {
-        const next = { ...prev };
-        Object.entries(entries).forEach(([name, config]) => {
-          if (!isValidServerConfig(config)) {
-            return;
-          }
-          importedCount += 1;
-          const existing = next[name];
-          const newInConfigs: [boolean, boolean] = existing?.inConfigs ?? [false, false];
-          newInConfigs[settings.activeConfigIndex] = true;
+      // Pre-validate all servers before importing
+      const validServers: Array<[string, ServerConfig]> = [];
+      const invalidServers: string[] = [];
 
-          next[name] = {
-            name,
-            config,
-            enabled: existing?.enabled ?? false,
-            updatedAt: now,
-            inConfigs: newInConfigs
-          };
-        });
-        return next;
+      Object.entries(entries).forEach(([name, config]) => {
+        if (isValidServerConfig(config)) {
+          validServers.push([name, config]);
+        } else {
+          invalidServers.push(name);
+        }
       });
 
-      if (importedCount > 0) {
-        notyfRef.current?.success(`Imported ${importedCount} server${importedCount > 1 ? 's' : ''}`);
+      // Import valid servers
+      if (validServers.length > 0) {
+        setServers(prev => {
+          const next = { ...prev };
+          validServers.forEach(([name, config]) => {
+            const existing = next[name];
+            const newInConfigs: [boolean, boolean] = existing?.inConfigs ?? [false, false];
+            newInConfigs[settings.activeConfigIndex] = true;
+
+            next[name] = {
+              name,
+              config,
+              enabled: existing?.enabled ?? false,
+              updatedAt: now,
+              inConfigs: newInConfigs
+            };
+          });
+          return next;
+        });
+
+        const successMsg = `Imported ${validServers.length} server${validServers.length > 1 ? 's' : ''}`;
+        if (invalidServers.length > 0) {
+          notyfRef.current?.success(`${successMsg} (${invalidServers.length} skipped: ${invalidServers.slice(0, 3).join(', ')}${invalidServers.length > 3 ? '...' : ''})`);
+        } else {
+          notyfRef.current?.success(successMsg);
+        }
       } else {
-        notyfRef.current?.error('No valid servers found in file');
+        const failedList = invalidServers.slice(0, 5).join(', ') + (invalidServers.length > 5 ? '...' : '');
+        notyfRef.current?.error(`No valid servers found. Failed: ${failedList}. Each server must have 'command', 'transport', or 'remotes' field.`);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -785,9 +799,12 @@ const App = (): JSX.Element => {
       const now = Date.now();
 
       Object.entries(prev).forEach(([name, server]) => {
+        const newInConfigs: [boolean, boolean] = [...server.inConfigs];
+        newInConfigs[settings.activeConfigIndex] = shouldEnable;
+
         next[name] = {
           ...server,
-          enabled: shouldEnable,
+          inConfigs: newInConfigs,
           updatedAt: now
         };
       });
@@ -795,8 +812,9 @@ const App = (): JSX.Element => {
       return next;
     });
 
-    notyfRef.current?.success(`All servers ${shouldEnable ? 'enabled' : 'disabled'}`);
-  }, [allServersEnabled]);
+    const configName = shortPath(settings.configPaths[settings.activeConfigIndex]);
+    notyfRef.current?.success(`All servers ${shouldEnable ? 'added to' : 'removed from'} ${configName}`);
+  }, [allServersEnabled, settings.activeConfigIndex, settings.configPaths]);
 
   const handleRawEditorChange = useCallback((value: string) => {
     setRawEditorValue(value);
@@ -1447,7 +1465,7 @@ const Toolbar = ({ viewMode, onViewChange, filter, onFilterChange, onRefresh, on
 
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2">
-          <span className="text-xs font-medium text-slate-300">Toggle All</span>
+          <span className="text-xs font-medium text-slate-300">{allServersEnabled ? 'Disable All Servers' : 'Enable All Servers'}</span>
           <ToggleSwitch active={allServersEnabled} onClick={onToggleAll} />
         </div>
         <button

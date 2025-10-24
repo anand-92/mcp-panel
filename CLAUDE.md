@@ -2,9 +2,17 @@
 
 Guidance for Claude Code when working in this repository.
 
+## ⚠️ CRITICAL: THIS IS FOR CLAUDE CODE, NOT CLAUDE DESKTOP ⚠️
+
+**CLAUDE CODE** = The CLI tool for developers (uses ~/.claude.json config)
+**CLAUDE DESKTOP** = The consumer desktop app (different product, different config)
+
+THIS APP MANAGES MCP SERVERS FOR **CLAUDE CODE** AND **GEMINI CLI** ONLY.
+NEVER mention "Claude Desktop" in any user-facing text, descriptions, or documentation.
+
 ## Project Overview
 
-MCP Server Manager is a desktop + web companion for managing Claude MCP server definitions. The project now uses a React + Tailwind renderer (Vite) that is shared between the Electron shell and an Express web host.
+MCP Server Manager is a desktop + web companion for managing CLAUDE CODE and GEMINI CLI MCP server definitions. The project now uses a React + Tailwind renderer (Vite) that is shared between the Electron shell and an Express web host.
 
 ## Commands
 
