@@ -42,6 +42,7 @@ struct ServerCardView: View {
                             .scrollContentBackground(.hidden)
                             .background(Color.black.opacity(0.3))
                             .cornerRadius(8)
+                            .focusable(true)
 
                         HStack {
                             Button("Format") {

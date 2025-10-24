@@ -59,6 +59,7 @@ struct AddServerModal: View {
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(Color.white.opacity(0.1), lineWidth: 1)
                         )
+                        .focusable(true)
 
                     if !errorMessage.isEmpty {
                         HStack {

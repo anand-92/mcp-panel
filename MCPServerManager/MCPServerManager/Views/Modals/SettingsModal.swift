@@ -53,6 +53,7 @@ struct SettingsModal: View {
                         HStack {
                             TextField("~/.claude.json", text: $config1Path)
                                 .textFieldStyle(.roundedBorder)
+                                .focusable(true)
 
                             Button("Browse") {
                                 selectConfigFile { path in
@@ -72,6 +73,7 @@ struct SettingsModal: View {
                         HStack {
                             TextField("~/.settings.json", text: $config2Path)
                                 .textFieldStyle(.roundedBorder)
+                                .focusable(true)
 
                             Button("Browse") {
                                 selectConfigFile { path in

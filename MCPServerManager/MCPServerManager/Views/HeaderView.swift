@@ -34,6 +34,7 @@ struct HeaderView: View {
                 TextField("Search servers... (⌘F)", text: $viewModel.searchText)
                     .textFieldStyle(.plain)
                     .frame(width: 250)
+                    .focusable(true)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)

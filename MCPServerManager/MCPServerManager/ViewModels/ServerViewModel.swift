@@ -168,7 +168,10 @@ class ServerViewModel: ObservableObject {
     }
 
     func syncToConfigs() {
-        guard !skipSync else { return }
+        guard !skipSync else {
+            print("DEBUG: Skipping sync")
+            return
+        }
 
         Task {
             do {
@@ -180,13 +183,19 @@ class ServerViewModel: ObservableObject {
                     .filter { $0.isInConfig2 }
                     .reduce(into: [String: ServerConfig]()) { $0[$1.name] = $1.config }
 
+                print("DEBUG: Syncing - Config1: \(config1Servers.count) servers, Config2: \(config2Servers.count) servers")
+
                 try configManager.writeConfig(servers: config1Servers, to: settings.config1Path)
                 try configManager.writeConfig(servers: config2Servers, to: settings.config2Path)
 
                 // Update cache
-                UserDefaults.standard.cachedServers = servers
+                await MainActor.run {
+                    UserDefaults.standard.cachedServers = servers
+                }
             } catch {
-                showToast(message: "Failed to save: \(error.localizedDescription)", type: .error)
+                await MainActor.run {
+                    showToast(message: "Failed to save: \(error.localizedDescription)", type: .error)
+                }
             }
         }
     }
@@ -199,20 +208,59 @@ class ServerViewModel: ObservableObject {
                 throw NSError(domain: "Invalid JSON", code: -1)
             }
 
-            let serverDict = try JSONDecoder().decode([String: ServerConfig].self, from: data)
+            // Try to parse - check for mcpServers wrapper FIRST
+            var serverDict: [String: ServerConfig]?
 
-            for (name, config) in serverDict {
+            // Try format 1: Full config with mcpServers wrapper (most common)
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let mcpServers = json["mcpServers"] as? [String: Any] {
+                print("DEBUG: Found mcpServers wrapper, extracting...")
+                let mcpData = try JSONSerialization.data(withJSONObject: mcpServers)
+                serverDict = try JSONDecoder().decode([String: ServerConfig].self, from: mcpData)
+            }
+            // Try format 2: Direct server dictionary
+            else if let direct = try? JSONDecoder().decode([String: ServerConfig].self, from: data) {
+                print("DEBUG: Parsed as direct server dictionary")
+                serverDict = direct
+            }
+            // Unrecognized format
+            else {
+                throw NSError(domain: "Unrecognized JSON format", code: -1, userInfo: [
+                    NSLocalizedDescriptionKey: "Expected either {\"name\": {...}} or {\"mcpServers\": {\"name\": {...}}}"
+                ])
+            }
+
+            guard let servers = serverDict, !servers.isEmpty else {
+                showToast(message: "No servers found in JSON", type: .warning)
+                print("DEBUG: Parsed dictionary is empty")
+                return
+            }
+
+            print("DEBUG: Found \(servers.count) servers in JSON")
+
+            var addedCount = 0
+            var invalidCount = 0
+
+            for (name, config) in servers {
+                print("DEBUG: Processing server '\(name)'...")
+                print("DEBUG: Config valid: \(config.isValid)")
+                print("DEBUG: Has command: \(config.command != nil)")
+                print("DEBUG: Has transport: \(config.transport != nil)")
+                print("DEBUG: Has remotes: \(config.remotes != nil)")
+
                 guard config.isValid else {
-                    showToast(message: "Invalid config for \(name)", type: .error)
+                    print("DEBUG: Skipping invalid config for \(name)")
+                    invalidCount += 1
                     continue
                 }
 
-                if let index = servers.firstIndex(where: { $0.name == name }) {
-                    var updatedServer = servers[index]
+                if let index = self.servers.firstIndex(where: { $0.name == name }) {
+                    var updatedServer = self.servers[index]
                     updatedServer.config = config
                     updatedServer.updatedAt = Date()
                     updatedServer.inConfigs[settings.activeConfigIndex] = true
-                    servers[index] = updatedServer
+                    self.servers[index] = updatedServer
+                    print("DEBUG: Updated existing server '\(name)'")
                 } else {
                     var inConfigs = [false, false]
                     inConfigs[settings.activeConfigIndex] = true
@@ -223,14 +271,32 @@ class ServerViewModel: ObservableObject {
                         updatedAt: Date(),
                         inConfigs: inConfigs
                     )
-                    servers.append(newServer)
+                    self.servers.append(newServer)
+                    print("DEBUG: Added new server '\(name)'")
                 }
+                addedCount += 1
             }
 
-            servers.sort { $0.name < $1.name }
+            self.servers.sort { $0.name < $1.name }
+
+            // Force UI update
+            objectWillChange.send()
+
+            // Sync to files
             syncToConfigs()
-            showToast(message: "Added \(serverDict.count) server(s)", type: .success)
+
+            if invalidCount > 0 {
+                showToast(message: "Added \(addedCount) server(s), skipped \(invalidCount) invalid", type: .warning)
+            } else {
+                showToast(message: "Added \(addedCount) server(s)", type: .success)
+            }
+
+            print("DEBUG: Total servers now: \(self.servers.count)")
+            print("DEBUG: Filtered servers: \(filteredServers.count)")
+            print("DEBUG: Active config index: \(settings.activeConfigIndex)")
+            print("DEBUG: Filter mode: \(filterMode)")
         } catch {
+            print("DEBUG: Error parsing JSON: \(error)")
             showToast(message: "Invalid JSON: \(error.localizedDescription)", type: .error)
         }
     }

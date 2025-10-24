@@ -92,16 +92,27 @@ struct SidebarView: View {
     private func handleImport(_ result: Result<URL, Error>) {
         switch result {
         case .success(let url):
+            // Start accessing security-scoped resource
+            let accessing = url.startAccessingSecurityScopedResource()
+            defer {
+                if accessing {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
             do {
                 let data = try Data(contentsOf: url)
                 if let jsonString = String(data: data, encoding: .utf8) {
+                    print("DEBUG: Imported JSON length: \(jsonString.count) characters")
                     viewModel.addServers(from: jsonString)
+                } else {
+                    print("ERROR: Could not convert data to string")
                 }
             } catch {
-                print("Import error: \(error)")
+                print("ERROR: Import error: \(error)")
             }
         case .failure(let error):
-            print("File picker error: \(error)")
+            print("ERROR: File picker error: \(error)")
         }
     }
 }
