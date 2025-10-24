@@ -6,23 +6,16 @@ struct HeaderView: View {
     @Binding var showAddServer: Bool
     @Binding var showQuickActions: Bool
     @Environment(\.themeColors) private var themeColors
+    @State private var isPulsing = true
 
     var body: some View {
         HStack(spacing: 16) {
-            // Quick Actions Button
-            Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    showQuickActions.toggle()
-                }
-            }) {
-                Image(systemName: showQuickActions ? "xmark" : "square.grid.2x2.fill")
-                    .font(DesignTokens.Typography.title3)
-                    .foregroundColor(themeColors.primaryText)
-                    .rotationEffect(.degrees(showQuickActions ? 90 : 0))
-                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showQuickActions)
-            }
-            .buttonStyle(.plain)
-            .help("Quick Actions")
+            // Quick Actions Button - Enhanced discoverability
+            QuickActionsButton(
+                showQuickActions: $showQuickActions,
+                isPulsing: $isPulsing,
+                themeColors: themeColors
+            )
 
             // App title
             Text("MCP Server Manager")
@@ -116,5 +109,81 @@ struct ConfigButton: View {
                 .foregroundColor(isActive ? Color(hex: "#1a1a1a") : themeColors.mutedText)
         }
         .buttonStyle(.plain)
+    }
+}
+
+struct QuickActionsButton: View {
+    @Binding var showQuickActions: Bool
+    @Binding var isPulsing: Bool
+    let themeColors: ThemeColors
+
+    var body: some View {
+        Button(action: handleTap) {
+            buttonContent
+        }
+        .buttonStyle(.plain)
+        .help("Quick Actions Menu • Add, Import & Export")
+        .onAppear(perform: startPulsing)
+    }
+
+    private var buttonContent: some View {
+        ZStack(alignment: .topTrailing) {
+            iconView
+            indicatorDot
+        }
+    }
+
+    private var iconView: some View {
+        let iconName = showQuickActions ? "xmark" : "square.grid.2x2.fill"
+        let foregroundColor = showQuickActions ? Color(hex: "#1a1a1a") : themeColors.primaryText
+        let borderOpacity = isPulsing ? 0.3 : 0.1
+        let scale = isPulsing ? 1.05 : 1.0
+        let shadowOpacity = isPulsing ? 0.3 : 0.0
+
+        return Image(systemName: iconName)
+            .font(DesignTokens.Typography.title3)
+            .foregroundColor(foregroundColor)
+            .padding(8)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(showQuickActions ? AnyShapeStyle(themeColors.accentGradient) : AnyShapeStyle(Color.white.opacity(0.05)))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(themeColors.primaryAccent.opacity(borderOpacity), lineWidth: 1)
+                    )
+            )
+            .scaleEffect(scale)
+            .shadow(color: themeColors.primaryAccent.opacity(shadowOpacity), radius: isPulsing ? 8 : 0)
+            .rotationEffect(.degrees(showQuickActions ? 90 : 0))
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showQuickActions)
+    }
+
+    @ViewBuilder
+    private var indicatorDot: some View {
+        if !showQuickActions && isPulsing {
+            Circle()
+                .fill(themeColors.primaryAccent)
+                .frame(width: 6, height: 6)
+                .offset(x: 2, y: -2)
+        }
+    }
+
+    private func handleTap() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            showQuickActions.toggle()
+        }
+        isPulsing = false
+    }
+
+    private func startPulsing() {
+        withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+            isPulsing = true
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+            withAnimation {
+                isPulsing = false
+            }
+        }
     }
 }

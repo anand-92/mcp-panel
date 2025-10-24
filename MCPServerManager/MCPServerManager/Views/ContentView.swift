@@ -30,7 +30,7 @@ struct ContentView: View {
                 // Main content area - switches based on view mode
                 Group {
                     if viewModel.viewMode == .grid {
-                        ServerGridView(viewModel: viewModel)
+                        ServerGridView(viewModel: viewModel, showAddServer: $showAddServer)
                     } else {
                         RawJSONView(viewModel: viewModel)
                     }

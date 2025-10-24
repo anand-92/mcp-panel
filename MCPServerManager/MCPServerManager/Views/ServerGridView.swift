@@ -2,11 +2,14 @@ import SwiftUI
 
 struct ServerGridView: View {
     @ObservedObject var viewModel: ServerViewModel
+    @Binding var showAddServer: Bool
 
     var body: some View {
         ScrollView {
             if viewModel.filteredServers.isEmpty {
-                EmptyStateView(onCreateServer: {})
+                EmptyStateView(onCreateServer: {
+                    showAddServer = true
+                })
             } else {
                 LazyVGrid(columns: GridConfiguration.columns, spacing: DesignTokens.gridSpacing) {
                     ForEach(viewModel.filteredServers) { server in

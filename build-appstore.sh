@@ -77,7 +77,7 @@ cat > "$APP_PATH/Contents/Info.plist" << 'EOF'
     <key>CFBundleShortVersionString</key>
     <string>2.0.0</string>
     <key>CFBundleVersion</key>
-    <string>2000</string>
+    <string>2001</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>NSHighResolutionCapable</key>

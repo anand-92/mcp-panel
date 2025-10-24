@@ -158,21 +158,128 @@ class IconService: ObservableObject {
     }
 
     private func fetchRemoteIcon(for domain: String) async -> NSImage? {
-        // Try Clearbit first (better quality, real logos)
-        if let image = await fetchFromClearbit(domain: domain) {
-            return image
-        }
+        // Try domain variations (.com, .dev, .io, .ai, .app)
+        let variations = generateDomainVariations(domain)
 
-        // Fallback to Google Favicon
-        if let image = await fetchFromGoogleFavicon(domain: domain) {
-            return image
+        for testDomain in variations {
+            if let icon = await fetchBestIcon(for: testDomain) {
+                // Check if it's high quality enough
+                if scoreIcon(icon) > 100 { // Threshold for acceptable quality
+                    return icon
+                }
+            }
         }
 
         return nil
     }
 
+    /// Generate domain variations to try
+    private func generateDomainVariations(_ domain: String) -> [String] {
+        // If already has TLD, return as-is
+        if domain.contains(".") {
+            return [domain]
+        }
+
+        // Try common TLDs
+        return [
+            "\(domain).com",
+            "\(domain).dev",
+            "\(domain).io",
+            "\(domain).ai",
+            "\(domain).app",
+            "\(domain).org"
+        ]
+    }
+
+    /// Fetch icon from multiple sources in parallel and pick the best quality
+    private func fetchBestIcon(for domain: String) async -> NSImage? {
+        // Fire all requests simultaneously (~200-400ms total)
+        async let clearbit = fetchFromClearbit(domain: domain)
+        async let iconHorse = fetchFromIconHorse(domain: domain)
+        async let duckduckgo = fetchFromDuckDuckGo(domain: domain)
+        async let google = fetchFromGoogleFavicon(domain: domain)
+
+        let results = await [clearbit, iconHorse, duckduckgo, google]
+
+        // Filter out nil and tiny icons, then pick highest quality
+        return results
+            .compactMap { $0 }
+            .filter { $0.size.width >= 64 || $0.size.height >= 64 } // Skip tiny icons
+            .max { scoreIcon($0) < scoreIcon($1) }
+    }
+
+    /// Score an icon's quality (higher = better)
+    private func scoreIcon(_ image: NSImage) -> Int {
+        var score = 0
+
+        // Resolution score (bigger = better, up to a point)
+        let maxDimension = max(image.size.width, image.size.height)
+        score += Int(min(maxDimension, 512)) // Cap at 512 to avoid preferring huge images
+
+        // Check for transparency (professional logos usually have it)
+        if imageHasTransparency(image) {
+            score += 100
+        }
+
+        // Check if it's a vector (PDF representation)
+        if image.representations.contains(where: { $0 is NSPDFImageRep }) {
+            score += 200
+        }
+
+        // Check if it's a bitmap with good quality
+        if let bitmapRep = image.representations.compactMap({ $0 as? NSBitmapImageRep }).first {
+            // Prefer higher bit depth
+            score += bitmapRep.bitsPerPixel
+        }
+
+        return score
+    }
+
+    /// Check if image has transparency
+    private func imageHasTransparency(_ image: NSImage) -> Bool {
+        guard let tiffData = image.tiffRepresentation,
+              let bitmapRep = NSBitmapImageRep(data: tiffData) else {
+            return false
+        }
+        return bitmapRep.hasAlpha
+    }
+
     private func fetchFromClearbit(domain: String) async -> NSImage? {
         guard let url = URL(string: "https://logo.clearbit.com/\(domain)") else {
+            return nil
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                return nil
+            }
+            return NSImage(data: data)
+        } catch {
+            return nil
+        }
+    }
+
+    private func fetchFromIconHorse(domain: String) async -> NSImage? {
+        guard let url = URL(string: "https://icon.horse/icon/\(domain)") else {
+            return nil
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                return nil
+            }
+            return NSImage(data: data)
+        } catch {
+            return nil
+        }
+    }
+
+    private func fetchFromDuckDuckGo(domain: String) async -> NSImage? {
+        guard let url = URL(string: "https://icons.duckduckgo.com/ip3/\(domain).ico") else {
             return nil
         }
 
