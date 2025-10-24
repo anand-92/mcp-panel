@@ -37,7 +37,7 @@ struct ToolbarView: View {
                 }
                 HStack(spacing: 8) {
                     Text(allEnabled ? "Disable All" : "Enable All")
-                        .font(.subheadline)
+                        .font(.scaled(.subheadline))
 
                     // Visual indicator only - the button wrapper handles the action
                     ZStack {

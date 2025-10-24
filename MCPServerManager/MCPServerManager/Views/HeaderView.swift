@@ -10,7 +10,7 @@ struct HeaderView: View {
             // Hamburger menu (mobile/compact)
             Button(action: { showSidebar.toggle() }) {
                 Image(systemName: "line.3.horizontal")
-                    .font(.title2)
+                    .font(.scaled(.title2))
             }
             .buttonStyle(.plain)
             .help("Toggle Sidebar")
@@ -19,7 +19,7 @@ struct HeaderView: View {
             HStack(spacing: 4) {
                 Text("⚡")
                 Text("MCP Server Manager")
-                    .font(.title3)
+                    .font(.scaled(.title3))
                     .fontWeight(.bold)
                     .foregroundStyle(DesignTokens.primaryGradient)
             }
@@ -73,7 +73,7 @@ struct HeaderView: View {
             // Settings button
             Button(action: { showSettings = true }) {
                 Image(systemName: "gear")
-                    .font(.title3)
+                    .font(.scaled(.title3))
                     .foregroundColor(.white)
                     .padding(8)
                     .background(
@@ -108,7 +108,7 @@ struct ConfigButton: View {
                     .frame(width: 8, height: 8)
 
                 Text(shortPath(path))
-                    .font(.caption)
+                    .font(.scaled(.caption))
                     .lineLimit(1)
 
                 Text("\(number)")

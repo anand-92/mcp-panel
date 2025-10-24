@@ -12,13 +12,13 @@ struct RawJSONView: View {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("RAW JSON EDITOR")
-                        .font(.caption)
+                        .font(.scaled(.caption))
                         .fontWeight(.semibold)
                         .foregroundColor(.secondary)
                         .tracking(1.5)
 
                     Text("Edit the full configuration in JSON format. Changes will be applied to the active config.")
-                        .font(.caption)
+                        .font(.scaled(.caption))
                         .foregroundColor(.secondary)
                 }
 
@@ -30,7 +30,7 @@ struct RawJSONView: View {
                             .fill(Color.orange)
                             .frame(width: 8, height: 8)
                         Text("Unsaved edits")
-                            .font(.caption)
+                            .font(.scaled(.caption))
                             .foregroundColor(.orange)
                     }
                     .padding(.horizontal, 12)
@@ -48,7 +48,7 @@ struct RawJSONView: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                     Text(errorMessage)
                 }
-                .font(.subheadline)
+                .font(.scaled(.subheadline))
                 .foregroundColor(.red)
                 .padding()
                 .frame(maxWidth: .infinity)
@@ -61,7 +61,7 @@ struct RawJSONView: View {
 
             // Text editor
             TextEditor(text: $jsonText)
-                .font(.system(.body, design: .monospaced))
+                .font(.scaled(.body, design: .monospaced))
                 .scrollContentBackground(.hidden)
                 .background(Color.black.opacity(0.3))
                 .padding(20)

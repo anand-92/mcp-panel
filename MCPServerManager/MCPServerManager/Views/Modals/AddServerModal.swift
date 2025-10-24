@@ -13,13 +13,13 @@ struct AddServerModal: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("BULK ADD")
-                        .font(.caption)
+                        .font(.scaled(.caption))
                         .fontWeight(.semibold)
                         .foregroundColor(.secondary)
                         .tracking(1.5)
 
                     Text("Add Servers")
-                        .font(.title2)
+                        .font(.scaled(.title2))
                         .fontWeight(.bold)
                 }
 
@@ -27,7 +27,7 @@ struct AddServerModal: View {
 
                 Button(action: { isPresented = false }) {
                     Image(systemName: "xmark")
-                        .font(.title3)
+                        .font(.scaled(.title3))
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
@@ -40,17 +40,17 @@ struct AddServerModal: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("SERVER JSON")
-                        .font(.caption)
+                        .font(.scaled(.caption))
                         .fontWeight(.semibold)
                         .foregroundColor(.secondary)
                         .tracking(1.5)
 
                     Text("Paste server definitions in the format: {\"server-name\": {\"command\": \"...\"}} or just the config object")
-                        .font(.caption)
+                        .font(.scaled(.caption))
                         .foregroundColor(.secondary)
 
                     TextEditor(text: $jsonText)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.scaled(.body, design: .monospaced))
                         .frame(height: 300)
                         .scrollContentBackground(.hidden)
                         .background(Color.black.opacity(0.3))
@@ -66,7 +66,7 @@ struct AddServerModal: View {
                             Image(systemName: "exclamationmark.triangle.fill")
                             Text(errorMessage)
                         }
-                        .font(.caption)
+                        .font(.scaled(.caption))
                         .foregroundColor(.red)
                         .padding(12)
                         .background(

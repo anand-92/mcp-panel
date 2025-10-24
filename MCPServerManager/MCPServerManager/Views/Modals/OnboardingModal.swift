@@ -19,14 +19,14 @@ struct OnboardingModal: View {
                 // Welcome
                 VStack(spacing: 12) {
                     Text("⚡")
-                        .font(.system(size: 60))
+                        .font(.scaledSystem(size: 60))
 
                     Text("Welcome to MCP Server Manager")
-                        .font(.title)
+                        .font(.scaled(.title))
                         .fontWeight(.bold)
 
                     Text("Manage your Claude Code MCP servers with ease")
-                        .font(.subheadline)
+                        .font(.scaled(.subheadline))
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                 }
@@ -36,14 +36,14 @@ struct OnboardingModal: View {
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: "info.circle.fill")
                             .foregroundColor(.blue)
-                            .font(.title3)
+                            .font(.scaled(.title3))
 
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Your Claude Code config is typically located at:")
-                                .font(.subheadline)
+                                .font(.scaled(.subheadline))
 
                             Text("~/.claude.json")
-                                .font(.system(.body, design: .monospaced))
+                                .font(.scaled(.body, design: .monospaced))
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
                                 .background(
@@ -52,7 +52,7 @@ struct OnboardingModal: View {
                                 )
 
                             Text("If you don't see hidden files, press ⌘⇧. (Command+Shift+Period)")
-                                .font(.caption)
+                                .font(.scaled(.caption))
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -74,7 +74,7 @@ struct OnboardingModal: View {
                             .foregroundColor(.green)
 
                         Text(selectedPath)
-                            .font(.subheadline)
+                            .font(.scaled(.subheadline))
                             .lineLimit(1)
 
                         Spacer()
@@ -125,7 +125,7 @@ struct OnboardingModal: View {
 
                 // Footer
                 Text("This app only reads and writes to your config files. No data is sent anywhere.")
-                    .font(.caption2)
+                    .font(.scaled(.caption2))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
             }

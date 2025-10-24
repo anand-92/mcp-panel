@@ -86,7 +86,7 @@ struct ServerCardView: View {
                                 isEditing = true
                             }) {
                                 Image(systemName: "pencil")
-                                    .font(.caption)
+                                    .font(.scaled(.caption))
                                     .padding(6)
                                     .background(Color.blue.opacity(0.8))
                                     .foregroundColor(.white)

@@ -18,13 +18,13 @@ struct SettingsModal: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("PREFERENCES")
-                        .font(.caption)
+                        .font(.scaled(.caption))
                         .fontWeight(.semibold)
                         .foregroundColor(.secondary)
                         .tracking(1.5)
 
                     Text("Settings")
-                        .font(.title2)
+                        .font(.scaled(.title2))
                         .fontWeight(.bold)
                 }
 
@@ -32,7 +32,7 @@ struct SettingsModal: View {
 
                 Button(action: { isPresented = false }) {
                     Image(systemName: "xmark")
-                        .font(.title3)
+                        .font(.scaled(.title3))
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
@@ -47,7 +47,7 @@ struct SettingsModal: View {
                     // Config Path 1
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Config Path 1")
-                            .font(.subheadline)
+                            .font(.scaled(.subheadline))
                             .fontWeight(.semibold)
 
                         HStack {
@@ -67,7 +67,7 @@ struct SettingsModal: View {
                     // Config Path 2
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Config Path 2")
-                            .font(.subheadline)
+                            .font(.scaled(.subheadline))
                             .fontWeight(.semibold)
 
                         HStack {
@@ -91,7 +91,7 @@ struct SettingsModal: View {
                         CheckboxToggle(isOn: $confirmDelete, label: "Confirm before deleting servers")
 
                         Text("Show confirmation dialog when deleting servers")
-                            .font(.caption)
+                            .font(.scaled(.caption))
                             .foregroundColor(.secondary)
                     }
 
@@ -100,7 +100,7 @@ struct SettingsModal: View {
                         CheckboxToggle(isOn: $cyberpunkMode, label: "Cyberpunk Mode")
 
                         Text("Adds extra neon flair to the UI")
-                            .font(.caption)
+                            .font(.scaled(.caption))
                             .foregroundColor(.secondary)
                     }
 
@@ -124,7 +124,7 @@ struct SettingsModal: View {
 
                         if !testResult.isEmpty {
                             Text(testResult)
-                                .font(.caption)
+                                .font(.scaled(.caption))
                                 .foregroundColor(.secondary)
                         }
                     }

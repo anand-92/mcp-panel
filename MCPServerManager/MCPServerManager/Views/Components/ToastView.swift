@@ -7,11 +7,11 @@ struct ToastView: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: iconName)
-                .font(.title3)
+                .font(.scaled(.title3))
                 .foregroundColor(.white)
 
             Text(message)
-                .font(.subheadline)
+                .font(.scaled(.subheadline))
                 .foregroundColor(.white)
         }
         .padding(.horizontal, 16)
