@@ -40,7 +40,7 @@ struct ServerCardView: View {
                     VStack(alignment: .trailing, spacing: 8) {
                         TextEditor(text: $editedJSON)
                             .font(.system(.caption, design: .monospaced))
-                            .frame(height: 120)
+                            .frame(height: 200)
                             .scrollContentBackground(.hidden)
                             .background(Color.black.opacity(0.3))
                             .cornerRadius(8)
@@ -76,7 +76,7 @@ struct ServerCardView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(8)
                         }
-                        .frame(height: 120)
+                        .frame(height: 200)
                         .background(Color.black.opacity(0.3))
                         .cornerRadius(8)
 
@@ -135,7 +135,6 @@ struct ServerCardView: View {
             }
             .padding(DesignTokens.cardPadding)
         }
-        .frame(minHeight: GridConfiguration.minCardHeight)
     }
 
     private func formatJSON(_ string: String) -> String {
