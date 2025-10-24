@@ -135,6 +135,7 @@ struct ServerCardView: View {
             }
             .padding(DesignTokens.cardPadding)
         }
+        .frame(minHeight: GridConfiguration.minCardHeight)
     }
 
     private func formatJSON(_ string: String) -> String {

@@ -70,6 +70,7 @@ enum DesignTokens {
 
 enum GridConfiguration {
     static let columns = [
-        GridItem(.adaptive(minimum: 340, maximum: 450), spacing: 16)
+        GridItem(.adaptive(minimum: 400, maximum: 600), spacing: 16)
     ]
+    static let minCardHeight: CGFloat = 280
 }
