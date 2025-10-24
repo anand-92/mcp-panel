@@ -6,7 +6,7 @@ enum AppConstants {
     static let appName = "MCP Server Manager"
     static let defaultConfigPath = "~/.claude.json"
     static let defaultSettingsPath = "~/.settings.json"
-    static let mcpRegistryURL = "https://registry.lobehub.com/mcp"
+    static let mcpRegistryURL = "https://lobehub.com/mcp"
 }
 
 // MARK: - Design Tokens
