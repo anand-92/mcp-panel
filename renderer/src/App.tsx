@@ -268,6 +268,10 @@ const App = (): JSX.Element => {
     return collection;
   }, [serverArray, filter, searchQuery, fuse]);
 
+  const allServersEnabled = useMemo(() => {
+    return Object.values(servers).every(server => server.enabled);
+  }, [servers]);
+
   const persistLocal = useCallback((map: ServerMap) => {
     localStorage.setItem('mcp-all-configs', JSON.stringify(toAllServerConfigs(map)));
   }, []);
@@ -699,8 +703,7 @@ const App = (): JSX.Element => {
   }, [persistLocal, servers, syncServers]);
 
   const handleToggleAllServers = useCallback(() => {
-    const allEnabled = Object.values(servers).every(server => server.enabled);
-    const shouldEnable = !allEnabled;
+    const shouldEnable = !allServersEnabled;
 
     setServers(prev => {
       const next: ServerMap = {};
@@ -718,7 +721,7 @@ const App = (): JSX.Element => {
     });
 
     notyfRef.current?.success(`All servers ${shouldEnable ? 'enabled' : 'disabled'}`);
-  }, [servers]);
+  }, [allServersEnabled]);
 
   const handleRawEditorChange = useCallback((value: string) => {
     setRawEditorValue(value);
@@ -913,7 +916,7 @@ const App = (): JSX.Element => {
               onRefresh={() => void loadServers()}
               onSave={handleManualSave}
               onToggleAll={handleToggleAllServers}
-              allServersEnabled={Object.values(servers).every(server => server.enabled)}
+              allServersEnabled={allServersEnabled}
             />
 
             <div className="glass-panel flex-1 overflow-hidden p-6">
