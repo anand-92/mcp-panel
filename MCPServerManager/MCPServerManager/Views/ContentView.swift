@@ -38,9 +38,15 @@ struct ContentView: View {
                         .transition(.move(edge: .leading).combined(with: .opacity))
                     }
 
-                    // Server grid
-                    ServerGridView(viewModel: viewModel)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // Main content area - switches based on view mode
+                    Group {
+                        if viewModel.viewMode == .grid {
+                            ServerGridView(viewModel: viewModel)
+                        } else {
+                            RawJSONView(viewModel: viewModel)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
 

@@ -25,18 +25,32 @@ struct ToolbarView: View {
             Spacer()
 
             // Toggle all servers
-            let allEnabled = viewModel.servers.allSatisfy {
-                $0.inConfigs[safe: viewModel.settings.activeConfigIndex] ?? false
-            }
-
             Button(action: {
+                let allEnabled = viewModel.servers.allSatisfy {
+                    $0.inConfigs[safe: viewModel.settings.activeConfigIndex] ?? false
+                }
+                print("DEBUG: Toggle All clicked, currently allEnabled: \(allEnabled), will set to: \(!allEnabled)")
                 viewModel.toggleAllServers(!allEnabled)
             }) {
+                let allEnabled = viewModel.servers.allSatisfy {
+                    $0.inConfigs[safe: viewModel.settings.activeConfigIndex] ?? false
+                }
                 HStack(spacing: 8) {
                     Text(allEnabled ? "Disable All" : "Enable All")
                         .font(.subheadline)
 
-                    CustomToggleSwitch(isOn: .constant(allEnabled))
+                    // Visual indicator only - the button wrapper handles the action
+                    ZStack {
+                        Capsule()
+                            .fill(allEnabled ? AnyShapeStyle(LinearGradient(colors: [.green, .cyan], startPoint: .leading, endPoint: .trailing)) : AnyShapeStyle(Color.gray.opacity(0.3)))
+                            .frame(width: 44, height: 24)
+
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 20, height: 20)
+                            .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
+                            .offset(x: allEnabled ? 10 : -10)
+                    }
                 }
             }
             .buttonStyle(.plain)

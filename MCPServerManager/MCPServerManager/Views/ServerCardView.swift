@@ -3,9 +3,11 @@ import SwiftUI
 struct ServerCardView: View {
     let server: ServerModel
     @Binding var activeConfigIndex: Int
+    @Binding var confirmDelete: Bool
     @State private var isEditing = false
     @State private var editedJSON: String = ""
     @State private var isHovering = false
+    @State private var showingDeleteAlert = false
 
     let onToggle: () -> Void
     let onDelete: () -> Void
@@ -110,11 +112,25 @@ struct ServerCardView: View {
 
                     Spacer()
 
-                    Button(action: onDelete) {
+                    Button(action: {
+                        if confirmDelete {
+                            showingDeleteAlert = true
+                        } else {
+                            onDelete()
+                        }
+                    }) {
                         Image(systemName: "trash")
                             .foregroundColor(.red)
                     }
                     .buttonStyle(.plain)
+                    .alert("Delete Server", isPresented: $showingDeleteAlert) {
+                        Button("Cancel", role: .cancel) { }
+                        Button("Delete", role: .destructive) {
+                            onDelete()
+                        }
+                    } message: {
+                        Text("Are you sure you want to delete '\(server.name)'?")
+                    }
                 }
             }
             .padding(DesignTokens.cardPadding)

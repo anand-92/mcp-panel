@@ -349,11 +349,17 @@ class ServerViewModel: ObservableObject {
 
     func toggleAllServers(_ enable: Bool) {
         let configIndex = settings.activeConfigIndex
+        print("DEBUG: toggleAllServers called with enable=\(enable), configIndex=\(configIndex), serverCount=\(servers.count)")
 
         for i in 0..<servers.count {
+            let before = servers[i].inConfigs[configIndex]
             servers[i].inConfigs[configIndex] = enable
             servers[i].updatedAt = Date()
+            print("DEBUG: Server '\(servers[i].name)': \(before) -> \(enable)")
         }
+
+        // Force UI update
+        objectWillChange.send()
 
         syncToConfigs()
         let status = enable ? "enabled" : "disabled"

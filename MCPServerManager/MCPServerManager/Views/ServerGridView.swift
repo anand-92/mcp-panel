@@ -13,6 +13,7 @@ struct ServerGridView: View {
                         ServerCardView(
                             server: server,
                             activeConfigIndex: $viewModel.settings.activeConfigIndex,
+                            confirmDelete: $viewModel.settings.confirmDelete,
                             onToggle: {
                                 viewModel.toggleServer(server)
                             },
