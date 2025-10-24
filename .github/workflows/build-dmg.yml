@@ -94,13 +94,14 @@ jobs:
         fi
 
     - name: Create DMG
-      working-directory: MCPServerManager/build
+      working-directory: MCPServerManager
       run: |
-        # Create a DMG with version number
+        # Create installer DMG with Applications symlink
         VERSION="2.0.${{ github.run_number }}"
-        hdiutil create -volname "MCP Server Manager" -srcfolder MCP-Server-Manager.app -ov -format UDZO "MCP-Server-Manager-v${VERSION}.dmg"
+        bash ../create-dmg.sh build/MCP-Server-Manager.app "build/MCP-Server-Manager-v${VERSION}.dmg"
 
         # Also create a "latest" symlink for consistent naming
+        cd build
         ln -sf "MCP-Server-Manager-v${VERSION}.dmg" MCP-Server-Manager.dmg
 
     - name: List build artifacts

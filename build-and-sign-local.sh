@@ -48,7 +48,7 @@ EOF
 
 # Copy app icon
 echo "🎨 Adding app icon..."
-cp ../icons/AppIcon.icns build/MCP-Server-Manager.app/Contents/Resources/AppIcon.icns
+cp icons/AppIcon.icns build/MCP-Server-Manager.app/Contents/Resources/AppIcon.icns
 
 echo "✍️  Code signing..."
 cd build
@@ -87,11 +87,10 @@ xcrun stapler staple MCP-Server-Manager.app
 echo "✅ Verifying notarization..."
 spctl --assess -vv --type install MCP-Server-Manager.app
 
-echo "💿 Creating DMG..."
-hdiutil create -volname "MCP Server Manager" \
-  -srcfolder MCP-Server-Manager.app \
-  -ov -format UDZO \
-  MCP-Server-Manager.dmg
+echo "💿 Creating installer DMG..."
+cd ..
+bash ../create-dmg.sh build/MCP-Server-Manager.app build/MCP-Server-Manager.dmg
+cd build
 
 echo "✅ Done! DMG created at: MCPServerManager/build/MCP-Server-Manager.dmg"
 echo ""
