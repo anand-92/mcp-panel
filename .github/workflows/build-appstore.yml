@@ -42,11 +42,11 @@ jobs:
 
         # Decode and import App Store signing certificate
         echo "$MAC_APP_STORE_CERT" | base64 --decode > appstore_cert.p12
-        security import appstore_cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign
+        security import appstore_cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign -A
 
         # Decode and import Installer certificate
         echo "$MAC_INSTALLER_CERT" | base64 --decode > installer_cert.p12
-        security import installer_cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign
+        security import installer_cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign -A
 
         # Set partition list
         security set-key-partition-list -S apple-tool:,apple:,codesign:,productsign: -s -k actions build.keychain
