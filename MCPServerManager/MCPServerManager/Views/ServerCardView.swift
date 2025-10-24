@@ -19,7 +19,7 @@ struct ServerCardView: View {
                 // Header
                 HStack(alignment: .top) {
                     Text(server.name)
-                        .font(.headline)
+                        .font(.scaled(.headline))
                         .lineLimit(2)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -31,7 +31,7 @@ struct ServerCardView: View {
 
                 // Config summary
                 Text(server.config.summary)
-                    .font(.caption)
+                    .font(.scaled(.caption))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
 
@@ -39,7 +39,7 @@ struct ServerCardView: View {
                 if isEditing {
                     VStack(alignment: .trailing, spacing: 8) {
                         TextEditor(text: $editedJSON)
-                            .font(.system(.footnote, design: .monospaced))
+                            .font(.scaled(.footnote, design: .monospaced))
                             .frame(height: 200)
                             .scrollContentBackground(.hidden)
                             .background(Color.black.opacity(0.3))
@@ -71,7 +71,7 @@ struct ServerCardView: View {
                     ZStack(alignment: .topTrailing) {
                         ScrollView {
                             Text(server.configJSON)
-                                .font(.system(.footnote, design: .monospaced))
+                                .font(.scaled(.footnote, design: .monospaced))
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(8)
