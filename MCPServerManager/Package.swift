@@ -18,6 +18,7 @@ let package = Package(
             name: "MCPServerManager",
             dependencies: [],
             path: "MCPServerManager",
+            exclude: ["Info.plist"],
             resources: [
                 .process("Resources")
             ]
