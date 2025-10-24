@@ -22,11 +22,6 @@ struct ServerCardView: View {
                         .font(.system(size: 22))
                         .lineLimit(2)
                         .frame(maxWidth: .infinity, alignment: .leading)
-
-                    HStack(spacing: 4) {
-                        ConfigBadge(number: 1, isActive: server.isInConfig1, isCurrentConfig: activeConfigIndex == 0)
-                        ConfigBadge(number: 2, isActive: server.isInConfig2, isCurrentConfig: activeConfigIndex == 1)
-                    }
                 }
 
                 // Config summary
