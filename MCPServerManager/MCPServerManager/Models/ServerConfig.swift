@@ -86,11 +86,26 @@ struct ServerConfig: Codable, Equatable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(command, forKey: .command)
-        try container.encodeIfPresent(args, forKey: .args)
+
+        // Only encode arrays if not empty
+        if let args = args, !args.isEmpty {
+            try container.encode(args, forKey: .args)
+        }
+
         try container.encodeIfPresent(cwd, forKey: .cwd)
-        try container.encodeIfPresent(env, forKey: .env)
+
+        // Only encode env if not empty
+        if let env = env, !env.isEmpty {
+            try container.encode(env, forKey: .env)
+        }
+
         try container.encodeIfPresent(transport, forKey: .transport)
-        try container.encodeIfPresent(remotes, forKey: .remotes)
+
+        // Only encode remotes if not empty
+        if let remotes = remotes, !remotes.isEmpty {
+            try container.encode(remotes, forKey: .remotes)
+        }
+
         try container.encodeIfPresent(type, forKey: .type)
         try container.encodeIfPresent(url, forKey: .url)
     }
