@@ -19,7 +19,7 @@ struct ServerCardView: View {
                 // Header
                 HStack(alignment: .top) {
                     Text(server.name)
-                        .font(.scaled(.headline))
+                        .font(.system(size: 22))
                         .lineLimit(2)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -31,7 +31,7 @@ struct ServerCardView: View {
 
                 // Config summary
                 Text(server.config.summary)
-                    .font(.scaled(.caption))
+                    .font(.system(size: 12))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
 
@@ -39,7 +39,7 @@ struct ServerCardView: View {
                 if isEditing {
                     VStack(alignment: .trailing, spacing: 8) {
                         TextEditor(text: $editedJSON)
-                            .font(.scaled(.footnote, design: .monospaced))
+                            .font(.system(size: 13, design: .monospaced))
                             .frame(height: 200)
                             .scrollContentBackground(.hidden)
                             .background(Color.black.opacity(0.3))
@@ -71,7 +71,7 @@ struct ServerCardView: View {
                     ZStack(alignment: .topTrailing) {
                         ScrollView {
                             Text(server.configJSON)
-                                .font(.scaled(.footnote, design: .monospaced))
+                                .font(.system(size: 13, design: .monospaced))
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(8)
@@ -86,7 +86,7 @@ struct ServerCardView: View {
                                 isEditing = true
                             }) {
                                 Image(systemName: "pencil")
-                                    .font(.scaled(.caption))
+                                    .font(.system(size: 12))
                                     .padding(6)
                                     .background(Color.blue.opacity(0.8))
                                     .foregroundColor(.white)
@@ -155,7 +155,7 @@ struct ConfigBadge: View {
 
     var body: some View {
         Text("\(number)")
-            .font(.system(size: 10, weight: .bold))
+            .font(.system(size: 14, weight: .bold))
             .foregroundColor(isActive ? .white : .gray)
             .frame(width: 18, height: 18)
             .background(

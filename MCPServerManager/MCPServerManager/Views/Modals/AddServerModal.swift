@@ -13,13 +13,13 @@ struct AddServerModal: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("BULK ADD")
-                        .font(.scaled(.caption))
+                        .font(.system(size: 12))
                         .fontWeight(.semibold)
                         .foregroundColor(.secondary)
                         .tracking(1.5)
 
                     Text("Add Servers")
-                        .font(.scaled(.title2))
+                        .font(.system(size: 22))
                         .fontWeight(.bold)
                 }
 
@@ -27,7 +27,7 @@ struct AddServerModal: View {
 
                 Button(action: { isPresented = false }) {
                     Image(systemName: "xmark")
-                        .font(.scaled(.title3))
+                        .font(.system(size: 20))
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
@@ -40,17 +40,17 @@ struct AddServerModal: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("SERVER JSON")
-                        .font(.scaled(.caption))
+                        .font(.system(size: 12))
                         .fontWeight(.semibold)
                         .foregroundColor(.secondary)
                         .tracking(1.5)
 
                     Text("Paste server definitions in the format: {\"server-name\": {\"command\": \"...\"}} or just the config object")
-                        .font(.scaled(.caption))
+                        .font(.system(size: 12))
                         .foregroundColor(.secondary)
 
                     TextEditor(text: $jsonText)
-                        .font(.scaled(.body, design: .monospaced))
+                        .font(.system(size: 15, design: .monospaced))
                         .frame(height: 300)
                         .scrollContentBackground(.hidden)
                         .background(Color.black.opacity(0.3))
@@ -66,7 +66,7 @@ struct AddServerModal: View {
                             Image(systemName: "exclamationmark.triangle.fill")
                             Text(errorMessage)
                         }
-                        .font(.scaled(.caption))
+                        .font(.system(size: 12))
                         .foregroundColor(.red)
                         .padding(12)
                         .background(

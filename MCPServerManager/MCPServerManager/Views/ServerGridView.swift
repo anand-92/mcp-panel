@@ -38,7 +38,7 @@ struct EmptyStateView: View {
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "server.rack")
-                .font(.scaledSystem(size: 60))
+                .font(.system(size: 40))
                 .foregroundColor(.secondary)
                 .padding(30)
                 .background(
@@ -47,11 +47,11 @@ struct EmptyStateView: View {
                 )
 
             Text("No servers configured yet")
-                .font(.scaled(.title2))
+                .font(.system(size: 22))
                 .fontWeight(.semibold)
 
             Text("Add your first MCP server to get started")
-                .font(.scaled(.subheadline))
+                .font(.system(size: 14))
                 .foregroundColor(.secondary)
 
             Button(action: onCreateServer) {

@@ -11,7 +11,7 @@ struct SidebarView: View {
         GlassPanel {
             VStack(alignment: .leading, spacing: 16) {
                 Text("QUICK ACTIONS")
-                    .font(.scaled(.caption))
+                    .font(.system(size: 12))
                     .fontWeight(.semibold)
                     .foregroundColor(.secondary)
                     .tracking(1.5)
@@ -23,7 +23,7 @@ struct SidebarView: View {
                         Text("Explore New MCPs")
                         Spacer()
                         Image(systemName: "arrow.up.right")
-                            .font(.scaled(.caption))
+                            .font(.system(size: 12))
                     }
                     .padding(.vertical, 10)
                     .padding(.horizontal, 12)

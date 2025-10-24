@@ -87,7 +87,7 @@ struct ContentView: View {
                             .scaleEffect(1.5)
 
                         Text("Loading configuration...")
-                            .font(.headline)
+                            .font(.system(size: 17))
                     }
                     .padding(40)
                     .background(

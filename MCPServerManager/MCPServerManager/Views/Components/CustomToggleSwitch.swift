@@ -9,7 +9,7 @@ struct CustomToggleSwitch: View {
             HStack(spacing: 12) {
                 if !label.isEmpty {
                     Text(label)
-                        .font(.scaled(.subheadline))
+                        .font(.system(size: 14))
                         .foregroundColor(.primary)
                 }
 
@@ -49,10 +49,10 @@ struct CheckboxToggle: View {
             HStack(spacing: 8) {
                 Image(systemName: isOn ? "checkmark.square.fill" : "square")
                     .foregroundColor(isOn ? .blue : .gray)
-                    .font(.scaled(.title3))
+                    .font(.system(size: 20))
 
                 Text(label)
-                    .font(.scaled(.subheadline))
+                    .font(.system(size: 14))
                     .foregroundColor(.primary)
             }
         }
