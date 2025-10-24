@@ -19,7 +19,7 @@ echo ""
 
 # Configuration
 APP_NAME="MCP Server Manager"
-BUNDLE_ID="com.nikhilanand.mcpservermanager"
+BUNDLE_ID="com.mcpmanager.app"
 VERSION="2.0.0"
 BUILD_NUMBER="1"
 
@@ -63,7 +63,7 @@ cat > "$APP_PATH/Contents/Info.plist" << 'EOF'
     <key>CFBundleExecutable</key>
     <string>MCPServerManager</string>
     <key>CFBundleIdentifier</key>
-    <string>com.nikhilanand.mcpservermanager</string>
+    <string>com.mcpmanager.app</string>
     <key>CFBundleName</key>
     <string>MCP Server Manager</string>
     <key>CFBundleDisplayName</key>

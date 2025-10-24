@@ -27,7 +27,7 @@ cat > build/MCP-Server-Manager.app/Contents/Info.plist << 'EOF'
     <key>CFBundleExecutable</key>
     <string>MCPServerManager</string>
     <key>CFBundleIdentifier</key>
-    <string>com.nikhilanand.mcpservermanager</string>
+    <string>com.mcpmanager.app</string>
     <key>CFBundleName</key>
     <string>MCP Server Manager</string>
     <key>CFBundlePackageType</key>
