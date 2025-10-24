@@ -30,11 +30,14 @@ export interface ServerModel {
   config: ServerConfig;
   enabled: boolean;
   updatedAt: number;
+  inConfigs: [boolean, boolean]; // [inConfig1, inConfig2]
 }
 
 export interface SettingsState {
   confirmDelete: boolean;
   cyberpunkMode: boolean;
+  configPaths: [string, string];
+  activeConfigIndex: 0 | 1;
 }
 
 export interface ConfigResponse {
