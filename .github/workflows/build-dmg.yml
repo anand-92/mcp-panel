@@ -61,8 +61,7 @@ jobs:
         </plist>
         EOF
 
-    - name: Code sign (if secrets available)
-      if: secrets.MAC_CERTS != ''
+    - name: Code sign
       working-directory: MCPServerManager/build
       env:
         CSC_LINK: ${{ secrets.MAC_CERTS }}
