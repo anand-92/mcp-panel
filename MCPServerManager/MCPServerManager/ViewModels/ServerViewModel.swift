@@ -395,7 +395,7 @@ class ServerViewModel: ObservableObject {
 
     private var toastTask: Task<Void, Never>?
 
-    private func showToast(message: String, type: ToastType) {
+    func showToast(message: String, type: ToastType) {
         // Cancel any existing toast timer
         toastTask?.cancel()
 

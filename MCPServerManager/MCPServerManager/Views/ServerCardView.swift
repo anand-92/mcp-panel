@@ -8,6 +8,7 @@ struct ServerCardView: View {
     @State private var editedJSON: String = ""
     @State private var isHovering = false
     @State private var showingDeleteAlert = false
+    @Environment(\.themeColors) private var themeColors
 
     let onToggle: () -> Void
     let onDelete: () -> Void
@@ -41,26 +42,72 @@ struct ServerCardView: View {
                             .cornerRadius(8)
                             .focusable(true)
 
-                        HStack {
-                            Button("Format") {
+                        HStack(spacing: 8) {
+                            Button(action: {
                                 editedJSON = formatJSON(editedJSON)
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "text.alignleft")
+                                        .font(.system(size: 12))
+                                    Text("Format")
+                                        .font(DesignTokens.Typography.labelSmall)
+                                }
+                                .foregroundColor(themeColors.primaryText)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(themeColors.glassBackground)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(themeColors.borderColor, lineWidth: 1)
+                                        )
+                                )
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(.plain)
 
                             Spacer()
 
-                            Button("Cancel") {
+                            Button(action: {
                                 isEditing = false
+                            }) {
+                                Text("Cancel")
+                                    .font(DesignTokens.Typography.labelSmall)
+                                    .foregroundColor(themeColors.primaryText)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(themeColors.glassBackground)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(themeColors.borderColor, lineWidth: 1)
+                                            )
+                                    )
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(.plain)
 
-                            Button("Save") {
+                            Button(action: {
                                 onUpdate(editedJSON)
                                 isEditing = false
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 12))
+                                    Text("Save")
+                                        .font(DesignTokens.Typography.labelSmall)
+                                }
+                                .foregroundColor(Color(hex: "#1a1a1a"))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(themeColors.accentGradient)
+                                )
+                                .shadow(color: themeColors.primaryAccent.opacity(0.3), radius: 6, x: 0, y: 2)
                             }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(.plain)
                         }
-                        .controlSize(.small)
                     }
                 } else {
                     ZStack(alignment: .topTrailing) {

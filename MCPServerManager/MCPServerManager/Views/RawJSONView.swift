@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RawJSONView: View {
     @ObservedObject var viewModel: ServerViewModel
+    @Environment(\.themeColors) private var themeColors
     @State private var jsonText: String = ""
     @State private var isDirty: Bool = false
     @State private var errorMessage: String = ""
@@ -71,24 +72,68 @@ struct RawJSONView: View {
 
             // Action buttons
             HStack(spacing: 12) {
-                Button("Format JSON") {
-                    formatJSON()
+                Button(action: formatJSON) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "text.alignleft")
+                        Text("Format JSON")
+                    }
+                    .font(DesignTokens.Typography.label)
+                    .foregroundColor(themeColors.primaryText)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(themeColors.glassBackground)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(themeColors.borderColor, lineWidth: 1)
+                            )
+                    )
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.plain)
 
-                Button("Reset") {
+                Button(action: {
                     jsonText = serversToJSON()
                     isDirty = false
                     errorMessage = ""
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.counterclockwise")
+                        Text("Reset")
+                    }
+                    .font(DesignTokens.Typography.label)
+                    .foregroundColor(themeColors.primaryText)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(themeColors.glassBackground)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(themeColors.borderColor, lineWidth: 1)
+                            )
+                    )
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.plain)
 
                 Spacer()
 
-                Button("Apply Changes") {
-                    applyChanges()
+                Button(action: applyChanges) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Apply Changes")
+                    }
+                    .font(DesignTokens.Typography.label)
+                    .foregroundColor(isDirty ? Color(hex: "#1a1a1a") : themeColors.mutedText)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(isDirty ? AnyShapeStyle(themeColors.accentGradient) : AnyShapeStyle(themeColors.glassBackground))
+                    )
+                    .shadow(color: isDirty ? themeColors.primaryAccent.opacity(0.3) : .clear, radius: 8, x: 0, y: 4)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.plain)
                 .disabled(!isDirty)
             }
             .padding(20)
@@ -180,9 +225,7 @@ struct RawJSONView: View {
 
             isDirty = false
             errorMessage = ""
-            viewModel.showToast = true
-            viewModel.toastMessage = "Configuration updated"
-            viewModel.toastType = .success
+            viewModel.showToast(message: "Configuration updated", type: .success)
         } catch {
             errorMessage = "Failed to parse JSON: \(error.localizedDescription)"
         }

@@ -25,12 +25,9 @@ struct HeaderView: View {
             .help("Quick Actions")
 
             // App title
-            HStack(spacing: 4) {
-                Text("⚡")
-                Text("MCP Server Manager")
-                    .font(DesignTokens.Typography.title3)
-                    .foregroundStyle(themeColors.accentGradient)
-            }
+            Text("MCP Server Manager")
+                .font(DesignTokens.Typography.title3)
+                .foregroundStyle(themeColors.accentGradient)
 
             Spacer()
 

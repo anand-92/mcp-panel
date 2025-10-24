@@ -55,14 +55,14 @@ struct EmptyStateView: View {
                 .foregroundColor(.secondary)
 
             Button(action: onCreateServer) {
-                Text("Create Server")
+                Text("Add Server")
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
                     .background(
                         RoundedRectangle(cornerRadius: 20)
                             .fill(themeColors.accentGradient)
                     )
-                    .foregroundColor(themeColors.primaryText)
+                    .foregroundColor(Color(hex: "#0b0e14"))
             }
             .buttonStyle(.plain)
         }

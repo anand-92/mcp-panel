@@ -34,6 +34,7 @@ struct ToolbarView: View {
                                 }
                             }
                         )
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
