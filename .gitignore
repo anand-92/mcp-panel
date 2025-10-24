@@ -74,3 +74,4 @@ Certificates.p12
 package-mac-signed.sh
 embedded.provisionprofile
 *.provisionprofile
+mac_installer (1).cer

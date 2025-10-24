@@ -4,11 +4,12 @@ import UniformTypeIdentifiers
 struct SettingsModal: View {
     @Binding var isPresented: Bool
     @ObservedObject var viewModel: ServerViewModel
+    @Environment(\.themeColors) private var themeColors
 
     @State private var config1Path: String = ""
     @State private var config2Path: String = ""
     @State private var confirmDelete: Bool = true
-    @State private var cyberpunkMode: Bool = false
+    @State private var windowOpacity: Double = 1.0
     @State private var testingConnection: Bool = false
     @State private var testResult: String = ""
 
@@ -18,21 +19,19 @@ struct SettingsModal: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("PREFERENCES")
-                        .font(.system(size: 12))
-                        .fontWeight(.semibold)
+                        .font(DesignTokens.Typography.labelSmall)
                         .foregroundColor(.secondary)
                         .tracking(1.5)
 
                     Text("Settings")
-                        .font(.system(size: 22))
-                        .fontWeight(.bold)
+                        .font(DesignTokens.Typography.title2)
                 }
 
                 Spacer()
 
                 Button(action: { isPresented = false }) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 20))
+                        .font(DesignTokens.Typography.title3)
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
@@ -47,40 +46,68 @@ struct SettingsModal: View {
                     // Config Path 1
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Config Path 1")
-                            .font(.system(size: 14))
-                            .fontWeight(.semibold)
+                            .font(DesignTokens.Typography.label)
 
                         HStack {
                             TextField("~/.claude.json", text: $config1Path)
                                 .textFieldStyle(.roundedBorder)
                                 .focusable(true)
 
-                            Button("Browse") {
+                            Button(action: {
                                 selectConfigFile { path in
                                     config1Path = path
                                 }
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "folder")
+                                    Text("Browse")
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.white.opacity(0.1))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                        )
+                                )
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(.plain)
                         }
                     }
 
                     // Config Path 2
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Config Path 2")
-                            .font(.system(size: 14))
-                            .fontWeight(.semibold)
+                            .font(DesignTokens.Typography.label)
 
                         HStack {
                             TextField("~/.settings.json", text: $config2Path)
                                 .textFieldStyle(.roundedBorder)
                                 .focusable(true)
 
-                            Button("Browse") {
+                            Button(action: {
                                 selectConfigFile { path in
                                     config2Path = path
                                 }
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "folder")
+                                    Text("Browse")
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.white.opacity(0.1))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                        )
+                                )
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(.plain)
                         }
                     }
 
@@ -91,16 +118,35 @@ struct SettingsModal: View {
                         CheckboxToggle(isOn: $confirmDelete, label: "Confirm before deleting servers")
 
                         Text("Show confirmation dialog when deleting servers")
-                            .font(.system(size: 12))
+                            .font(DesignTokens.Typography.bodySmall)
                             .foregroundColor(.secondary)
                     }
 
-                    // Cyberpunk Mode
-                    VStack(alignment: .leading, spacing: 8) {
-                        CheckboxToggle(isOn: $cyberpunkMode, label: "Cyberpunk Mode")
+                    Divider()
 
-                        Text("Adds extra neon flair to the UI")
-                            .font(.system(size: 12))
+                    // Window Translucency
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Window Translucency")
+                                .font(DesignTokens.Typography.label)
+
+                            Spacer()
+
+                            Text("\(Int(windowOpacity * 100))%")
+                                .font(DesignTokens.Typography.bodySmall)
+                                .foregroundColor(.secondary)
+                                .monospacedDigit()
+                        }
+
+                        Slider(value: $windowOpacity, in: 0.3...1.0, step: 0.05)
+                            .onChange(of: windowOpacity) { newValue in
+                                // Update in real-time
+                                viewModel.settings.windowOpacity = newValue
+                                viewModel.saveSettings()
+                            }
+
+                        Text("Adjust the transparency of the application window")
+                            .font(DesignTokens.Typography.bodySmall)
                             .foregroundColor(.secondary)
                     }
 
@@ -124,7 +170,7 @@ struct SettingsModal: View {
 
                         if !testResult.isEmpty {
                             Text(testResult)
-                                .font(.system(size: 12))
+                                .font(DesignTokens.Typography.bodySmall)
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -138,15 +184,40 @@ struct SettingsModal: View {
             HStack(spacing: 12) {
                 Spacer()
 
-                Button("Cancel") {
+                Button(action: {
                     isPresented = false
+                }) {
+                    Text("Cancel")
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.white.opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                )
+                        )
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.plain)
 
-                Button("Save Settings") {
+                Button(action: {
                     saveSettings()
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Save Settings")
+                    }
+                    .foregroundColor(Color(hex: "#1a1a1a"))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(themeColors.accentGradient)
+                    )
+                    .shadow(color: themeColors.primaryAccent.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.plain)
             }
             .padding(24)
         }
@@ -160,7 +231,7 @@ struct SettingsModal: View {
             config1Path = viewModel.settings.config1Path
             config2Path = viewModel.settings.config2Path
             confirmDelete = viewModel.settings.confirmDelete
-            cyberpunkMode = viewModel.settings.cyberpunkMode
+            windowOpacity = viewModel.settings.windowOpacity
         }
     }
 
@@ -201,7 +272,7 @@ struct SettingsModal: View {
     private func saveSettings() {
         viewModel.settings.configPaths = [config1Path, config2Path]
         viewModel.settings.confirmDelete = confirmDelete
-        viewModel.settings.cyberpunkMode = cyberpunkMode
+        viewModel.settings.windowOpacity = windowOpacity
         viewModel.saveSettings()
         isPresented = false
     }

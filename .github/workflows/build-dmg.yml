@@ -1,69 +1,117 @@
-name: Build DMG
+name: Build Swift App
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, swifty ]
     tags: [ 'v*' ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, swifty ]
 
 jobs:
-  build-dmg:
+  build-swift-app:
     runs-on: macos-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
       with:
-        node-version: '20'
-        cache: 'npm'
+        xcode-version: latest-stable
 
-    - name: Install dependencies
+    - name: Build Swift app
+      working-directory: MCPServerManager
       run: |
-        npm ci --include=dev
+        swift build -c release
 
-    - name: Build macOS app and DMG
+    - name: Create app bundle
+      working-directory: MCPServerManager
+      run: |
+        # Create .app structure
+        mkdir -p build/MCP-Server-Manager.app/Contents/MacOS
+        mkdir -p build/MCP-Server-Manager.app/Contents/Resources
+
+        # Copy binary
+        cp .build/release/MCPServerManager build/MCP-Server-Manager.app/Contents/MacOS/
+
+        # Create Info.plist
+        cat > build/MCP-Server-Manager.app/Contents/Info.plist << 'EOF'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleExecutable</key>
+            <string>MCPServerManager</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.nikhilanand.mcpservermanager</string>
+            <key>CFBundleName</key>
+            <string>MCP Server Manager</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>2.0.0</string>
+            <key>CFBundleVersion</key>
+            <string>1</string>
+            <key>LSMinimumSystemVersion</key>
+            <string>13.0</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+        </dict>
+        </plist>
+        EOF
+
+    - name: Code sign (if secrets available)
+      if: ${{ secrets.MAC_CERTS != '' }}
+      working-directory: MCPServerManager/build
       env:
-        # Code signing configuration
         CSC_LINK: ${{ secrets.MAC_CERTS }}
-        # No password needed for certificate
         CSC_IDENTITY_AUTO_DISCOVERY: true
-        # Apple notarization
         APPLE_ID: ${{ secrets.APPLE_ID }}
         APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        # Allow signing even if some dependencies are unresolved
-        ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
-        # GitHub token for auto-publishing
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # Enable notarization
-        NOTARIZE: true
       run: |
-        # Rename DMG to have consistent name
-        npx electron-builder --mac
+        # Import certificates
+        echo "$CSC_LINK" | base64 --decode > certificate.p12
+        security create-keychain -p actions build.keychain
+        security default-keychain -s build.keychain
+        security unlock-keychain -p actions build.keychain
+        security import certificate.p12 -k build.keychain -P "" -T /usr/bin/codesign
+        security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions build.keychain
+
+        # Sign the app
+        codesign --deep --force --verify --verbose --sign "Developer ID Application" MCP-Server-Manager.app
+
+        # Notarize if credentials available
+        if [ -n "$APPLE_ID" ]; then
+          ditto -c -k --keepParent MCP-Server-Manager.app MCP-Server-Manager.zip
+          xcrun notarytool submit MCP-Server-Manager.zip --apple-id "$APPLE_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
+          xcrun stapler staple MCP-Server-Manager.app
+        fi
+
+    - name: Create DMG
+      working-directory: MCPServerManager/build
+      run: |
+        # Create a DMG
+        hdiutil create -volname "MCP Server Manager" -srcfolder MCP-Server-Manager.app -ov -format UDZO MCP-Server-Manager.dmg
 
     - name: List build artifacts
       run: |
         echo "Build directory contents:"
-        ls -la dist/ || echo "No dist directory"
+        ls -la MCPServerManager/build/ || echo "No build directory"
         find . -name "*.dmg" -type f || echo "No DMG files found"
-        find . -name "*.app" -type f || echo "No APP files found"
+        find . -name "*.app" -type d || echo "No APP bundles found"
 
     - name: Upload DMG artifact
       uses: actions/upload-artifact@v4
       if: success()
       with:
-        name: mcp-server-manager-${{ github.sha }}
-        path: dist/MCP-Server-Manager.*
+        name: mcp-server-manager-swift-${{ github.sha }}
+        path: MCPServerManager/build/MCP-Server-Manager.dmg
         retention-days: 30
 
-    # This step ensures that when we push to main, the 'latest' tag and release are cleanly replaced.
-    # It prevents errors from trying to create a release that already exists.
     - name: Delete old latest release
-      if: github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/swifty'
       run: |
         gh release delete latest -y || true
         git push origin :refs/tags/latest || true
@@ -72,18 +120,13 @@ jobs:
 
     - name: Create or Update Release
       uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+      if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/swifty'
       with:
-        # Use the git tag for tagged releases, or 'latest' for pushes to main
         tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
-        # Generate release notes for tagged releases, or use a static title for 'latest'
         name: ${{ startsWith(github.ref, 'refs/tags/') && format('Release {0}', github.ref_name) || 'Latest Build' }}
-        # Automatically generate release notes from commits for tagged releases
         generate_release_notes: ${{ startsWith(github.ref, 'refs/tags/') }}
-        # Mark 'latest' builds as pre-release, and tagged builds as stable
         prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
         files: |
-          dist/MCP-Server-Manager.dmg
-          dist/MCP-Server-Manager.zip
+          MCPServerManager/build/MCP-Server-Manager.dmg
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

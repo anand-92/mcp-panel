@@ -3,6 +3,7 @@ import UniformTypeIdentifiers
 
 struct OnboardingModal: View {
     @ObservedObject var viewModel: ServerViewModel
+    @Environment(\.themeColors) private var themeColors
 
     @State private var selectedPath: String = ""
     @State private var showingFilePicker = false
@@ -19,14 +20,13 @@ struct OnboardingModal: View {
                 // Welcome
                 VStack(spacing: 12) {
                     Text("⚡")
-                        .font(.system(size: 60))
+                        .font(DesignTokens.Typography.hero)
 
                     Text("Welcome to MCP Server Manager")
-                        .font(.system(size: 28))
-                        .fontWeight(.bold)
+                        .font(DesignTokens.Typography.title1)
 
                     Text("Manage your Claude Code MCP servers with ease")
-                        .font(.system(size: 14))
+                        .font(DesignTokens.Typography.body)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                 }
@@ -36,14 +36,14 @@ struct OnboardingModal: View {
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: "info.circle.fill")
                             .foregroundColor(.blue)
-                            .font(.system(size: 20))
+                            .font(DesignTokens.Typography.title3)
 
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Your Claude Code config is typically located at:")
-                                .font(.system(size: 14))
+                                .font(DesignTokens.Typography.body)
 
                             Text("~/.claude.json")
-                                .font(.system(size: 15, design: .monospaced))
+                                .font(DesignTokens.Typography.codeLarge)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
                                 .background(
@@ -52,7 +52,7 @@ struct OnboardingModal: View {
                                 )
 
                             Text("If you don't see hidden files, press ⌘⇧. (Command+Shift+Period)")
-                                .font(.system(size: 12))
+                                .font(DesignTokens.Typography.bodySmall)
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -74,7 +74,7 @@ struct OnboardingModal: View {
                             .foregroundColor(.green)
 
                         Text(selectedPath)
-                            .font(.system(size: 14))
+                            .font(DesignTokens.Typography.body)
                             .lineLimit(1)
 
                         Spacer()
@@ -94,14 +94,13 @@ struct OnboardingModal: View {
                 VStack(spacing: 12) {
                     Button(action: selectFile) {
                         Text("Select Config File")
-                            .fontWeight(.semibold)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(DesignTokens.primaryGradient)
+                                    .fill(themeColors.accentGradient)
                             )
-                            .foregroundColor(.white)
+                            .foregroundColor(themeColors.primaryText)
                     }
                     .buttonStyle(.plain)
 
@@ -110,7 +109,6 @@ struct OnboardingModal: View {
                             viewModel.completeOnboarding(configPath: selectedPath)
                         }) {
                             Text("Continue")
-                                .fontWeight(.semibold)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
                                 .background(
@@ -125,7 +123,7 @@ struct OnboardingModal: View {
 
                 // Footer
                 Text("This app only reads and writes to your config files. No data is sent anywhere.")
-                    .font(.system(size: 11))
+                    .font(DesignTokens.Typography.caption)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
             }

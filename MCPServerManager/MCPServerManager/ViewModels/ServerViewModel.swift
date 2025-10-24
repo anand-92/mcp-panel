@@ -18,6 +18,16 @@ class ServerViewModel: ObservableObject {
     private let configManager = ConfigManager.shared
     private var skipSync = false
 
+    // MARK: - Theme Detection
+
+    var currentTheme: AppTheme {
+        AppTheme.detect(from: settings.activeConfigPath)
+    }
+
+    var themeColors: ThemeColors {
+        DesignTokens.colors(for: currentTheme)
+    }
+
     enum ToastType {
         case success, error, warning
     }

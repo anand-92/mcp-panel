@@ -17,7 +17,10 @@ let package = Package(
         .executableTarget(
             name: "MCPServerManager",
             dependencies: [],
-            path: "MCPServerManager"
+            path: "MCPServerManager",
+            resources: [
+                .process("Resources")
+            ]
         )
     ]
 )

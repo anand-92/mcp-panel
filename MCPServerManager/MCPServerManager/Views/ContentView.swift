@@ -4,14 +4,12 @@ struct ContentView: View {
     @StateObject private var viewModel = ServerViewModel()
     @State private var showSettings = false
     @State private var showAddServer = false
-    @State private var showSidebar = true
+    @State private var showQuickActions = false
 
     var body: some View {
         ZStack {
-            // Background
-            (viewModel.settings.cyberpunkMode ?
-                DesignTokens.cyberpunkBackgroundGradient :
-                DesignTokens.backgroundGradient)
+            // Background - uses dynamic theme
+            viewModel.themeColors.backgroundGradient
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -19,35 +17,22 @@ struct ContentView: View {
                 HeaderView(
                     viewModel: viewModel,
                     showSettings: $showSettings,
-                    showSidebar: $showSidebar
+                    showAddServer: $showAddServer,
+                    showQuickActions: $showQuickActions
                 )
 
                 // Toolbar
                 ToolbarView(viewModel: viewModel)
 
-                // Main content
-                HStack(spacing: 0) {
-                    // Sidebar
-                    if showSidebar {
-                        SidebarView(
-                            viewModel: viewModel,
-                            showAddServer: $showAddServer
-                        )
-                        .padding(.leading, 20)
-                        .padding(.vertical, 20)
-                        .transition(.move(edge: .leading).combined(with: .opacity))
+                // Main content area - switches based on view mode
+                Group {
+                    if viewModel.viewMode == .grid {
+                        ServerGridView(viewModel: viewModel)
+                    } else {
+                        RawJSONView(viewModel: viewModel)
                     }
-
-                    // Main content area - switches based on view mode
-                    Group {
-                        if viewModel.viewMode == .grid {
-                            ServerGridView(viewModel: viewModel)
-                        } else {
-                            RawJSONView(viewModel: viewModel)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
 
             // Toast notification - positioned to not block UI
@@ -87,7 +72,7 @@ struct ContentView: View {
                             .scaleEffect(1.5)
 
                         Text("Loading configuration...")
-                            .font(.system(size: 17))
+                            .font(DesignTokens.Typography.bodyLarge)
                     }
                     .padding(40)
                     .background(
@@ -98,14 +83,66 @@ struct ContentView: View {
                 }
                 .transition(.opacity)
             }
+
+            // Quick Actions Menu - Floating overlay
+            if showQuickActions {
+                ZStack(alignment: .topLeading) {
+                    // Backdrop with gradient
+                    RadialGradient(
+                        gradient: Gradient(colors: [
+                            Color.black.opacity(0.7),
+                            Color.black.opacity(0.5),
+                            Color.black.opacity(0.3),
+                            Color.black.opacity(0.0)
+                        ]),
+                        center: UnitPoint(x: 0.15, y: 0.15),
+                        startRadius: 50,
+                        endRadius: 1200
+                    )
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            showQuickActions = false
+                        }
+                    }
+
+                    // Menu
+                    QuickActionsMenu(
+                        viewModel: viewModel,
+                        showAddServer: $showAddServer,
+                        isExpanded: $showQuickActions
+                    )
+                }
+                .transition(.opacity)
+            }
+
+            // Settings Modal with dark backdrop
+            if showSettings {
+                ZStack {
+                    Color.black.opacity(0.5)
+                        .ignoresSafeArea()
+                        .transition(.opacity)
+
+                    SettingsModal(isPresented: $showSettings, viewModel: viewModel)
+                }
+                .transition(.opacity)
+            }
+
+            // Add Server Modal with dark backdrop
+            if showAddServer {
+                ZStack {
+                    Color.black.opacity(0.5)
+                        .ignoresSafeArea()
+                        .transition(.opacity)
+
+                    AddServerModal(isPresented: $showAddServer, viewModel: viewModel)
+                }
+                .transition(.opacity)
+            }
         }
-        .environment(\.cyberpunkMode, viewModel.settings.cyberpunkMode)
-        .sheet(isPresented: $showSettings) {
-            SettingsModal(isPresented: $showSettings, viewModel: viewModel)
-        }
-        .sheet(isPresented: $showAddServer) {
-            AddServerModal(isPresented: $showAddServer, viewModel: viewModel)
-        }
+        .environment(\.themeColors, viewModel.themeColors)
+        .environment(\.currentTheme, viewModel.currentTheme)
+        .windowOpacity(viewModel.settings.windowOpacity)
         .frame(minWidth: 900, minHeight: 600)
     }
 }

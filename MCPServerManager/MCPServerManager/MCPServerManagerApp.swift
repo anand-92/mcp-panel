@@ -28,6 +28,9 @@ struct MCPServerManagerApp: App {
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Register custom fonts (Poppins & Crimson Pro)
+        FontManager.registerFonts()
+
         // Make app key window and accept input
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)

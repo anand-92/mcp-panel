@@ -3,25 +3,33 @@ import SwiftUI
 struct HeaderView: View {
     @ObservedObject var viewModel: ServerViewModel
     @Binding var showSettings: Bool
-    @Binding var showSidebar: Bool
+    @Binding var showAddServer: Bool
+    @Binding var showQuickActions: Bool
+    @Environment(\.themeColors) private var themeColors
 
     var body: some View {
         HStack(spacing: 16) {
-            // Hamburger menu (mobile/compact)
-            Button(action: { showSidebar.toggle() }) {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(size: 22))
+            // Quick Actions Button
+            Button(action: {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    showQuickActions.toggle()
+                }
+            }) {
+                Image(systemName: showQuickActions ? "xmark" : "square.grid.2x2.fill")
+                    .font(DesignTokens.Typography.title3)
+                    .foregroundColor(themeColors.primaryText)
+                    .rotationEffect(.degrees(showQuickActions ? 90 : 0))
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showQuickActions)
             }
             .buttonStyle(.plain)
-            .help("Toggle Sidebar")
+            .help("Quick Actions")
 
             // App title
             HStack(spacing: 4) {
                 Text("⚡")
                 Text("MCP Server Manager")
-                    .font(.system(size: 20))
-                    .fontWeight(.bold)
-                    .foregroundStyle(DesignTokens.primaryGradient)
+                    .font(DesignTokens.Typography.title3)
+                    .foregroundStyle(themeColors.accentGradient)
             }
 
             Spacer()
@@ -33,7 +41,6 @@ struct HeaderView: View {
 
                 TextField("Search servers... (⌘F)", text: $viewModel.searchText)
                     .textFieldStyle(.plain)
-                    .frame(width: 250)
                     .focusable(true)
             }
             .padding(.horizontal, 12)
@@ -50,7 +57,6 @@ struct HeaderView: View {
             // Config switcher
             HStack(spacing: 8) {
                 ConfigButton(
-                    number: 1,
                     path: viewModel.settings.config1Path,
                     isActive: viewModel.settings.activeConfigIndex == 0,
                     action: {
@@ -60,7 +66,6 @@ struct HeaderView: View {
                 )
 
                 ConfigButton(
-                    number: 2,
                     path: viewModel.settings.config2Path,
                     isActive: viewModel.settings.activeConfigIndex == 1,
                     action: {
@@ -73,12 +78,12 @@ struct HeaderView: View {
             // Settings button
             Button(action: { showSettings = true }) {
                 Image(systemName: "gear")
-                    .font(.system(size: 20))
-                    .foregroundColor(.white)
+                    .font(DesignTokens.Typography.title3)
+                    .foregroundColor(Color(hex: "#1a1a1a"))
                     .padding(8)
                     .background(
                         Circle()
-                            .fill(DesignTokens.primaryGradient)
+                            .fill(themeColors.accentGradient)
                     )
             }
             .buttonStyle(.plain)
@@ -95,41 +100,24 @@ struct HeaderView: View {
 }
 
 struct ConfigButton: View {
-    let number: Int
     let path: String
     let isActive: Bool
     let action: () -> Void
+    @Environment(\.themeColors) private var themeColors
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(Color.green)
-                    .frame(width: 8, height: 8)
-
-                Text(shortPath(path))
-                    .font(.system(size: 12))
-                    .lineLimit(1)
-
-                Text("\(number)")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 16, height: 16)
-                    .background(Circle().fill(Color.blue))
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(isActive ? AnyShapeStyle(DesignTokens.primaryGradient) : AnyShapeStyle(Color.gray.opacity(0.3)))
-            )
-            .foregroundColor(.white)
+            Text(path.shortPath())
+                .font(DesignTokens.Typography.label)
+                .lineLimit(1)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(isActive ? AnyShapeStyle(themeColors.accentGradient) : AnyShapeStyle(themeColors.glassBackground))
+                )
+                .foregroundColor(isActive ? Color(hex: "#1a1a1a") : themeColors.mutedText)
         }
         .buttonStyle(.plain)
-    }
-
-    private func shortPath(_ path: String) -> String {
-        let components = path.split(separator: "/")
-        return String(components.last ?? "config")
     }
 }

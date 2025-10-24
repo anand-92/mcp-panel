@@ -34,11 +34,12 @@ struct ServerGridView: View {
 
 struct EmptyStateView: View {
     let onCreateServer: () -> Void
+    @Environment(\.themeColors) private var themeColors
 
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "server.rack")
-                .font(.system(size: 40))
+                .font(DesignTokens.Typography.display)
                 .foregroundColor(.secondary)
                 .padding(30)
                 .background(
@@ -47,11 +48,10 @@ struct EmptyStateView: View {
                 )
 
             Text("No servers configured yet")
-                .font(.system(size: 22))
-                .fontWeight(.semibold)
+                .font(DesignTokens.Typography.title2)
 
             Text("Add your first MCP server to get started")
-                .font(.system(size: 14))
+                .font(DesignTokens.Typography.body)
                 .foregroundColor(.secondary)
 
             Button(action: onCreateServer) {
@@ -60,9 +60,9 @@ struct EmptyStateView: View {
                     .padding(.vertical, 12)
                     .background(
                         RoundedRectangle(cornerRadius: 20)
-                            .fill(DesignTokens.primaryGradient)
+                            .fill(themeColors.accentGradient)
                     )
-                    .foregroundColor(.white)
+                    .foregroundColor(themeColors.primaryText)
             }
             .buttonStyle(.plain)
         }

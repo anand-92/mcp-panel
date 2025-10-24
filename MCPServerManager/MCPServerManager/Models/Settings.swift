@@ -2,28 +2,28 @@ import Foundation
 
 struct AppSettings: Codable, Equatable {
     var confirmDelete: Bool
-    var cyberpunkMode: Bool
     var configPaths: [String]
     var activeConfigIndex: Int
+    var windowOpacity: Double
 
     static let `default` = AppSettings(
         confirmDelete: true,
-        cyberpunkMode: false,
         configPaths: [
             "~/.claude.json",
             "~/.settings.json"
         ],
-        activeConfigIndex: 0
+        activeConfigIndex: 0,
+        windowOpacity: 1.0
     )
 
     init(confirmDelete: Bool = true,
-         cyberpunkMode: Bool = false,
          configPaths: [String] = ["~/.claude.json", "~/.settings.json"],
-         activeConfigIndex: Int = 0) {
+         activeConfigIndex: Int = 0,
+         windowOpacity: Double = 1.0) {
         self.confirmDelete = confirmDelete
-        self.cyberpunkMode = cyberpunkMode
         self.configPaths = configPaths
         self.activeConfigIndex = max(0, min(activeConfigIndex, 1)) // Ensure 0 or 1
+        self.windowOpacity = max(0.3, min(windowOpacity, 1.0)) // Clamp between 0.3 and 1.0
     }
 
     var activeConfigPath: String {
