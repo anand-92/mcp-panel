@@ -1,0 +1,24 @@
+# Xcode
+.DS_Store
+.build/
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+*.xcuserstate
+DerivedData/
+
+# Swift Package Manager
+/.build
+/Packages
+Package.resolved
+*.swiftpm
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Build artifacts
+*.app
+*.dSYM
+*.ipa
