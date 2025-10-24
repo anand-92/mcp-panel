@@ -17,12 +17,16 @@ struct ServerCardView: View {
     var body: some View {
         GlassPanel {
             VStack(alignment: .leading, spacing: 12) {
-                // Header
+                // Header with icon
                 HStack(alignment: .top) {
                     Text(server.name)
                         .font(DesignTokens.Typography.title2)
                         .lineLimit(2)
                         .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Spacer()
+
+                    ServerIconView(server: server, size: 40)
                 }
 
                 // Config summary

@@ -1,0 +1,209 @@
+import Foundation
+import SwiftUI
+import AppKit
+
+/// Service for fetching and caching server logos/icons
+class IconService: ObservableObject {
+    static let shared = IconService()
+
+    private let cacheDirectory: URL
+    private let bundledLogos: [String: String] = [
+        "chrome": "chrome-logo",
+        "github": "github-logo",
+        "gitlab": "gitlab-logo",
+        "slack": "slack-logo",
+        "postgres": "postgres-logo",
+        "postgresql": "postgres-logo",
+        "filesystem": "filesystem-logo",
+        "brave": "brave-logo",
+        "puppeteer": "puppeteer-logo",
+        "playwright": "playwright-logo",
+        "sqlite": "sqlite-logo",
+        "mysql": "mysql-logo",
+        "mongodb": "mongodb-logo",
+        "redis": "redis-logo",
+        "docker": "docker-logo",
+        "kubernetes": "kubernetes-logo",
+        "aws": "aws-logo",
+        "gcp": "gcp-logo",
+        "azure": "azure-logo",
+        "anthropic": "anthropic-logo",
+        "openai": "openai-logo",
+        "google": "google-logo",
+        "fetch": "fetch-logo",
+        "memory": "memory-logo",
+        "sequential-thinking": "sequential-thinking-logo",
+        "everart": "everart-logo",
+        "sentry": "sentry-logo",
+        "raycast": "raycast-logo",
+        "linear": "linear-logo",
+        "notion": "notion-logo"
+    ]
+
+    private init() {
+        // Setup cache directory
+        let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        self.cacheDirectory = cacheDir.appendingPathComponent("MCPServerManager/ServerLogos", isDirectory: true)
+
+        // Create cache directory if needed
+        try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+    }
+
+    // MARK: - Public API
+
+    /// Load icon for a server with automatic fallback chain
+    func loadIcon(for serverName: String, domain: String?) async -> NSImage? {
+        // 1. Check bundled assets first (instant)
+        if let bundledIcon = loadBundledIcon(for: serverName) {
+            return bundledIcon
+        }
+
+        // 2. Check if we have it cached
+        if let domain = domain, let cachedIcon = loadCachedIcon(for: domain) {
+            return cachedIcon
+        }
+
+        // 3. Fetch from remote if enabled
+        if UserDefaults.standard.bool(forKey: "fetchServerLogos") != false, let domain = domain {
+            if let remoteIcon = await fetchRemoteIcon(for: domain) {
+                cacheIcon(remoteIcon, for: domain)
+                return remoteIcon
+            }
+        }
+
+        // 4. Fallback to nil (caller will show SF Symbol)
+        return nil
+    }
+
+    /// Get SF Symbol fallback icon name based on server name
+    func getFallbackSymbol(for serverName: String) -> String {
+        let lowerName = serverName.lowercased()
+
+        // Keyword matching for common patterns
+        if lowerName.contains("chrome") || lowerName.contains("browser") {
+            return "globe"
+        } else if lowerName.contains("github") || lowerName.contains("gitlab") || lowerName.contains("git") {
+            return "chevron.left.forwardslash.chevron.right"
+        } else if lowerName.contains("slack") || lowerName.contains("discord") || lowerName.contains("message") {
+            return "message.fill"
+        } else if lowerName.contains("database") || lowerName.contains("postgres") || lowerName.contains("mysql") || lowerName.contains("sql") {
+            return "cylinder.fill"
+        } else if lowerName.contains("filesystem") || lowerName.contains("file") {
+            return "folder.fill"
+        } else if lowerName.contains("memory") || lowerName.contains("cache") {
+            return "memorychip.fill"
+        } else if lowerName.contains("fetch") || lowerName.contains("http") {
+            return "arrow.down.circle.fill"
+        } else if lowerName.contains("sequential") || lowerName.contains("thinking") {
+            return "brain.head.profile"
+        } else if lowerName.contains("docker") || lowerName.contains("container") {
+            return "shippingbox.fill"
+        } else if lowerName.contains("kubernetes") || lowerName.contains("k8s") {
+            return "network"
+        } else if lowerName.contains("cloud") || lowerName.contains("aws") || lowerName.contains("gcp") || lowerName.contains("azure") {
+            return "cloud.fill"
+        } else if lowerName.contains("api") {
+            return "arrow.left.arrow.right"
+        } else if lowerName.contains("search") {
+            return "magnifyingglass"
+        } else if lowerName.contains("honeycomb") {
+            return "hexagon.fill"
+        } else if lowerName.contains("x-") || lowerName == "x" {
+            return "xmark"
+        } else {
+            return "server.rack"
+        }
+    }
+
+    // MARK: - Private Helpers
+
+    private func loadBundledIcon(for serverName: String) -> NSImage? {
+        let lowerName = serverName.lowercased()
+
+        // Try exact match first
+        if let assetName = bundledLogos[lowerName], let image = NSImage(named: assetName) {
+            return image
+        }
+
+        // Try partial matches
+        for (key, assetName) in bundledLogos {
+            if lowerName.contains(key) {
+                if let image = NSImage(named: assetName) {
+                    return image
+                }
+            }
+        }
+
+        return nil
+    }
+
+    private func loadCachedIcon(for domain: String) -> NSImage? {
+        let cacheURL = cacheDirectory.appendingPathComponent("\(domain).png")
+        guard FileManager.default.fileExists(atPath: cacheURL.path) else {
+            return nil
+        }
+        return NSImage(contentsOf: cacheURL)
+    }
+
+    private func cacheIcon(_ image: NSImage, for domain: String) {
+        let cacheURL = cacheDirectory.appendingPathComponent("\(domain).png")
+
+        guard let tiffData = image.tiffRepresentation,
+              let bitmapRep = NSBitmapImageRep(data: tiffData),
+              let pngData = bitmapRep.representation(using: .png, properties: [:]) else {
+            return
+        }
+
+        try? pngData.write(to: cacheURL)
+    }
+
+    private func fetchRemoteIcon(for domain: String) async -> NSImage? {
+        // Try Clearbit first (better quality, real logos)
+        if let image = await fetchFromClearbit(domain: domain) {
+            return image
+        }
+
+        // Fallback to Google Favicon
+        if let image = await fetchFromGoogleFavicon(domain: domain) {
+            return image
+        }
+
+        return nil
+    }
+
+    private func fetchFromClearbit(domain: String) async -> NSImage? {
+        guard let url = URL(string: "https://logo.clearbit.com/\(domain)") else {
+            return nil
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                return nil
+            }
+            return NSImage(data: data)
+        } catch {
+            return nil
+        }
+    }
+
+    private func fetchFromGoogleFavicon(domain: String) async -> NSImage? {
+        guard let url = URL(string: "https://www.google.com/s2/favicons?sz=128&domain=\(domain)") else {
+            return nil
+        }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            return NSImage(data: data)
+        } catch {
+            return nil
+        }
+    }
+
+    /// Clear all cached icons
+    func clearCache() {
+        try? FileManager.default.removeItem(at: cacheDirectory)
+        try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+    }
+}

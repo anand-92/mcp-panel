@@ -217,102 +217,82 @@ class ServerViewModel: ObservableObject {
     // MARK: - Server CRUD
 
     func addServers(from jsonString: String) {
-        do {
-            guard let data = jsonString.data(using: .utf8) else {
-                throw NSError(domain: "Invalid JSON", code: -1)
-            }
+        print("DEBUG: Starting addServers with input length: \(jsonString.count)")
 
-            // Try to parse - check for mcpServers wrapper FIRST
-            var serverDict: [String: ServerConfig]?
-
-            // Try format 1: Full config with mcpServers wrapper (most common)
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let mcpServers = json["mcpServers"] as? [String: Any] {
-                print("DEBUG: Found mcpServers wrapper, extracting...")
-                let mcpData = try JSONSerialization.data(withJSONObject: mcpServers)
-                serverDict = try JSONDecoder().decode([String: ServerConfig].self, from: mcpData)
-            }
-            // Try format 2: Direct server dictionary
-            else if let direct = try? JSONDecoder().decode([String: ServerConfig].self, from: data) {
-                print("DEBUG: Parsed as direct server dictionary")
-                serverDict = direct
-            }
-            // Unrecognized format
-            else {
-                throw NSError(domain: "Unrecognized JSON format", code: -1, userInfo: [
-                    NSLocalizedDescriptionKey: "Expected either {\"name\": {...}} or {\"mcpServers\": {\"name\": {...}}}"
-                ])
-            }
-
-            guard let servers = serverDict, !servers.isEmpty else {
-                showToast(message: "No servers found in JSON", type: .warning)
-                print("DEBUG: Parsed dictionary is empty")
-                return
-            }
-
-            print("DEBUG: Found \(servers.count) servers in JSON")
-
-            var addedCount = 0
-            var invalidCount = 0
-
-            for (name, config) in servers {
-                print("DEBUG: Processing server '\(name)'...")
-                print("DEBUG: Config valid: \(config.isValid)")
-                print("DEBUG: Has command: \(config.command != nil)")
-                print("DEBUG: Has transport: \(config.transport != nil)")
-                print("DEBUG: Has remotes: \(config.remotes != nil)")
-
-                guard config.isValid else {
-                    print("DEBUG: Skipping invalid config for \(name)")
-                    invalidCount += 1
-                    continue
-                }
-
-                if let index = self.servers.firstIndex(where: { $0.name == name }) {
-                    var updatedServer = self.servers[index]
-                    updatedServer.config = config
-                    updatedServer.updatedAt = Date()
-                    updatedServer.inConfigs[settings.activeConfigIndex] = true
-                    self.servers[index] = updatedServer
-                    print("DEBUG: Updated existing server '\(name)'")
-                } else {
-                    var inConfigs = [false, false]
-                    inConfigs[settings.activeConfigIndex] = true
-
-                    let newServer = ServerModel(
-                        name: name,
-                        config: config,
-                        updatedAt: Date(),
-                        inConfigs: inConfigs
-                    )
-                    self.servers.append(newServer)
-                    print("DEBUG: Added new server '\(name)'")
-                }
-                addedCount += 1
-            }
-
-            self.servers.sort { $0.name < $1.name }
-
-            // Force UI update
-            objectWillChange.send()
-
-            // Sync to files
-            syncToConfigs()
-
-            if invalidCount > 0 {
-                showToast(message: "Added \(addedCount) server(s), skipped \(invalidCount) invalid", type: .warning)
-            } else {
-                showToast(message: "Added \(addedCount) server(s)", type: .success)
-            }
-
-            print("DEBUG: Total servers now: \(self.servers.count)")
-            print("DEBUG: Filtered servers: \(filteredServers.count)")
-            print("DEBUG: Active config index: \(settings.activeConfigIndex)")
-            print("DEBUG: Filter mode: \(filterMode)")
-        } catch {
-            print("DEBUG: Error parsing JSON: \(error)")
-            showToast(message: "Invalid JSON: \(error.localizedDescription)", type: .error)
+        // Use forgiving parser to extract server entries
+        guard let serverDict = ServerExtractor.extractServerEntries(from: jsonString) else {
+            print("DEBUG: Failed to parse JSON")
+            showToast(message: "Could not parse JSON. Please check format.", type: .error)
+            return
         }
+
+        guard !serverDict.isEmpty else {
+            showToast(message: "No servers found in JSON", type: .warning)
+            print("DEBUG: Parsed dictionary is empty")
+            return
+        }
+
+        print("DEBUG: Found \(serverDict.count) servers in JSON")
+
+        var addedCount = 0
+        var invalidCount = 0
+
+        for (name, config) in serverDict {
+            print("DEBUG: Processing server '\(name)'...")
+            print("DEBUG: Config valid: \(config.isValid)")
+            print("DEBUG: Has command: \(config.command != nil)")
+            print("DEBUG: Command: \(config.command ?? "nil")")
+            print("DEBUG: Args: \(config.args ?? [])")
+            print("DEBUG: Has transport: \(config.transport != nil)")
+            print("DEBUG: Has remotes: \(config.remotes != nil)")
+
+            guard config.isValid else {
+                print("DEBUG: Skipping invalid config for \(name)")
+                invalidCount += 1
+                continue
+            }
+
+            if let index = self.servers.firstIndex(where: { $0.name == name }) {
+                var updatedServer = self.servers[index]
+                updatedServer.config = config
+                updatedServer.updatedAt = Date()
+                updatedServer.inConfigs[settings.activeConfigIndex] = true
+                self.servers[index] = updatedServer
+                print("DEBUG: Updated existing server '\(name)'")
+            } else {
+                var inConfigs = [false, false]
+                inConfigs[settings.activeConfigIndex] = true
+
+                let newServer = ServerModel(
+                    name: name,
+                    config: config,
+                    updatedAt: Date(),
+                    inConfigs: inConfigs
+                )
+                self.servers.append(newServer)
+                print("DEBUG: Added new server '\(name)'")
+            }
+            addedCount += 1
+        }
+
+        self.servers.sort { $0.name < $1.name }
+
+        // Force UI update
+        objectWillChange.send()
+
+        // Sync to files
+        syncToConfigs()
+
+        if invalidCount > 0 {
+            showToast(message: "Added \(addedCount) server(s), skipped \(invalidCount) invalid", type: .warning)
+        } else {
+            showToast(message: "Added \(addedCount) server(s)", type: .success)
+        }
+
+        print("DEBUG: Total servers now: \(self.servers.count)")
+        print("DEBUG: Filtered servers: \(filteredServers.count)")
+        print("DEBUG: Active config index: \(settings.activeConfigIndex)")
+        print("DEBUG: Filter mode: \(filterMode)")
     }
 
     func updateServer(_ server: ServerModel, with jsonString: String) {

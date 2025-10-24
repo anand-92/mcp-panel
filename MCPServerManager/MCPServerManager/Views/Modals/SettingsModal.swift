@@ -9,6 +9,7 @@ struct SettingsModal: View {
     @State private var config1Path: String = ""
     @State private var config2Path: String = ""
     @State private var confirmDelete: Bool = true
+    @State private var fetchServerLogos: Bool = true
     @State private var windowOpacity: Double = 1.0
     @State private var testingConnection: Bool = false
     @State private var testResult: String = ""
@@ -124,6 +125,17 @@ struct SettingsModal: View {
 
                     Divider()
 
+                    // Fetch Server Logos
+                    VStack(alignment: .leading, spacing: 8) {
+                        CheckboxToggle(isOn: $fetchServerLogos, label: "Fetch server logos from internet")
+
+                        Text("Automatically download logos for servers. When disabled, only generic icons will be shown. Respects your privacy - no tracking.")
+                            .font(DesignTokens.Typography.bodySmall)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Divider()
+
                     // Window Translucency
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
@@ -231,6 +243,7 @@ struct SettingsModal: View {
             config1Path = viewModel.settings.config1Path
             config2Path = viewModel.settings.config2Path
             confirmDelete = viewModel.settings.confirmDelete
+            fetchServerLogos = UserDefaults.standard.object(forKey: "fetchServerLogos") as? Bool ?? true
             windowOpacity = viewModel.settings.windowOpacity
         }
     }
@@ -273,6 +286,7 @@ struct SettingsModal: View {
         viewModel.settings.configPaths = [config1Path, config2Path]
         viewModel.settings.confirmDelete = confirmDelete
         viewModel.settings.windowOpacity = windowOpacity
+        UserDefaults.standard.set(fetchServerLogos, forKey: "fetchServerLogos")
         viewModel.saveSettings()
         isPresented = false
     }

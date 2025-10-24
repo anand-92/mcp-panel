@@ -38,6 +38,11 @@ struct ServerModel: Identifiable, Codable, Equatable {
 
     var isInConfig1: Bool { inConfigs.count > 0 ? inConfigs[0] : false }
     var isInConfig2: Bool { inConfigs.count > 1 ? inConfigs[1] : false }
+
+    /// Extract domain for icon fetching
+    var iconDomain: String? {
+        return DomainExtractor.extractDomain(from: name, config: config)
+    }
 }
 
 // MARK: - Config Response
