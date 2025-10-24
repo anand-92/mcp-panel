@@ -35,7 +35,7 @@ mkdir -p "$BUILD_DIR"
 # Step 1: Build the Swift binary
 echo "🔨 Building Swift binary..."
 cd MCPServerManager
-swift build -c release --arch arm64 --arch x86_64
+swift build -c release
 cd ..
 
 # Step 2: Create .app bundle structure

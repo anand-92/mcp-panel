@@ -60,7 +60,12 @@ jobs:
     - name: Build Swift app
       working-directory: MCPServerManager
       run: |
-        swift build -c release --arch arm64 --arch x86_64
+        # Build for native architecture (GitHub runners are arm64)
+        swift build -c release
+
+        # Verify binary was created
+        ls -la .build/release/
+        file .build/release/MCPServerManager
 
     - name: Create .app bundle
       run: |

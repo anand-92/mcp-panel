@@ -23,7 +23,12 @@ jobs:
     - name: Build Swift app
       working-directory: MCPServerManager
       run: |
+        # Build for native architecture
         swift build -c release
+
+        # Verify binary was created
+        ls -la .build/release/
+        file .build/release/MCPServerManager
 
     - name: Create app bundle
       working-directory: MCPServerManager
