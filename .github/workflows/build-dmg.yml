@@ -80,7 +80,7 @@ jobs:
         security create-keychain -p actions build.keychain
         security default-keychain -s build.keychain
         security unlock-keychain -p actions build.keychain
-        security import certificate.p12 -k build.keychain -T /usr/bin/codesign -A
+        security import certificate.p12 -k build.keychain -P "" -T /usr/bin/codesign -A
         security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions build.keychain
 
         # Sign the app
@@ -92,6 +92,9 @@ jobs:
           xcrun notarytool submit MCP-Server-Manager.zip --apple-id "$APPLE_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
           xcrun stapler staple MCP-Server-Manager.app
         fi
+
+    - name: Install create-dmg tool
+      run: brew install create-dmg
 
     - name: Create DMG
       working-directory: MCPServerManager
