@@ -12,7 +12,7 @@ struct ServerCardView: View {
 
     let onToggle: () -> Void
     let onDelete: () -> Void
-    let onUpdate: (String) -> Void
+    let onUpdate: (String) -> Bool
 
     var body: some View {
         GlassPanel {
@@ -92,8 +92,9 @@ struct ServerCardView: View {
                             .buttonStyle(.plain)
 
                             Button(action: {
-                                onUpdate(editedJSON)
-                                isEditing = false
+                                if onUpdate(editedJSON) {
+                                    isEditing = false
+                                }
                             }) {
                                 HStack(spacing: 4) {
                                     Image(systemName: "checkmark")
@@ -184,7 +185,10 @@ struct ServerCardView: View {
     }
 
     private func formatJSON(_ string: String) -> String {
-        guard let data = string.data(using: .utf8),
+        // First normalize quotes (curly quotes from Notes/Word/Slack)
+        let normalized = string.normalizingQuotes()
+
+        guard let data = normalized.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data),
               let formatted = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]),
               let result = String(data: formatted, encoding: .utf8) else {

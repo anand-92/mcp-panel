@@ -172,11 +172,14 @@ struct RawJSONView: View {
     }
 
     private func formatJSON() {
-        guard let data = jsonText.data(using: .utf8),
+        // First normalize quotes (curly quotes from Notes/Word/Slack)
+        let normalized = jsonText.normalizingQuotes()
+
+        guard let data = normalized.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data),
               let formatted = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]),
               let result = String(data: formatted, encoding: .utf8) else {
-            errorMessage = "Invalid JSON format"
+            errorMessage = "Invalid JSON format (after normalizing quotes)"
             return
         }
         jsonText = result
