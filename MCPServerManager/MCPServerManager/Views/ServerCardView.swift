@@ -185,7 +185,20 @@ struct ServerCardView: View {
     }
 
     private func formatJSON(_ string: String) -> String {
-        guard let data = string.data(using: .utf8),
+        // First normalize quotes (curly quotes from Notes/Word/Slack)
+        let normalized = string
+            .replacingOccurrences(of: """, with: "\"")  // Left double quotation mark
+            .replacingOccurrences(of: """, with: "\"")  // Right double quotation mark
+            .replacingOccurrences(of: "'", with: "'")   // Left single quotation mark
+            .replacingOccurrences(of: "'", with: "'")   // Right single quotation mark
+            .replacingOccurrences(of: "‚", with: "'")   // Single low-9 quotation mark
+            .replacingOccurrences(of: "„", with: "\"")  // Double low-9 quotation mark
+            .replacingOccurrences(of: "«", with: "\"")  // Left-pointing double angle quotation mark
+            .replacingOccurrences(of: "»", with: "\"")  // Right-pointing double angle quotation mark
+            .replacingOccurrences(of: "‹", with: "'")   // Single left-pointing angle quotation mark
+            .replacingOccurrences(of: "›", with: "'")   // Single right-pointing angle quotation mark
+
+        guard let data = normalized.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data),
               let formatted = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]),
               let result = String(data: formatted, encoding: .utf8) else {

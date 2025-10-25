@@ -5,11 +5,27 @@ import Foundation
 struct ServerExtractor {
 
     /// Extract server entries from raw JSON string
-    /// Handles common issues like trailing commas, missing braces, etc.
+    /// Handles common issues like trailing commas, missing braces, curly quotes, etc.
     static func extractServerEntries(from raw: String) -> [String: ServerConfig]? {
         var normalized = raw.trimmingCharacters(in: .whitespacesAndNewlines)
 
         print("DEBUG ServerExtractor: Input length: \(raw.count)")
+
+        // Normalize quotation marks - replace curly/typographic quotes with straight quotes
+        // This is super common when copying from Notes, Slack, Word, etc.
+        normalized = normalized
+            .replacingOccurrences(of: """, with: "\"")  // Left double quotation mark
+            .replacingOccurrences(of: """, with: "\"")  // Right double quotation mark
+            .replacingOccurrences(of: "'", with: "'")   // Left single quotation mark
+            .replacingOccurrences(of: "'", with: "'")   // Right single quotation mark
+            .replacingOccurrences(of: "‚", with: "'")   // Single low-9 quotation mark
+            .replacingOccurrences(of: "„", with: "\"")  // Double low-9 quotation mark
+            .replacingOccurrences(of: "«", with: "\"")  // Left-pointing double angle quotation mark
+            .replacingOccurrences(of: "»", with: "\"")  // Right-pointing double angle quotation mark
+            .replacingOccurrences(of: "‹", with: "'")   // Single left-pointing angle quotation mark
+            .replacingOccurrences(of: "›", with: "'")   // Single right-pointing angle quotation mark
+
+        print("DEBUG ServerExtractor: Normalized quotes")
 
         // Handle JSON fragments: if it doesn't start with {, try wrapping it
         // This includes cases like: "server-name": { ... } (missing outer braces)

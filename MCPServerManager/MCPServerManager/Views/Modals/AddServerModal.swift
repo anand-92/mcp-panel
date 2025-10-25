@@ -164,11 +164,24 @@ struct AddServerModal: View {
     }
 
     private func formatJSON() {
-        guard let data = jsonText.data(using: .utf8),
+        // First normalize quotes (curly quotes from Notes/Word/Slack)
+        var normalized = jsonText
+            .replacingOccurrences(of: """, with: "\"")  // Left double quotation mark
+            .replacingOccurrences(of: """, with: "\"")  // Right double quotation mark
+            .replacingOccurrences(of: "'", with: "'")   // Left single quotation mark
+            .replacingOccurrences(of: "'", with: "'")   // Right single quotation mark
+            .replacingOccurrences(of: "‚", with: "'")   // Single low-9 quotation mark
+            .replacingOccurrences(of: "„", with: "\"")  // Double low-9 quotation mark
+            .replacingOccurrences(of: "«", with: "\"")  // Left-pointing double angle quotation mark
+            .replacingOccurrences(of: "»", with: "\"")  // Right-pointing double angle quotation mark
+            .replacingOccurrences(of: "‹", with: "'")   // Single left-pointing angle quotation mark
+            .replacingOccurrences(of: "›", with: "'")   // Single right-pointing angle quotation mark
+
+        guard let data = normalized.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data),
               let formatted = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]),
               let result = String(data: formatted, encoding: .utf8) else {
-            errorMessage = "Invalid JSON format"
+            errorMessage = "Invalid JSON format (after normalizing quotes)"
             return
         }
         jsonText = result
