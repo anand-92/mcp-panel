@@ -24,7 +24,7 @@ struct ServerGridView: View {
                                 viewModel.deleteServer(server)
                             },
                             onUpdate: { json in
-                                viewModel.updateServer(server, with: json)
+                                return viewModel.updateServer(server, with: json)
                             }
                         )
                     }

@@ -295,7 +295,7 @@ class ServerViewModel: ObservableObject {
         print("DEBUG: Filter mode: \(filterMode)")
     }
 
-    func updateServer(_ server: ServerModel, with jsonString: String) {
+    func updateServer(_ server: ServerModel, with jsonString: String) -> Bool {
         do {
             guard let data = jsonString.data(using: .utf8),
                   let config = try? JSONDecoder().decode(ServerConfig.self, from: data) else {
@@ -314,9 +314,12 @@ class ServerViewModel: ObservableObject {
 
                 syncToConfigs()
                 showToast(message: "Server updated", type: .success)
+                return true
             }
+            return false
         } catch {
             showToast(message: "Failed to update: \(error.localizedDescription)", type: .error)
+            return false
         }
     }
 

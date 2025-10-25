@@ -12,7 +12,7 @@ struct ServerCardView: View {
 
     let onToggle: () -> Void
     let onDelete: () -> Void
-    let onUpdate: (String) -> Void
+    let onUpdate: (String) -> Bool
 
     var body: some View {
         GlassPanel {
@@ -92,8 +92,9 @@ struct ServerCardView: View {
                             .buttonStyle(.plain)
 
                             Button(action: {
-                                onUpdate(editedJSON)
-                                isEditing = false
+                                if onUpdate(editedJSON) {
+                                    isEditing = false
+                                }
                             }) {
                                 HStack(spacing: 4) {
                                     Image(systemName: "checkmark")
