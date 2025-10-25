@@ -9,9 +9,12 @@ struct ServerExtractor {
     static func extractServerEntries(from raw: String) -> [String: ServerConfig]? {
         var normalized = raw.trimmingCharacters(in: .whitespacesAndNewlines)
 
+        print("DEBUG ServerExtractor: Input length: \(raw.count)")
+
         // Handle JSON fragments: if it doesn't start with {, try wrapping it
         // This includes cases like: "server-name": { ... } (missing outer braces)
         if !normalized.hasPrefix("{") {
+            print("DEBUG ServerExtractor: Adding outer braces")
             normalized = "{\(normalized)}"
         }
 
@@ -23,34 +26,59 @@ struct ServerExtractor {
         )
 
         // Try to parse the JSON
-        guard let data = normalized.data(using: .utf8),
-              let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+        guard let data = normalized.data(using: .utf8) else {
+            print("DEBUG ServerExtractor: Failed to convert to UTF8 data")
             return nil
         }
 
-        // Check if it has mcpServers wrapper
-        if let mcpServers = parsed["mcpServers"] as? [String: Any] {
-            return parseServerDictionary(mcpServers)
-        }
+        do {
+            guard let parsed = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                print("DEBUG ServerExtractor: Parsed JSON is not a dictionary")
+                return nil
+            }
 
-        // Otherwise treat the whole thing as server entries
-        return parseServerDictionary(parsed)
+            print("DEBUG ServerExtractor: Successfully parsed JSON with keys: \(parsed.keys.joined(separator: ", "))")
+
+            // Check if it has mcpServers wrapper
+            if let mcpServers = parsed["mcpServers"] as? [String: Any] {
+                print("DEBUG ServerExtractor: Found mcpServers wrapper with \(mcpServers.count) servers")
+                return parseServerDictionary(mcpServers)
+            }
+
+            // Otherwise treat the whole thing as server entries
+            print("DEBUG ServerExtractor: No mcpServers wrapper, treating as direct server entries")
+            return parseServerDictionary(parsed)
+        } catch {
+            print("DEBUG ServerExtractor: JSON parsing error: \(error.localizedDescription)")
+            return nil
+        }
     }
 
     /// Parse a dictionary into ServerConfig entries
     private static func parseServerDictionary(_ dict: [String: Any]) -> [String: ServerConfig]? {
         var result: [String: ServerConfig] = [:]
 
+        print("DEBUG parseServerDictionary: Processing \(dict.count) entries")
+
         for (name, value) in dict {
+            print("DEBUG parseServerDictionary: Processing server '\(name)'")
+
             guard let configDict = value as? [String: Any] else {
+                print("DEBUG parseServerDictionary: Server '\(name)' value is not a dictionary")
                 continue
             }
 
+            print("DEBUG parseServerDictionary: Server '\(name)' has keys: \(configDict.keys.joined(separator: ", "))")
+
             if let config = parseServerConfig(configDict) {
+                print("DEBUG parseServerDictionary: Successfully parsed server '\(name)', isValid: \(config.isValid)")
                 result[name] = config
+            } else {
+                print("DEBUG parseServerDictionary: Failed to parse config for '\(name)'")
             }
         }
 
+        print("DEBUG parseServerDictionary: Result has \(result.count) servers")
         return result.isEmpty ? nil : result
     }
 

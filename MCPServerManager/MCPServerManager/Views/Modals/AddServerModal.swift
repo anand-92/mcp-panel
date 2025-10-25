@@ -176,14 +176,20 @@ struct AddServerModal: View {
     }
 
     private func validateJSON() {
+        print("DEBUG AddServerModal: Starting validation")
+        print("DEBUG AddServerModal: JSON text length: \(jsonText.count)")
+
         // Use the same forgiving parser as addServers
         guard let serverDict = ServerExtractor.extractServerEntries(from: jsonText) else {
-            errorMessage = "Could not parse JSON. Please check format."
+            errorMessage = "Could not parse JSON. Check Console.app logs for details. Expected format: {\"server-name\": {\"command\": \"...\"}} or wrap in {\"mcpServers\": {...}}"
+            print("DEBUG AddServerModal: ServerExtractor returned nil")
             return
         }
 
+        print("DEBUG AddServerModal: Extracted \(serverDict.count) servers")
+
         guard !serverDict.isEmpty else {
-            errorMessage = "No servers found in JSON"
+            errorMessage = "No valid server configurations found in JSON"
             return
         }
 
@@ -191,11 +197,27 @@ struct AddServerModal: View {
         let invalidServers = serverDict.filter { !$0.value.isValid }
         if !invalidServers.isEmpty {
             let names = invalidServers.map { $0.key }.joined(separator: ", ")
-            errorMessage = "Invalid server config(s): \(names)"
+            let details = invalidServers.map { name, config in
+                let reason = getInvalidReason(config)
+                return "\(name): \(reason)"
+            }.joined(separator: "; ")
+            errorMessage = "Invalid server config(s): \(details)"
+            print("DEBUG AddServerModal: Invalid servers: \(details)")
             return
         }
 
         errorMessage = "✓ Valid! Found \(serverDict.count) server(s)"
+        print("DEBUG AddServerModal: Validation succeeded")
+    }
+
+    private func getInvalidReason(_ config: ServerConfig) -> String {
+        if config.command == nil && config.transport == nil && config.remotes == nil {
+            return "missing command, transport, or remotes"
+        }
+        if let cmd = config.command, cmd.trimmingCharacters(in: .whitespaces).isEmpty {
+            return "empty command"
+        }
+        return "unknown issue"
     }
 
     private func addServers() {
