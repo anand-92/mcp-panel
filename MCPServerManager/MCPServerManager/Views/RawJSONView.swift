@@ -173,17 +173,7 @@ struct RawJSONView: View {
 
     private func formatJSON() {
         // First normalize quotes (curly quotes from Notes/Word/Slack)
-        var normalized = jsonText
-            .replacingOccurrences(of: """, with: "\"")  // Left double quotation mark
-            .replacingOccurrences(of: """, with: "\"")  // Right double quotation mark
-            .replacingOccurrences(of: "'", with: "'")   // Left single quotation mark
-            .replacingOccurrences(of: "'", with: "'")   // Right single quotation mark
-            .replacingOccurrences(of: "‚", with: "'")   // Single low-9 quotation mark
-            .replacingOccurrences(of: "„", with: "\"")  // Double low-9 quotation mark
-            .replacingOccurrences(of: "«", with: "\"")  // Left-pointing double angle quotation mark
-            .replacingOccurrences(of: "»", with: "\"")  // Right-pointing double angle quotation mark
-            .replacingOccurrences(of: "‹", with: "'")   // Single left-pointing angle quotation mark
-            .replacingOccurrences(of: "›", with: "'")   // Single right-pointing angle quotation mark
+        let normalized = jsonText.normalizingQuotes()
 
         guard let data = normalized.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data),

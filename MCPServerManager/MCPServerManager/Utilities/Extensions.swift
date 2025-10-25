@@ -20,6 +20,22 @@ extension String {
         let components = self.split(separator: "/")
         return String(components.last ?? "")
     }
+
+    /// Normalize various quotation mark styles to standard straight quotes
+    /// Handles curly quotes commonly pasted from Notes, Word, Slack, etc.
+    func normalizingQuotes() -> String {
+        return self
+            .replacingOccurrences(of: """, with: "\"")  // Left double quotation mark
+            .replacingOccurrences(of: """, with: "\"")  // Right double quotation mark
+            .replacingOccurrences(of: "'", with: "'")   // Left single quotation mark
+            .replacingOccurrences(of: "'", with: "'")   // Right single quotation mark
+            .replacingOccurrences(of: "‚", with: "'")   // Single low-9 quotation mark
+            .replacingOccurrences(of: "„", with: "\"")  // Double low-9 quotation mark
+            .replacingOccurrences(of: "«", with: "\"")  // Left-pointing double angle quotation mark
+            .replacingOccurrences(of: "»", with: "\"")  // Right-pointing double angle quotation mark
+            .replacingOccurrences(of: "‹", with: "'")   // Single left-pointing angle quotation mark
+            .replacingOccurrences(of: "›", with: "'")   // Single right-pointing angle quotation mark
+    }
 }
 
 // MARK: - Date Extensions

@@ -165,17 +165,7 @@ struct AddServerModal: View {
 
     private func formatJSON() {
         // First normalize quotes (curly quotes from Notes/Word/Slack)
-        var normalized = jsonText
-            .replacingOccurrences(of: """, with: "\"")  // Left double quotation mark
-            .replacingOccurrences(of: """, with: "\"")  // Right double quotation mark
-            .replacingOccurrences(of: "'", with: "'")   // Left single quotation mark
-            .replacingOccurrences(of: "'", with: "'")   // Right single quotation mark
-            .replacingOccurrences(of: "‚", with: "'")   // Single low-9 quotation mark
-            .replacingOccurrences(of: "„", with: "\"")  // Double low-9 quotation mark
-            .replacingOccurrences(of: "«", with: "\"")  // Left-pointing double angle quotation mark
-            .replacingOccurrences(of: "»", with: "\"")  // Right-pointing double angle quotation mark
-            .replacingOccurrences(of: "‹", with: "'")   // Single left-pointing angle quotation mark
-            .replacingOccurrences(of: "›", with: "'")   // Single right-pointing angle quotation mark
+        let normalized = jsonText.normalizingQuotes()
 
         guard let data = normalized.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data),
@@ -189,17 +179,23 @@ struct AddServerModal: View {
     }
 
     private func validateJSON() {
+        #if DEBUG
         print("DEBUG AddServerModal: Starting validation")
         print("DEBUG AddServerModal: JSON text length: \(jsonText.count)")
+        #endif
 
         // Use the same forgiving parser as addServers
         guard let serverDict = ServerExtractor.extractServerEntries(from: jsonText) else {
             errorMessage = "Could not parse JSON. Check Console.app logs for details. Expected format: {\"server-name\": {\"command\": \"...\"}} or wrap in {\"mcpServers\": {...}}"
+            #if DEBUG
             print("DEBUG AddServerModal: ServerExtractor returned nil")
+            #endif
             return
         }
 
+        #if DEBUG
         print("DEBUG AddServerModal: Extracted \(serverDict.count) servers")
+        #endif
 
         guard !serverDict.isEmpty else {
             errorMessage = "No valid server configurations found in JSON"
@@ -215,12 +211,16 @@ struct AddServerModal: View {
                 return "\(name): \(reason)"
             }.joined(separator: "; ")
             errorMessage = "Invalid server config(s): \(details)"
+            #if DEBUG
             print("DEBUG AddServerModal: Invalid servers: \(details)")
+            #endif
             return
         }
 
         errorMessage = "✓ Valid! Found \(serverDict.count) server(s)"
+        #if DEBUG
         print("DEBUG AddServerModal: Validation succeeded")
+        #endif
     }
 
     private func getInvalidReason(_ config: ServerConfig) -> String {
