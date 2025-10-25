@@ -205,7 +205,6 @@ struct AddServerModal: View {
         // Check if any servers are invalid
         let invalidServers = serverDict.filter { !$0.value.isValid }
         if !invalidServers.isEmpty {
-            let names = invalidServers.map { $0.key }.joined(separator: ", ")
             let details = invalidServers.map { name, config in
                 let reason = getInvalidReason(config)
                 return "\(name): \(reason)"

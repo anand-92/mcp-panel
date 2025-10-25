@@ -25,16 +25,16 @@ extension String {
     /// Handles curly quotes commonly pasted from Notes, Word, Slack, etc.
     func normalizingQuotes() -> String {
         return self
-            .replacingOccurrences(of: """, with: "\"")  // Left double quotation mark
-            .replacingOccurrences(of: """, with: "\"")  // Right double quotation mark
-            .replacingOccurrences(of: "'", with: "'")   // Left single quotation mark
-            .replacingOccurrences(of: "'", with: "'")   // Right single quotation mark
-            .replacingOccurrences(of: "‚", with: "'")   // Single low-9 quotation mark
-            .replacingOccurrences(of: "„", with: "\"")  // Double low-9 quotation mark
-            .replacingOccurrences(of: "«", with: "\"")  // Left-pointing double angle quotation mark
-            .replacingOccurrences(of: "»", with: "\"")  // Right-pointing double angle quotation mark
-            .replacingOccurrences(of: "‹", with: "'")   // Single left-pointing angle quotation mark
-            .replacingOccurrences(of: "›", with: "'")   // Single right-pointing angle quotation mark
+            .replacingOccurrences(of: "\u{201C}", with: "\"")  // Left double quotation mark
+            .replacingOccurrences(of: "\u{201D}", with: "\"")  // Right double quotation mark
+            .replacingOccurrences(of: "\u{2018}", with: "'")   // Left single quotation mark
+            .replacingOccurrences(of: "\u{2019}", with: "'")   // Right single quotation mark
+            .replacingOccurrences(of: "\u{201A}", with: "'")   // Single low-9 quotation mark
+            .replacingOccurrences(of: "\u{201E}", with: "\"")  // Double low-9 quotation mark
+            .replacingOccurrences(of: "\u{00AB}", with: "\"")  // Left-pointing double angle quotation mark
+            .replacingOccurrences(of: "\u{00BB}", with: "\"")  // Right-pointing double angle quotation mark
+            .replacingOccurrences(of: "\u{2039}", with: "'")   // Single left-pointing angle quotation mark
+            .replacingOccurrences(of: "\u{203A}", with: "'")   // Single right-pointing angle quotation mark
     }
 }
 
