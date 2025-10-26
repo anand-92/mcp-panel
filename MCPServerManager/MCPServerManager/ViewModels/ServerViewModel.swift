@@ -321,7 +321,10 @@ class ServerViewModel: ObservableObject {
 
     func updateServer(_ server: ServerModel, with jsonString: String) -> Bool {
         do {
-            guard let data = jsonString.data(using: .utf8) else {
+            // Normalize quotes first (curly quotes from Notes/Word/Slack)
+            let normalized = jsonString.normalizingQuotes()
+
+            guard let data = normalized.data(using: .utf8) else {
                 throw NSError(domain: "MCPServerManager", code: -1, userInfo: [
                     NSLocalizedDescriptionKey: "Failed to convert JSON string to data"
                 ])

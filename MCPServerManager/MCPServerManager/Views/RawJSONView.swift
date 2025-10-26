@@ -188,7 +188,10 @@ struct RawJSONView: View {
 
     private func applyChanges() {
         do {
-            guard let data = jsonText.data(using: .utf8) else {
+            // Normalize quotes first (curly quotes from Notes/Word/Slack)
+            let normalized = jsonText.normalizingQuotes()
+
+            guard let data = normalized.data(using: .utf8) else {
                 throw NSError(domain: "Invalid JSON", code: -1)
             }
 

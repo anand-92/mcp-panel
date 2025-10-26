@@ -58,7 +58,7 @@ jobs:
             <key>CFBundlePackageType</key>
             <string>APPL</string>
             <key>CFBundleShortVersionString</key>
-            <string>2.0.1.${{ github.run_number }}</string>
+            <string>2.0.2.${{ github.run_number }}</string>
             <key>CFBundleVersion</key>
             <string>${{ github.run_number }}</string>
             <key>LSMinimumSystemVersion</key>
@@ -107,7 +107,7 @@ jobs:
       working-directory: MCPServerManager
       run: |
         # Create installer DMG with Applications symlink
-        VERSION="2.0.1.${{ github.run_number }}"
+        VERSION="2.0.2.${{ github.run_number }}"
         bash ../create-dmg.sh build/MCP-Server-Manager.app "build/MCP-Server-Manager-v${VERSION}.dmg"
 
         # Also create a "latest" symlink for consistent naming
@@ -125,7 +125,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: success()
       with:
-        name: mcp-server-manager-v2.0.1.${{ github.run_number }}
+        name: mcp-server-manager-v2.0.2.${{ github.run_number }}
         path: MCPServerManager/build/MCP-Server-Manager-v*.dmg
         retention-days: 30
 
@@ -142,9 +142,9 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/swifty'
       with:
         tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
-        name: ${{ startsWith(github.ref, 'refs/tags/') && format('Release {0}', github.ref_name) || format('Latest Build v2.0.1.{0}', github.run_number) }}
+        name: ${{ startsWith(github.ref, 'refs/tags/') && format('Release {0}', github.ref_name) || format('Latest Build v2.0.2.{0}', github.run_number) }}
         body: |
-          Version: 2.0.1.${{ github.run_number }}
+          Version: 2.0.2.${{ github.run_number }}
           Commit: ${{ github.sha }}
         generate_release_notes: ${{ startsWith(github.ref, 'refs/tags/') }}
         prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
