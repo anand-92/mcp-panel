@@ -3,6 +3,7 @@ import SwiftUI
 import AppKit
 
 /// Service for fetching and caching server logos/icons
+@MainActor
 class IconService: ObservableObject {
     static let shared = IconService()
 
@@ -194,16 +195,20 @@ class IconService: ObservableObject {
     /// Fetch icon from multiple sources in parallel and pick the best quality
     private func fetchBestIcon(for domain: String) async -> NSImage? {
         // Fire all requests simultaneously (~200-400ms total)
-        async let clearbit = fetchFromClearbit(domain: domain)
-        async let iconHorse = fetchFromIconHorse(domain: domain)
-        async let duckduckgo = fetchFromDuckDuckGo(domain: domain)
-        async let google = fetchFromGoogleFavicon(domain: domain)
+        async let clearbit = fetchImageData(from: "https://logo.clearbit.com/\(domain)")
+        async let iconHorse = fetchImageData(from: "https://icon.horse/icon/\(domain)")
+        async let duckduckgo = fetchImageData(from: "https://icons.duckduckgo.com/ip3/\(domain).ico")
+        async let google = fetchImageData(from: "https://www.google.com/s2/favicons?sz=128&domain=\(domain)")
 
-        let results = await [clearbit, iconHorse, duckduckgo, google]
+        let dataResults = await [clearbit, iconHorse, duckduckgo, google]
 
-        // Filter out nil and tiny icons, then pick highest quality
-        return results
-            .compactMap { $0 }
+        // Convert data to images and filter out nil and tiny icons, then pick highest quality
+        let images = dataResults.compactMap { data -> NSImage? in
+            guard let data = data else { return nil }
+            return NSImage(data: data)
+        }
+
+        return images
             .filter { $0.size.width >= 64 || $0.size.height >= 64 } // Skip tiny icons
             .max { scoreIcon($0) < scoreIcon($1) }
     }
@@ -244,8 +249,9 @@ class IconService: ObservableObject {
         return bitmapRep.hasAlpha
     }
 
-    private func fetchFromClearbit(domain: String) async -> NSImage? {
-        guard let url = URL(string: "https://logo.clearbit.com/\(domain)") else {
+    /// Fetch image data from URL (nonisolated for parallel execution)
+    nonisolated private func fetchImageData(from urlString: String) async -> Data? {
+        guard let url = URL(string: urlString) else {
             return nil
         }
 
@@ -255,54 +261,7 @@ class IconService: ObservableObject {
                   httpResponse.statusCode == 200 else {
                 return nil
             }
-            return NSImage(data: data)
-        } catch {
-            return nil
-        }
-    }
-
-    private func fetchFromIconHorse(domain: String) async -> NSImage? {
-        guard let url = URL(string: "https://icon.horse/icon/\(domain)") else {
-            return nil
-        }
-
-        do {
-            let (data, response) = try await URLSession.shared.data(from: url)
-            guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 else {
-                return nil
-            }
-            return NSImage(data: data)
-        } catch {
-            return nil
-        }
-    }
-
-    private func fetchFromDuckDuckGo(domain: String) async -> NSImage? {
-        guard let url = URL(string: "https://icons.duckduckgo.com/ip3/\(domain).ico") else {
-            return nil
-        }
-
-        do {
-            let (data, response) = try await URLSession.shared.data(from: url)
-            guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 else {
-                return nil
-            }
-            return NSImage(data: data)
-        } catch {
-            return nil
-        }
-    }
-
-    private func fetchFromGoogleFavicon(domain: String) async -> NSImage? {
-        guard let url = URL(string: "https://www.google.com/s2/favicons?sz=128&domain=\(domain)") else {
-            return nil
-        }
-
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            return NSImage(data: data)
+            return data
         } catch {
             return nil
         }

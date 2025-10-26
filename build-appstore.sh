@@ -21,7 +21,7 @@ echo ""
 APP_NAME="MCP Server Manager"
 BUNDLE_ID="com.mcpmanager.app"
 VERSION="2.0.0"
-BUILD_NUMBER="2001"
+BUILD_NUMBER="2002"
 
 # Build directory
 BUILD_DIR="MCPServerManager/build-appstore"
@@ -77,7 +77,7 @@ cat > "$APP_PATH/Contents/Info.plist" << 'EOF'
     <key>CFBundleShortVersionString</key>
     <string>2.0.0</string>
     <key>CFBundleVersion</key>
-    <string>2001</string>
+    <string>2002</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>NSHighResolutionCapable</key>
