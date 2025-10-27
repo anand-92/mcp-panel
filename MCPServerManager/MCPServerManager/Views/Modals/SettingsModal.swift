@@ -69,10 +69,10 @@ struct SettingsModal: View {
                                 .padding(.vertical, 8)
                                 .background(
                                     RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.white.opacity(0.1))
+                                        .fill(themeColors.glassLayer3)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 8)
-                                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                                .stroke(themeColors.borderLayer2, lineWidth: 1)
                                         )
                                 )
                             }
@@ -103,10 +103,10 @@ struct SettingsModal: View {
                                 .padding(.vertical, 8)
                                 .background(
                                     RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.white.opacity(0.1))
+                                        .fill(themeColors.glassLayer3)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 8)
-                                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                                .stroke(themeColors.borderLayer2, lineWidth: 1)
                                         )
                                 )
                             }
@@ -206,10 +206,10 @@ struct SettingsModal: View {
                         .padding(.vertical, 10)
                         .background(
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.white.opacity(0.1))
+                                .fill(themeColors.glassLayer3)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                        .stroke(themeColors.borderLayer2, lineWidth: 1)
                                 )
                         )
                 }
@@ -238,8 +238,12 @@ struct SettingsModal: View {
         .frame(width: 550, height: 600)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(Color(nsColor: .windowBackgroundColor))
-                .shadow(radius: 30)
+                .fill(themeColors.glassLayer4)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(themeColors.borderLayer3, lineWidth: 1.5)
+                )
+                .shadow(color: .black.opacity(0.5), radius: 40, x: 0, y: 20)
         )
         .onAppear {
             config1Path = viewModel.settings.config1Path

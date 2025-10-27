@@ -42,10 +42,10 @@ struct ToolbarView: View {
             .padding(4)
             .background(
                 Capsule()
-                    .fill(themeColors.glassBackground)
+                    .fill(themeColors.glassLayer3)
                     .overlay(
                         Capsule()
-                            .stroke(themeColors.borderColor, lineWidth: 1)
+                            .stroke(themeColors.borderLayer2, lineWidth: 1)
                     )
             )
 
@@ -88,10 +88,10 @@ struct ToolbarView: View {
                                         .shadow(color: themeColors.primaryAccent.opacity(0.3), radius: 6, x: 0, y: 2)
                                 } else {
                                     Capsule()
-                                        .fill(themeColors.glassBackground)
+                                        .fill(themeColors.glassLayer2)
                                         .overlay(
                                             Capsule()
-                                                .stroke(themeColors.borderColor, lineWidth: 0.5)
+                                                .stroke(themeColors.borderLayer1, lineWidth: 0.5)
                                         )
                                 }
                             }
@@ -122,7 +122,11 @@ struct ToolbarView: View {
                     // Visual indicator only - the button wrapper handles the action
                     ZStack {
                         Capsule()
-                            .fill(allEnabled ? AnyShapeStyle(themeColors.successColor) : AnyShapeStyle(themeColors.glassBackground))
+                            .fill(allEnabled ? AnyShapeStyle(themeColors.successColor) : AnyShapeStyle(themeColors.glassLayer2))
+                            .overlay(
+                                Capsule()
+                                    .stroke(allEnabled ? Color.clear : themeColors.borderLayer1, lineWidth: 1)
+                            )
                             .frame(width: 44, height: 24)
 
                         Circle()
@@ -146,10 +150,10 @@ struct ToolbarView: View {
                 .padding(.vertical, 6)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(themeColors.glassBackground)
+                        .fill(themeColors.glassLayer2)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(themeColors.borderColor, lineWidth: 1)
+                                .stroke(themeColors.borderLayer1, lineWidth: 1)
                         )
                 )
             }
@@ -158,7 +162,11 @@ struct ToolbarView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
-        .background(themeColors.sidebarBackground.opacity(0.5))
+        .background(
+            Rectangle()
+                .fill(themeColors.glassLayer3)
+                .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 3)
+        )
     }
 
     // Helper function to get icon for filter mode

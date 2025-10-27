@@ -12,10 +12,10 @@ struct OnboardingModal: View {
 
     var body: some View {
         ZStack {
-            // Backdrop
-            Color.black.opacity(0.5)
+            // Backdrop with sophisticated blur
+            Color.black.opacity(0.6)
                 .ignoresSafeArea()
-                .blur(radius: 10)
+                .blur(radius: 20)
 
             // Modal
             VStack(spacing: 24) {
@@ -45,7 +45,7 @@ struct OnboardingModal: View {
                         .padding(.vertical, 6)
                         .background(
                             RoundedRectangle(cornerRadius: 6)
-                                .fill(Color.black.opacity(0.3))
+                                .fill(themeColors.glassLayer2)
                         )
 
                     Text("If you don't see hidden files, press ⌘⇧. (Command+Shift+Period)")
@@ -127,9 +127,13 @@ struct OnboardingModal: View {
             .frame(width: 550)
             .background(
                 RoundedRectangle(cornerRadius: 24)
-                    .fill(Color(nsColor: .windowBackgroundColor))
+                    .fill(themeColors.glassLayer4)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(themeColors.borderLayer3, lineWidth: 1.5)
+                    )
+                    .shadow(color: .black.opacity(0.5), radius: 50, x: 0, y: 25)
             )
-            .shadow(radius: 40)
         }
         .alert("Bookmark Storage Failed", isPresented: $showBookmarkAlert) {
             Button("OK", role: .cancel) {}
