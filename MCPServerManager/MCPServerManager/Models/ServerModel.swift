@@ -7,19 +7,22 @@ struct ServerModel: Identifiable, Codable, Equatable {
     var enabled: Bool
     var updatedAt: Date
     var inConfigs: [Bool] // [inConfig1, inConfig2]
+    var registryImageUrl: String? // Image URL from MCP registry (takes precedence over fetched icons)
 
     init(id: UUID = UUID(),
          name: String,
          config: ServerConfig,
          enabled: Bool = false,
          updatedAt: Date = Date(),
-         inConfigs: [Bool] = [false, false]) {
+         inConfigs: [Bool] = [false, false],
+         registryImageUrl: String? = nil) {
         self.id = id
         self.name = name
         self.config = config
         self.enabled = enabled
         self.updatedAt = updatedAt
         self.inConfigs = inConfigs
+        self.registryImageUrl = registryImageUrl
     }
 
     // MARK: - Computed Properties

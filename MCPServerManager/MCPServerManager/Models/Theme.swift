@@ -35,6 +35,7 @@ struct ThemeColors {
     let primaryText: Color
     let secondaryText: Color
     let mutedText: Color
+    let textOnAccent: Color
 
     // Accent colors
     let primaryAccent: Color
@@ -66,6 +67,7 @@ struct ThemeColors {
         primaryText: Color(hex: "#c3c1ba"),
         secondaryText: Color(hex: "#faf8f1").opacity(0.7),
         mutedText: Color(hex: "#c3c1ba").opacity(0.5),
+        textOnAccent: Color(hex: "#1a1a1a"),
 
         // Accent colors - Claude Code brand
         primaryAccent: Color(hex: "#d87757"), // Claude Code primary
@@ -111,6 +113,7 @@ struct ThemeColors {
         primaryText: Color(hex: "#aeaca6"),
         secondaryText: Color(hex: "#aeaca6").opacity(0.8),
         mutedText: Color(hex: "#646A71"),
+        textOnAccent: Color(hex: "#0b0e14"),
 
         // Accent colors - Ayu Dark vibrant palette
         primaryAccent: Color(hex: "#39BAE6"), // Accent Blue
@@ -158,6 +161,7 @@ struct ThemeColors {
         primaryText: Color.white.opacity(0.9),
         secondaryText: Color.white.opacity(0.7),
         mutedText: Color.white.opacity(0.5),
+        textOnAccent: Color(hex: "#1a1a1a"),
 
         // Accent colors
         primaryAccent: Color.cyan,

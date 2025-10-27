@@ -222,9 +222,12 @@ class ServerViewModel: ObservableObject {
 
     // MARK: - Server CRUD
 
-    func addServers(from jsonString: String) {
+    func addServers(from jsonString: String, registryImages: [String: String]? = nil) {
         #if DEBUG
         print("DEBUG: Starting addServers with input length: \(jsonString.count)")
+        if let images = registryImages {
+            print("DEBUG: Registry images provided for \(images.count) servers")
+        }
         #endif
 
         // Use forgiving parser to extract server entries
@@ -270,11 +273,18 @@ class ServerViewModel: ObservableObject {
                 continue
             }
 
+            // Get registry image URL if available
+            let registryImageUrl = registryImages?[name]
+
             if let index = self.servers.firstIndex(where: { $0.name == name }) {
                 var updatedServer = self.servers[index]
                 updatedServer.config = config
                 updatedServer.updatedAt = Date()
                 updatedServer.inConfigs[settings.activeConfigIndex] = true
+                // Update registry image URL if provided
+                if let imageUrl = registryImageUrl {
+                    updatedServer.registryImageUrl = imageUrl
+                }
                 self.servers[index] = updatedServer
                 #if DEBUG
                 print("DEBUG: Updated existing server '\(name)'")
@@ -287,11 +297,12 @@ class ServerViewModel: ObservableObject {
                     name: name,
                     config: config,
                     updatedAt: Date(),
-                    inConfigs: inConfigs
+                    inConfigs: inConfigs,
+                    registryImageUrl: registryImageUrl
                 )
                 self.servers.append(newServer)
                 #if DEBUG
-                print("DEBUG: Added new server '\(name)'")
+                print("DEBUG: Added new server '\(name)' with registry image: \(registryImageUrl != nil)")
                 #endif
             }
             addedCount += 1

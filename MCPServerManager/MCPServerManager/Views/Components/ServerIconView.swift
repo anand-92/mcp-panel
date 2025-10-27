@@ -67,6 +67,28 @@ struct ServerIconView: View {
 
     private func loadIcon() async {
         isLoading = true
+
+        // Prefer registry image URL over fetched icons
+        if let registryImageUrl = server.registryImageUrl,
+           let url = URL(string: registryImageUrl) {
+            #if DEBUG
+            print("ServerIconView: Loading registry image for \(server.name): \(registryImageUrl)")
+            #endif
+
+            // Try to load image from registry URL
+            if let (data, _) = try? await URLSession.shared.data(from: url),
+               let image = NSImage(data: data) {
+                logoImage = image
+                isLoading = false
+                return
+            }
+
+            #if DEBUG
+            print("ServerIconView: Failed to load registry image, falling back to IconService")
+            #endif
+        }
+
+        // Fall back to IconService if no registry image or if loading failed
         logoImage = await IconService.shared.loadIcon(for: server.name, domain: server.iconDomain)
         isLoading = false
     }

@@ -7,6 +7,13 @@ struct AddServerModal: View {
 
     @State private var jsonText: String = ""
     @State private var errorMessage: String = ""
+    @State private var entryMode: EntryMode = .manual
+    @State private var registryImages: [String: String] = [:] // Map server names to image URLs from registry
+
+    enum EntryMode {
+        case manual
+        case browse
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -35,45 +42,44 @@ struct AddServerModal: View {
 
             Divider()
 
-            // Content
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("SERVER JSON")
-                        .font(DesignTokens.Typography.labelSmall)
-                        .foregroundColor(.secondary)
-                        .tracking(1.5)
-
-                    Text("Paste server definitions in the format: {\"server-name\": {\"command\": \"...\"}} or just the config object")
-                        .font(DesignTokens.Typography.bodySmall)
-                        .foregroundColor(.secondary)
-
-                    TextEditor(text: $jsonText)
-                        .font(DesignTokens.Typography.codeLarge)
-                        .frame(height: 300)
-                        .scrollContentBackground(.hidden)
-                        .background(Color.black.opacity(0.3))
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                        )
-                        .focusable(true)
-
-                    if !errorMessage.isEmpty {
-                        HStack {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                            Text(errorMessage)
-                        }
-                        .font(DesignTokens.Typography.bodySmall)
-                        .foregroundColor(.red)
-                        .padding(12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.red.opacity(0.1))
-                        )
+            // Mode Switcher
+            HStack(spacing: 0) {
+                ModeButton(
+                    title: "Manual Entry",
+                    icon: "text.cursor",
+                    isSelected: entryMode == .manual,
+                    themeColors: themeColors
+                ) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        entryMode = .manual
                     }
                 }
-                .padding(24)
+
+                ModeButton(
+                    title: "Browse Registry",
+                    icon: "square.grid.2x2",
+                    isSelected: entryMode == .browse,
+                    themeColors: themeColors
+                ) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        entryMode = .browse
+                    }
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+
+            Divider()
+
+            // Content
+            Group {
+                if entryMode == .manual {
+                    manualEntryView
+                } else {
+                    BrowseRegistryView(registryService: MCPRegistryService.shared) { selectedServer in
+                        handleServerSelection(selectedServer)
+                    }
+                }
             }
 
             Divider()
@@ -140,7 +146,7 @@ struct AddServerModal: View {
                         Image(systemName: "plus.circle.fill")
                         Text("Add Servers")
                     }
-                    .foregroundColor(Color(hex: "#1a1a1a"))
+                    .foregroundColor(themeColors.textOnAccent)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
                     .background(
@@ -155,7 +161,14 @@ struct AddServerModal: View {
             }
             .padding(24)
         }
-        .frame(width: 600, height: 550)
+        .frame(
+            minWidth: 700,
+            idealWidth: 850,
+            maxWidth: 1000,
+            minHeight: 600,
+            idealHeight: 750,
+            maxHeight: 900
+        )
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .fill(Color(nsColor: .windowBackgroundColor))
@@ -233,9 +246,133 @@ struct AddServerModal: View {
     }
 
     private func addServers() {
-        viewModel.addServers(from: jsonText)
+        viewModel.addServers(from: jsonText, registryImages: registryImages.isEmpty ? nil : registryImages)
         isPresented = false
         jsonText = ""
         errorMessage = ""
+        registryImages = [:]
+    }
+
+    // MARK: - Computed Views
+
+    private var manualEntryView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("SERVER JSON")
+                    .font(DesignTokens.Typography.labelSmall)
+                    .foregroundColor(.secondary)
+                    .tracking(1.5)
+
+                Text("Paste server definitions in the format: {\"server-name\": {\"command\": \"...\"}} or just the config object")
+                    .font(DesignTokens.Typography.bodySmall)
+                    .foregroundColor(.secondary)
+
+                TextEditor(text: $jsonText)
+                    .font(DesignTokens.Typography.codeLarge)
+                    .frame(minHeight: 350, idealHeight: 450, maxHeight: 600)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.black.opacity(0.3))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                    )
+                    .focusable(true)
+
+                if !errorMessage.isEmpty {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                        Text(errorMessage)
+                    }
+                    .font(DesignTokens.Typography.bodySmall)
+                    .foregroundColor(.red)
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.red.opacity(0.1))
+                    )
+                }
+            }
+            .padding(24)
+        }
+    }
+
+    // MARK: - Server Selection Handler
+
+    private func handleServerSelection(_ server: RegistryServer) {
+        // Wrap the config with the server name
+        let wrappedConfig: [String: ServerConfig] = [server.displayName: server.config]
+
+        // Store the image URL for this server if available
+        if let imageUrl = server.imageUrl {
+            registryImages[server.displayName] = imageUrl
+            #if DEBUG
+            print("AddServerModal: Stored registry image for '\(server.displayName)': \(imageUrl)")
+            #endif
+        }
+
+        // Format as pretty JSON
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+
+        if let data = try? encoder.encode(wrappedConfig),
+           let jsonString = String(data: data, encoding: .utf8) {
+            jsonText = jsonString
+        } else {
+            // Fallback to unwrapped config if encoding fails
+            jsonText = server.configJSON
+        }
+
+        // Switch back to manual mode
+        withAnimation(.easeInOut(duration: 0.2)) {
+            entryMode = .manual
+        }
+
+        // Clear any errors
+        errorMessage = ""
+
+        #if DEBUG
+        print("AddServerModal: Selected server '\(server.name)', populated JSON with wrapper")
+        #endif
+    }
+}
+
+// MARK: - Mode Button Component
+
+struct ModeButton: View {
+    let title: String
+    let icon: String
+    let isSelected: Bool
+    let themeColors: ThemeColors
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                Text(title)
+                    .font(DesignTokens.Typography.body)
+            }
+            .foregroundColor(isSelected ? themeColors.textOnAccent : .secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(
+                Group {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(themeColors.accentGradient)
+                    } else {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.white.opacity(0.03))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                            )
+                    }
+                }
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
