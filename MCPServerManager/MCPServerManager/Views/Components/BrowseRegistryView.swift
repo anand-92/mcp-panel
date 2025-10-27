@@ -174,12 +174,23 @@ struct ServerRow: View {
                         .foregroundColor(.secondary)
                         .lineLimit(2)
 
+                    // Show command or remote info
                     if let command = server.config.command {
                         HStack(spacing: 4) {
                             Image(systemName: "terminal")
                                 .font(.system(size: 10))
                             Text(commandPreview(command, args: server.config.args))
                                 .font(DesignTokens.Typography.codeSmall)
+                        }
+                        .foregroundColor(.secondary.opacity(0.7))
+                        .padding(.top, 2)
+                    } else if let type = server.config.type, let url = server.config.url {
+                        HStack(spacing: 4) {
+                            Image(systemName: "network")
+                                .font(.system(size: 10))
+                            Text("\(type.uppercased()): \(url)")
+                                .font(DesignTokens.Typography.codeSmall)
+                                .lineLimit(1)
                         }
                         .foregroundColor(.secondary.opacity(0.7))
                         .padding(.top, 2)

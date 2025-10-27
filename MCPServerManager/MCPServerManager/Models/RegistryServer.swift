@@ -88,13 +88,41 @@ struct RegistryAPIServer: Codable {
     let description: String
     let repository: RepositoryInfo?
     let packages: [PackageInfo]?
+    let remotes: [APIRemoteConfig]?
     let createdAt: String?
     let updatedAt: String?
 
     enum CodingKeys: String, CodingKey {
-        case name, description, repository, packages
+        case name, description, repository, packages, remotes
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+    }
+}
+
+struct APIRemoteConfig: Codable {
+    let transportType: String
+    let url: String
+    let headers: [APIHeader]?
+
+    enum CodingKeys: String, CodingKey {
+        case transportType = "transport_type"
+        case url, headers
+    }
+}
+
+struct APIHeader: Codable {
+    let name: String
+    let value: String
+    let variables: [String: APIHeaderVariable]?
+}
+
+struct APIHeaderVariable: Codable {
+    let description: String?
+    let isSecret: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case description
+        case isSecret = "is_secret"
     }
 }
 

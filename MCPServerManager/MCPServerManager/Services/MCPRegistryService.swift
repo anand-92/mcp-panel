@@ -79,8 +79,29 @@ class MCPRegistryService: ObservableObject {
 
         // Process servers and extract configs
         let registryServers = allServers.compactMap { apiServer -> RegistryServer? in
-            guard let readme = apiServer.repository?.readme,
-                  let config = extractConfigFromReadme(readme) else {
+            // Try to get config from remotes first (HTTP/SSE servers)
+            var config: ServerConfig?
+
+            if let remotes = apiServer.remotes, !remotes.isEmpty {
+                config = createConfigFromRemotes(remotes)
+                #if DEBUG
+                if config != nil {
+                    print("MCPRegistryService: Using remotes config for \(apiServer.name)")
+                }
+                #endif
+            }
+
+            // Fall back to README extraction if no remotes
+            if config == nil, let readme = apiServer.repository?.readme {
+                config = extractConfigFromReadme(readme)
+                #if DEBUG
+                if config != nil {
+                    print("MCPRegistryService: Extracted config from README for \(apiServer.name)")
+                }
+                #endif
+            }
+
+            guard let finalConfig = config else {
                 #if DEBUG
                 print("MCPRegistryService: Skipping \(apiServer.name) - no valid config found")
                 #endif
@@ -102,7 +123,7 @@ class MCPRegistryService: ObservableObject {
                 name: apiServer.name,
                 description: apiServer.description,
                 repository: apiServer.repository?.url ?? "",
-                config: config,
+                config: finalConfig,
                 metadata: metadata
             )
         }
@@ -125,6 +146,40 @@ class MCPRegistryService: ObservableObject {
     }
 
     // MARK: - Private Helpers
+
+    /// Create config from API remotes data (HTTP/SSE servers)
+    private func createConfigFromRemotes(_ remotes: [APIRemoteConfig]) -> ServerConfig? {
+        // Use the first remote
+        guard let remote = remotes.first else { return nil }
+
+        // Map transport type to our config format
+        let transportType: String
+        switch remote.transportType.lowercased() {
+        case "sse":
+            transportType = "sse"
+        case "http", "https":
+            transportType = "http"
+        default:
+            transportType = remote.transportType
+        }
+
+        // Create config with type and url
+        let config = ServerConfig(
+            command: nil,
+            args: nil,
+            cwd: nil,
+            env: nil,
+            transport: nil,
+            remotes: nil,
+            type: transportType,
+            url: remote.url
+        )
+
+        // Validate it's a proper remote config
+        guard config.isValid else { return nil }
+
+        return config
+    }
 
     /// Extract MCP config from README markdown
     private func extractConfigFromReadme(_ readme: String) -> ServerConfig? {
