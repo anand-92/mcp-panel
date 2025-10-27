@@ -160,7 +160,14 @@ struct AddServerModal: View {
             }
             .padding(24)
         }
-        .frame(width: 600, height: 550)
+        .frame(
+            minWidth: 700,
+            idealWidth: 850,
+            maxWidth: 1000,
+            minHeight: 600,
+            idealHeight: 750,
+            maxHeight: 900
+        )
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .fill(Color(nsColor: .windowBackgroundColor))
@@ -260,7 +267,7 @@ struct AddServerModal: View {
 
                 TextEditor(text: $jsonText)
                     .font(DesignTokens.Typography.codeLarge)
-                    .frame(height: 300)
+                    .frame(minHeight: 350, idealHeight: 450, maxHeight: 600)
                     .scrollContentBackground(.hidden)
                     .background(Color.black.opacity(0.3))
                     .cornerRadius(12)
