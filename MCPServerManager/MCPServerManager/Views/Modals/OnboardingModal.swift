@@ -7,6 +7,8 @@ struct OnboardingModal: View {
 
     @State private var selectedPath: String = ""
     @State private var showingFilePicker = false
+    @State private var showBookmarkAlert: Bool = false
+    @State private var bookmarkAlertMessage: String = ""
 
     var body: some View {
         ZStack {
@@ -129,6 +131,11 @@ struct OnboardingModal: View {
             )
             .shadow(radius: 40)
         }
+        .alert("Bookmark Storage Failed", isPresented: $showBookmarkAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(bookmarkAlertMessage)
+        }
     }
 
     private func selectFile() {
@@ -146,11 +153,13 @@ struct OnboardingModal: View {
             do {
                 try ConfigManager.shared.storeBookmarkForConfigFile(url: url, path: url.path)
                 print("✅ Stored bookmark during onboarding")
+                selectedPath = url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
             } catch {
                 print("❌ Failed to store bookmark during onboarding: \(error.localizedDescription)")
+                // Show alert - this is critical for onboarding
+                bookmarkAlertMessage = "Failed to create persistent access to the selected file. The app may not be able to access this file after restart.\n\nError: \(error.localizedDescription)\n\nPlease try selecting the file again."
+                showBookmarkAlert = true
             }
-
-            selectedPath = url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
         }
     }
 }

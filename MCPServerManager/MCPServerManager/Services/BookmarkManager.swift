@@ -53,7 +53,12 @@ class BookmarkManager {
             if isStale {
                 print("⚠️ Bookmark is stale for: \(path), attempting to refresh...")
                 // Try to refresh the bookmark
-                try? storeBookmark(for: url)
+                do {
+                    try storeBookmark(for: url)
+                } catch {
+                    print("❌ Failed to refresh bookmark for: \(path) - \(error.localizedDescription)")
+                    UserDefaults.standard.removeObject(forKey: key) // Remove stale bookmark
+                }
             }
 
             print("✅ Resolved bookmark for: \(path)")
