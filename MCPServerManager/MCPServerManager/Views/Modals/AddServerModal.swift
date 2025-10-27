@@ -298,8 +298,20 @@ struct AddServerModal: View {
     // MARK: - Server Selection Handler
 
     private func handleServerSelection(_ server: RegistryServer) {
-        // Format the config as JSON
-        jsonText = server.configJSON
+        // Wrap the config with the server name
+        let wrappedConfig: [String: ServerConfig] = [server.displayName: server.config]
+
+        // Format as pretty JSON
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+
+        if let data = try? encoder.encode(wrappedConfig),
+           let jsonString = String(data: data, encoding: .utf8) {
+            jsonText = jsonString
+        } else {
+            // Fallback to unwrapped config if encoding fails
+            jsonText = server.configJSON
+        }
 
         // Switch back to manual mode
         withAnimation(.easeInOut(duration: 0.2)) {
@@ -310,7 +322,7 @@ struct AddServerModal: View {
         errorMessage = ""
 
         #if DEBUG
-        print("AddServerModal: Selected server '\(server.name)', populated JSON")
+        print("AddServerModal: Selected server '\(server.name)', populated JSON with wrapper")
         #endif
     }
 }
