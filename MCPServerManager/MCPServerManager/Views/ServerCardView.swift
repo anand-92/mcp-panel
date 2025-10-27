@@ -42,7 +42,7 @@ struct ServerCardView: View {
                             .font(DesignTokens.Typography.code)
                             .frame(height: 200)
                             .scrollContentBackground(.hidden)
-                            .codeEditorBackground()
+                            .background(Color.black.opacity(0.3))
                             .cornerRadius(8)
                             .focusable(true)
 
@@ -61,10 +61,10 @@ struct ServerCardView: View {
                                 .padding(.vertical, 6)
                                 .background(
                                     RoundedRectangle(cornerRadius: 8)
-                                        .fill(themeColors.glassLayer2)
+                                        .fill(themeColors.glassBackground)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 8)
-                                                .stroke(themeColors.borderLayer1, lineWidth: 1)
+                                                .stroke(themeColors.borderColor, lineWidth: 1)
                                         )
                                 )
                             }
@@ -82,10 +82,10 @@ struct ServerCardView: View {
                                     .padding(.vertical, 6)
                                     .background(
                                         RoundedRectangle(cornerRadius: 8)
-                                            .fill(themeColors.glassLayer2)
+                                            .fill(themeColors.glassBackground)
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 8)
-                                                    .stroke(themeColors.borderLayer1, lineWidth: 1)
+                                                    .stroke(themeColors.borderColor, lineWidth: 1)
                                             )
                                     )
                             }
@@ -124,12 +124,7 @@ struct ServerCardView: View {
                                 .padding(8)
                         }
                         .frame(height: 200)
-                        .background(
-                            ZStack {
-                                themeColors.glassLayer2
-                                Color.black.opacity(0.25)  // Text scrim for code readability
-                            }
-                        )
+                        .background(Color.black.opacity(0.3))
                         .cornerRadius(8)
 
                         if isHovering {
