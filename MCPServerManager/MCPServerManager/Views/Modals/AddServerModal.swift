@@ -51,12 +51,7 @@ struct AddServerModal: View {
                         .font(DesignTokens.Typography.codeLarge)
                         .frame(height: 300)
                         .scrollContentBackground(.hidden)
-                        .background(
-                            ZStack {
-                                themeColors.glassLayer2
-                                Color.black.opacity(0.25)  // Text scrim for code readability
-                            }
-                        )
+                        .codeEditorBackground()
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)

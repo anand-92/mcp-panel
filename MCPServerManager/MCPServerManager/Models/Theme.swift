@@ -39,9 +39,9 @@ struct ThemeColors {
     let glassLayer5: Color  // Interactive focus (0.15-0.25) - Hover/active states
 
     // Multi-layer border system
-    let borderLayer1: Color  // Subtle borders (0.05-0.08)
-    let borderLayer2: Color  // Medium borders (0.10-0.15)
-    let borderLayer3: Color  // Strong borders (0.20-0.30)
+    let borderLayer1: Color  // Subtle borders (0.3-0.4)
+    let borderLayer2: Color  // Medium borders (0.6-0.7)
+    let borderLayer3: Color  // Strong borders (0.9-1.0)
 
     // Text colors
     let primaryText: Color

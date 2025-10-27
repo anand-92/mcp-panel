@@ -42,12 +42,7 @@ struct ServerCardView: View {
                             .font(DesignTokens.Typography.code)
                             .frame(height: 200)
                             .scrollContentBackground(.hidden)
-                            .background(
-                                ZStack {
-                                    themeColors.glassLayer2
-                                    Color.black.opacity(0.25)  // Text scrim for code readability
-                                }
-                            )
+                            .codeEditorBackground()
                             .cornerRadius(8)
                             .focusable(true)
 
