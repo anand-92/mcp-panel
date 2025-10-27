@@ -5,6 +5,7 @@ struct AppSettings: Codable, Equatable {
     var configPaths: [String]
     var activeConfigIndex: Int
     var windowOpacity: Double
+    var textVisibilityBoost: Double
 
     static let `default` = AppSettings(
         confirmDelete: true,
@@ -13,17 +14,20 @@ struct AppSettings: Codable, Equatable {
             "~/.settings.json"
         ],
         activeConfigIndex: 0,
-        windowOpacity: 1.0
+        windowOpacity: 1.0,
+        textVisibilityBoost: 0.5
     )
 
     init(confirmDelete: Bool = true,
          configPaths: [String] = ["~/.claude.json", "~/.settings.json"],
          activeConfigIndex: Int = 0,
-         windowOpacity: Double = 1.0) {
+         windowOpacity: Double = 1.0,
+         textVisibilityBoost: Double = 0.5) {
         self.confirmDelete = confirmDelete
         self.configPaths = configPaths
         self.activeConfigIndex = max(0, min(activeConfigIndex, 1)) // Ensure 0 or 1
         self.windowOpacity = max(0.3, min(windowOpacity, 1.0)) // Clamp between 0.3 and 1.0
+        self.textVisibilityBoost = max(0.0, min(textVisibilityBoost, 1.0)) // Clamp between 0.0 and 1.0
     }
 
     var activeConfigPath: String {
@@ -36,6 +40,24 @@ struct AppSettings: Codable, Equatable {
 
     var config2Path: String {
         configPaths[safe: 1] ?? "~/.settings.json"
+    }
+
+    /// Calculates how much extra opacity to add to text based on window translucency
+    /// - Returns: A value between 0.0 and 1.0 representing the opacity boost
+    func textOpacityBoost() -> Double {
+        // When window is fully opaque (1.0), no boost needed
+        // When window is translucent (e.g., 0.3), boost kicks in proportionally
+        let transparencyLevel = 1.0 - windowOpacity
+        return transparencyLevel * textVisibilityBoost
+    }
+
+    /// Applies the text visibility boost to a base opacity value
+    /// - Parameter baseOpacity: The original opacity value (e.g., 0.7 for secondary text)
+    /// - Returns: The adjusted opacity value that maintains better visibility
+    func adjustedTextOpacity(_ baseOpacity: Double) -> Double {
+        // Add the boost to the base opacity, clamped to max 1.0
+        // This makes text more opaque as the window becomes more transparent
+        return min(1.0, baseOpacity + textOpacityBoost())
     }
 }
 

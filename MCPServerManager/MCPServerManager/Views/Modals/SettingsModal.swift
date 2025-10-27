@@ -11,6 +11,7 @@ struct SettingsModal: View {
     @State private var confirmDelete: Bool = true
     @State private var fetchServerLogos: Bool = true
     @State private var windowOpacity: Double = 1.0
+    @State private var textVisibilityBoost: Double = 0.5
     @State private var testingConnection: Bool = false
     @State private var testResult: String = ""
     @State private var showBookmarkAlert: Bool = false
@@ -166,6 +167,34 @@ struct SettingsModal: View {
 
                     Divider()
 
+                    // Text Visibility Boost
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Text Visibility Boost")
+                                .font(DesignTokens.Typography.label)
+
+                            Spacer()
+
+                            Text("\(Int(textVisibilityBoost * 100))%")
+                                .font(DesignTokens.Typography.bodySmall)
+                                .foregroundColor(.secondary)
+                                .monospacedDigit()
+                        }
+
+                        Slider(value: $textVisibilityBoost, in: 0.0...1.0, step: 0.05)
+                            .onChange(of: textVisibilityBoost) { newValue in
+                                // Update in real-time
+                                viewModel.settings.textVisibilityBoost = newValue
+                                viewModel.saveSettings()
+                            }
+
+                        Text("Keep text more visible when window is translucent (0% = text fades with window, 100% = text stays bright)")
+                            .font(DesignTokens.Typography.bodySmall)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Divider()
+
                     // Test Connection
                     VStack(alignment: .leading, spacing: 8) {
                         Button(action: testConnection) {
@@ -247,6 +276,7 @@ struct SettingsModal: View {
             confirmDelete = viewModel.settings.confirmDelete
             fetchServerLogos = UserDefaults.standard.object(forKey: "fetchServerLogos") as? Bool ?? true
             windowOpacity = viewModel.settings.windowOpacity
+            textVisibilityBoost = viewModel.settings.textVisibilityBoost
         }
         .alert("Bookmark Storage Failed", isPresented: $showBookmarkAlert) {
             Button("OK", role: .cancel) {}

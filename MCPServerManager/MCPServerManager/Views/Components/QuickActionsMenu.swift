@@ -10,7 +10,7 @@ struct QuickActionsMenu: View {
     @Environment(\.themeColors) private var themeColors
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 16) {
             // Explore New MCPs
             QuickActionButton(
                 icon: "star.fill",
@@ -98,7 +98,10 @@ struct QuickActionButton: View {
                 Text(title)
                     .font(DesignTokens.Typography.label)
                     .foregroundColor(themeColors.primaryText)
+                    .primaryTextVisibility()
             }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
         }
         .buttonStyle(.plain)
     }

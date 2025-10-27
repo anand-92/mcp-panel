@@ -99,6 +99,59 @@ The app uses a consistent design system defined in `Utilities/Constants.swift`:
 - **Cyberpunk Mode**: Optional neon cyan accents and enhanced glows
 - **Font Scaling**: 1.5x scaling applied to all text for better readability
 
+### Text Visibility Boost
+
+The app includes an independent text visibility control that maintains text readability when the window becomes translucent:
+
+- **Window Opacity**: Controls overall window transparency (30%-100%)
+- **Text Visibility Boost**: Controls how much text resists becoming transparent (0%-100%)
+  - 0% = Text fades proportionally with window
+  - 50% = Text maintains moderate visibility (default)
+  - 100% = Text stays at maximum brightness
+
+**Implementation Details:**
+- Settings stored in `AppSettings.textVisibilityBoost` (Models/Settings.swift)
+- UI controls in Settings modal with real-time preview
+- View modifiers available for applying boost to text elements:
+  - `.primaryTextVisibility()` - For main text elements
+  - `.secondaryTextVisibility()` - For secondary text (0.7 opacity baseline)
+  - `.mutedTextVisibility()` - For muted text (0.5 opacity baseline)
+  - `.textVisibilityBoost(baseOpacity:)` - Custom opacity baseline
+
+**Example Usage:**
+```swift
+Text("Server Name")
+    .font(DesignTokens.Typography.title)
+    .foregroundColor(themeColors.primaryText)
+    .primaryTextVisibility()  // Apply boost for better visibility
+
+Text("Description")
+    .font(DesignTokens.Typography.body)
+    .foregroundColor(themeColors.secondaryText)
+    .secondaryTextVisibility()  // Apply boost with secondary baseline
+```
+
+**Algorithm:**
+```
+textOpacityBoost = (1.0 - windowOpacity) × textVisibilityBoost
+brightnessIncrease = textOpacityBoost × 0.4 (up to 40% brighter)
+glowRadius = textOpacityBoost × 6.0 (up to 6pt glow)
+```
+
+The modifier applies two effects to compensate for window translucency:
+1. **Brightness increase** - Makes text brighter to maintain contrast
+2. **White glow/shadow** - Adds subtle halo effect for better visibility
+
+When window opacity is 30% and boost is 50%:
+- Boost = (1.0 - 0.3) × 0.5 = 0.35
+- Brightness = +14% (0.35 × 0.4)
+- Glow radius = 2.1pt (0.35 × 6.0)
+
+When window opacity is 30% and boost is 100%:
+- Boost = (1.0 - 0.3) × 1.0 = 0.7
+- Brightness = +28% (0.7 × 0.4)
+- Glow radius = 4.2pt (0.7 × 6.0)
+
 ## Config File Management
 
 - **Default Claude config path**: `~/.claude.json`
