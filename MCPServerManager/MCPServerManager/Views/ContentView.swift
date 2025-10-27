@@ -63,12 +63,12 @@ struct ContentView: View {
                     .transition(.opacity)
             }
 
-            // Loading overlay with sophisticated backdrop
+            // Loading overlay
             if viewModel.isLoading {
                 ZStack {
-                    Color.black.opacity(0.6)
+                    Color.black.opacity(0.5)
                         .ignoresSafeArea()
-                        .blur(radius: 20)
+                        .blur(radius: 10)
 
                     VStack(spacing: 16) {
                         ProgressView()
@@ -80,12 +80,8 @@ struct ContentView: View {
                     .padding(40)
                     .background(
                         RoundedRectangle(cornerRadius: 20)
-                            .fill(viewModel.themeColors.glassLayer4)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .stroke(viewModel.themeColors.borderLayer3, lineWidth: 1.5)
-                            )
-                            .shadow(color: .black.opacity(0.5), radius: 40, x: 0, y: 20)
+                            .fill(Color(nsColor: .windowBackgroundColor))
+                            .shadow(radius: 30)
                     )
                 }
                 .transition(.opacity)
@@ -125,12 +121,11 @@ struct ContentView: View {
                 .transition(.opacity)
             }
 
-            // Settings Modal with sophisticated backdrop
+            // Settings Modal with dark backdrop
             if showSettings {
                 ZStack {
-                    Color.black.opacity(0.6)
+                    Color.black.opacity(0.5)
                         .ignoresSafeArea()
-                        .blur(radius: 20)
                         .transition(.opacity)
 
                     SettingsModal(isPresented: $showSettings, viewModel: viewModel)
@@ -138,12 +133,11 @@ struct ContentView: View {
                 .transition(.opacity)
             }
 
-            // Add Server Modal with sophisticated backdrop
+            // Add Server Modal with dark backdrop
             if showAddServer {
                 ZStack {
-                    Color.black.opacity(0.6)
+                    Color.black.opacity(0.5)
                         .ignoresSafeArea()
-                        .blur(radius: 20)
                         .transition(.opacity)
 
                     AddServerModal(isPresented: $showAddServer, viewModel: viewModel)
