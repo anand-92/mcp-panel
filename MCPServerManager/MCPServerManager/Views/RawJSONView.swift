@@ -59,11 +59,16 @@ struct RawJSONView: View {
                 .padding(.horizontal, 20)
             }
 
-            // Text editor with layer1 for deep background
+            // Text editor with layer2 + text scrim for optimal code readability
             TextEditor(text: $jsonText)
                 .font(DesignTokens.Typography.codeLarge)
                 .scrollContentBackground(.hidden)
-                .background(themeColors.glassLayer1)
+                .background(
+                    ZStack {
+                        themeColors.glassLayer2
+                        Color.black.opacity(0.25)  // Text scrim for better contrast
+                    }
+                )
                 .padding(20)
                 .focusable(true)
                 .onChange(of: jsonText) { newValue in
