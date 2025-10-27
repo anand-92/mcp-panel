@@ -51,11 +51,11 @@ struct AddServerModal: View {
                         .font(DesignTokens.Typography.codeLarge)
                         .frame(height: 300)
                         .scrollContentBackground(.hidden)
-                        .background(Color.black.opacity(0.3))
+                        .background(themeColors.glassLayer2)
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                .stroke(themeColors.borderLayer1, lineWidth: 1)
                         )
                         .focusable(true)
 
@@ -89,10 +89,10 @@ struct AddServerModal: View {
                     .padding(.vertical, 10)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.white.opacity(0.05))
+                            .fill(themeColors.glassLayer3)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                                    .stroke(themeColors.borderLayer2, lineWidth: 1)
                             )
                     )
                 }
@@ -107,10 +107,10 @@ struct AddServerModal: View {
                     .padding(.vertical, 10)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.white.opacity(0.05))
+                            .fill(themeColors.glassLayer3)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                                    .stroke(themeColors.borderLayer2, lineWidth: 1)
                             )
                     )
                 }
@@ -126,10 +126,10 @@ struct AddServerModal: View {
                         .padding(.vertical, 10)
                         .background(
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.white.opacity(0.1))
+                                .fill(themeColors.glassLayer3)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                        .stroke(themeColors.borderLayer2, lineWidth: 1)
                                 )
                         )
                 }
@@ -158,8 +158,12 @@ struct AddServerModal: View {
         .frame(width: 600, height: 550)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(Color(nsColor: .windowBackgroundColor))
-                .shadow(radius: 30)
+                .fill(themeColors.glassLayer4)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(themeColors.borderLayer3, lineWidth: 1.5)
+                )
+                .shadow(color: .black.opacity(0.5), radius: 40, x: 0, y: 20)
         )
     }
 

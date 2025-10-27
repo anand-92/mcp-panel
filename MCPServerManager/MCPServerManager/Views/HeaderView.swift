@@ -24,7 +24,7 @@ struct HeaderView: View {
 
             Spacer()
 
-            // Search bar
+            // Search bar - Layer 3 for elevated element
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
@@ -37,10 +37,10 @@ struct HeaderView: View {
             .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.white.opacity(0.05))
+                    .fill(themeColors.glassLayer3)
                     .overlay(
                         RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                            .stroke(themeColors.borderLayer2, lineWidth: 1)
                     )
             )
 
@@ -83,8 +83,8 @@ struct HeaderView: View {
         .padding(.vertical, 12)
         .background(
             Rectangle()
-                .fill(Color.black.opacity(0.3))
-                .blur(radius: 10)
+                .fill(themeColors.glassLayer3)
+                .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
         )
     }
 }
@@ -104,7 +104,11 @@ struct ConfigButton: View {
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(isActive ? AnyShapeStyle(themeColors.accentGradient) : AnyShapeStyle(themeColors.glassBackground))
+                        .fill(isActive ? AnyShapeStyle(themeColors.accentGradient) : AnyShapeStyle(themeColors.glassLayer3))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(isActive ? Color.clear : themeColors.borderLayer2, lineWidth: 1)
+                        )
                 )
                 .foregroundColor(isActive ? Color(hex: "#1a1a1a") : themeColors.mutedText)
         }
@@ -146,7 +150,7 @@ struct QuickActionsButton: View {
             .padding(8)
             .background(
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(showQuickActions ? AnyShapeStyle(themeColors.accentGradient) : AnyShapeStyle(Color.white.opacity(0.05)))
+                    .fill(showQuickActions ? AnyShapeStyle(themeColors.accentGradient) : AnyShapeStyle(themeColors.glassLayer3))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(themeColors.primaryAccent.opacity(borderOpacity), lineWidth: 1)

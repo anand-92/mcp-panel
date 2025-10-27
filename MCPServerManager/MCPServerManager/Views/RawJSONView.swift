@@ -59,11 +59,11 @@ struct RawJSONView: View {
                 .padding(.horizontal, 20)
             }
 
-            // Text editor
+            // Text editor with layer1 for deep background
             TextEditor(text: $jsonText)
                 .font(DesignTokens.Typography.codeLarge)
                 .scrollContentBackground(.hidden)
-                .background(Color.black.opacity(0.3))
+                .background(themeColors.glassLayer1)
                 .padding(20)
                 .focusable(true)
                 .onChange(of: jsonText) { newValue in
@@ -83,10 +83,10 @@ struct RawJSONView: View {
                     .padding(.vertical, 10)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(themeColors.glassBackground)
+                            .fill(themeColors.glassLayer2)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
-                                    .stroke(themeColors.borderColor, lineWidth: 1)
+                                    .stroke(themeColors.borderLayer1, lineWidth: 1)
                             )
                     )
                 }
@@ -107,10 +107,10 @@ struct RawJSONView: View {
                     .padding(.vertical, 10)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(themeColors.glassBackground)
+                            .fill(themeColors.glassLayer2)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
-                                    .stroke(themeColors.borderColor, lineWidth: 1)
+                                    .stroke(themeColors.borderLayer1, lineWidth: 1)
                             )
                     )
                 }
@@ -129,7 +129,7 @@ struct RawJSONView: View {
                     .padding(.vertical, 10)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(isDirty ? AnyShapeStyle(themeColors.accentGradient) : AnyShapeStyle(themeColors.glassBackground))
+                            .fill(isDirty ? AnyShapeStyle(themeColors.accentGradient) : AnyShapeStyle(themeColors.glassLayer2))
                     )
                     .shadow(color: isDirty ? themeColors.primaryAccent.opacity(0.3) : .clear, radius: 8, x: 0, y: 4)
                 }
