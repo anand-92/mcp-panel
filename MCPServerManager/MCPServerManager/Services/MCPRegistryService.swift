@@ -7,14 +7,13 @@ class MCPRegistryService: ObservableObject {
     static let shared = MCPRegistryService()
 
     @Published var isLoading: Bool = false
-    @Published var error: String?
 
     private let apiURL = "https://api.mcp.github.com/2025-09-15/v0/servers"
     private var cachedServers: [RegistryServer]?
     private var cacheTimestamp: Date?
     private let cacheTimeout: TimeInterval = 3600 // 1 hour
 
-    // Compiled regex patterns for better performance
+    // Compiled regex patterns for better performance (Sendable, safe for concurrent access)
     private static let jsonBlockRegex = try! NSRegularExpression(pattern: #"```json\s*\n(.*?)\n```"#, options: [.dotMatchesLineSeparators])
     private static let codeBlockRegex = try! NSRegularExpression(pattern: #"```\s*\n(\{.*?\})\n```"#, options: [.dotMatchesLineSeparators])
     private static let inlineRegex = try! NSRegularExpression(pattern: #""[^"]+"\s*:\s*\{[\s\S]*?"command"\s*:[\s\S]*?\}"#, options: [])
@@ -40,13 +39,23 @@ class MCPRegistryService: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        // Fetch all pages
+        // Fetch all pages (with safety limit to prevent infinite loops)
         var allServers: [RegistryAPIServer] = []
         var cursor: String? = nil
         var pageCount = 0
+        let maxPages = 100 // Safety limit to prevent infinite loops
 
         repeat {
             pageCount += 1
+
+            // Break if we hit pagination limit
+            if pageCount > maxPages {
+                #if DEBUG
+                print("MCPRegistryService: Hit maximum page limit (\(maxPages)), stopping pagination")
+                #endif
+                break
+            }
+
             let pageURL = apiURL + (cursor.flatMap { $0.isEmpty ? nil : $0 }.map { "?cursor=\($0)" } ?? "")
 
             guard let url = URL(string: pageURL) else {
@@ -195,6 +204,14 @@ class MCPRegistryService: ObservableObject {
 
     /// Extract MCP config from README markdown
     private func extractConfigFromReadme(_ readme: String) -> ServerConfig? {
+        // Prevent ReDoS attacks by validating README size
+        guard readme.count < 1_000_000 else {
+            #if DEBUG
+            print("MCPRegistryService: README too large (\(readme.count) chars), skipping regex")
+            #endif
+            return nil
+        }
+
         let jsonBlocks = extractJSONBlocks(from: readme)
 
         for block in jsonBlocks {
@@ -207,7 +224,8 @@ class MCPRegistryService: ObservableObject {
     }
 
     /// Extract JSON code blocks from markdown
-    private func extractJSONBlocks(from markdown: String) -> [String] {
+    /// Note: Runs on background thread to avoid blocking UI with regex operations
+    private nonisolated func extractJSONBlocks(from markdown: String) -> [String] {
         var blocks: [String] = []
 
         // Pattern 1: ```json\n...\n```
@@ -246,7 +264,7 @@ class MCPRegistryService: ObservableObject {
     }
 
     /// Extract a complete JSON object with proper brace matching
-    private func extractCompleteJSON(from text: String, startingAt: String.Index) -> String? {
+    private nonisolated func extractCompleteJSON(from text: String, startingAt: String.Index) -> String? {
         var depth = 0
         var startIndex: String.Index?
         var endIndex: String.Index?
@@ -302,7 +320,7 @@ class MCPRegistryService: ObservableObject {
     }
 
     /// Try to parse a JSON block as an MCP config
-    private func parseConfigBlock(_ jsonString: String) -> ServerConfig? {
+    private nonisolated func parseConfigBlock(_ jsonString: String) -> ServerConfig? {
         guard let data = jsonString.data(using: .utf8) else { return nil }
 
         // Try to decode as JSON
@@ -311,9 +329,20 @@ class MCPRegistryService: ObservableObject {
         }
 
         // Check if it's an mcpServers wrapper
-        if let mcpServers = json["mcpServers"] as? [String: Any],
-           let firstServer = mcpServers.values.first as? [String: Any] {
-            return parseServerConfig(firstServer)
+        if let mcpServers = json["mcpServers"] as? [String: Any] {
+            #if DEBUG
+            if mcpServers.count > 1 {
+                print("MCPRegistryService: Found \(mcpServers.count) servers in mcpServers wrapper, trying all")
+            }
+            #endif
+
+            // Try all servers in the wrapper, return first valid config
+            for (_, serverValue) in mcpServers {
+                if let serverDict = serverValue as? [String: Any],
+                   let config = parseServerConfig(serverDict) {
+                    return config
+                }
+            }
         }
 
         // Check if it's a direct server config
@@ -333,7 +362,7 @@ class MCPRegistryService: ObservableObject {
     }
 
     /// Parse a server config dictionary into ServerConfig
-    private func parseServerConfig(_ dict: [String: Any]) -> ServerConfig? {
+    private nonisolated func parseServerConfig(_ dict: [String: Any]) -> ServerConfig? {
         guard let configData = try? JSONSerialization.data(withJSONObject: dict),
               let config = try? JSONDecoder().decode(ServerConfig.self, from: configData),
               config.isValid else {
