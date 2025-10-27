@@ -14,6 +14,11 @@ class MCPRegistryService: ObservableObject {
     private var cacheTimestamp: Date?
     private let cacheTimeout: TimeInterval = 3600 // 1 hour
 
+    // Compiled regex patterns for better performance
+    private static let jsonBlockRegex = try! NSRegularExpression(pattern: #"```json\s*\n(.*?)\n```"#, options: [.dotMatchesLineSeparators])
+    private static let codeBlockRegex = try! NSRegularExpression(pattern: #"```\s*\n(\{.*?\})\n```"#, options: [.dotMatchesLineSeparators])
+    private static let inlineRegex = try! NSRegularExpression(pattern: #""[^"]+"\s*:\s*\{[\s\S]*?"command"\s*:[\s\S]*?\}"#, options: [])
+
     private init() {}
 
     /// Fetch servers from the MCP registry
@@ -42,7 +47,7 @@ class MCPRegistryService: ObservableObject {
 
         repeat {
             pageCount += 1
-            let pageURL = cursor == nil ? apiURL : "\(apiURL)?cursor=\(cursor!)"
+            let pageURL = apiURL + (cursor.flatMap { $0.isEmpty ? nil : $0 }.map { "?cursor=\($0)" } ?? "")
 
             guard let url = URL(string: pageURL) else {
                 throw MCPRegistryError.invalidURL
@@ -58,7 +63,12 @@ class MCPRegistryService: ObservableObject {
                 throw MCPRegistryError.httpError(httpResponse.statusCode)
             }
 
-            let apiResponse = try JSONDecoder().decode(RegistryAPIResponse.self, from: data)
+            let apiResponse: RegistryAPIResponse
+            do {
+                apiResponse = try JSONDecoder().decode(RegistryAPIResponse.self, from: data)
+            } catch {
+                throw MCPRegistryError.decodingError(error)
+            }
 
             #if DEBUG
             print("MCPRegistryService: Page \(pageCount) - Fetched \(apiResponse.servers.count) servers")
@@ -67,10 +77,7 @@ class MCPRegistryService: ObservableObject {
             allServers.append(contentsOf: apiResponse.servers)
 
             // Check for next page
-            cursor = apiResponse.metadata?.nextCursor
-            if cursor?.isEmpty == true {
-                cursor = nil
-            }
+            cursor = apiResponse.metadata?.nextCursor.flatMap { $0.isEmpty ? nil : $0 }
         } while cursor != nil
 
         #if DEBUG
@@ -199,42 +206,33 @@ class MCPRegistryService: ObservableObject {
         var blocks: [String] = []
 
         // Pattern 1: ```json\n...\n```
-        let jsonPattern = #"```json\s*\n(.*?)\n```"#
-        if let jsonRegex = try? NSRegularExpression(pattern: jsonPattern, options: [.dotMatchesLineSeparators]) {
-            let matches = jsonRegex.matches(in: markdown, range: NSRange(markdown.startIndex..., in: markdown))
-            for match in matches {
-                if let range = Range(match.range(at: 1), in: markdown) {
-                    blocks.append(String(markdown[range]))
-                }
+        let matches1 = Self.jsonBlockRegex.matches(in: markdown, range: NSRange(markdown.startIndex..., in: markdown))
+        for match in matches1 {
+            if let range = Range(match.range(at: 1), in: markdown) {
+                blocks.append(String(markdown[range]))
             }
         }
 
         // Pattern 2: ```\n{...}\n```
-        let codeBlockPattern = #"```\s*\n(\{.*?\})\n```"#
-        if let codeRegex = try? NSRegularExpression(pattern: codeBlockPattern, options: [.dotMatchesLineSeparators]) {
-            let matches = codeRegex.matches(in: markdown, range: NSRange(markdown.startIndex..., in: markdown))
-            for match in matches {
-                if let range = Range(match.range(at: 1), in: markdown) {
-                    blocks.append(String(markdown[range]))
-                }
+        let matches2 = Self.codeBlockRegex.matches(in: markdown, range: NSRange(markdown.startIndex..., in: markdown))
+        for match in matches2 {
+            if let range = Range(match.range(at: 1), in: markdown) {
+                blocks.append(String(markdown[range]))
             }
         }
 
         // Pattern 3: Inline JSON with server name (e.g., "server-name": { ... })
         // This catches configs like: "chroma": { "command": "uvx", "args": [...] }
-        let inlinePattern = #""[^"]+"\s*:\s*\{[\s\S]*?"command"\s*:[\s\S]*?\}"#
-        if let inlineRegex = try? NSRegularExpression(pattern: inlinePattern, options: []) {
-            let matches = inlineRegex.matches(in: markdown, range: NSRange(markdown.startIndex..., in: markdown))
-            for match in matches {
-                if let range = Range(match.range, in: markdown) {
-                    let jsonStr = String(markdown[range])
-                    // Try to find the complete JSON object (handle nested braces)
-                    if let completeJson = extractCompleteJSON(from: markdown, startingAt: range.lowerBound) {
-                        blocks.append(completeJson)
-                    } else {
-                        // Fallback: wrap in braces to make it valid JSON
-                        blocks.append("{\(jsonStr)}")
-                    }
+        let matches3 = Self.inlineRegex.matches(in: markdown, range: NSRange(markdown.startIndex..., in: markdown))
+        for match in matches3 {
+            if let range = Range(match.range, in: markdown) {
+                let jsonStr = String(markdown[range])
+                // Try to find the complete JSON object (handle nested braces)
+                if let completeJson = extractCompleteJSON(from: markdown, startingAt: range.lowerBound) {
+                    blocks.append(completeJson)
+                } else {
+                    // Fallback: wrap in braces to make it valid JSON
+                    blocks.append("{\(jsonStr)}")
                 }
             }
         }

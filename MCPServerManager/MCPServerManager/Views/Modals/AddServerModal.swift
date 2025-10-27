@@ -75,7 +75,7 @@ struct AddServerModal: View {
                 if entryMode == .manual {
                     manualEntryView
                 } else {
-                    BrowseRegistryView { selectedServer in
+                    BrowseRegistryView(registryService: MCPRegistryService.shared) { selectedServer in
                         handleServerSelection(selectedServer)
                     }
                 }
@@ -145,7 +145,7 @@ struct AddServerModal: View {
                         Image(systemName: "plus.circle.fill")
                         Text("Add Servers")
                     }
-                    .foregroundColor(Color(hex: "#1a1a1a"))
+                    .foregroundColor(themeColors.textOnAccent)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
                     .background(
@@ -344,7 +344,7 @@ struct ModeButton: View {
                 Text(title)
                     .font(DesignTokens.Typography.body)
             }
-            .foregroundColor(isSelected ? Color(hex: "#1a1a1a") : .secondary)
+            .foregroundColor(isSelected ? themeColors.textOnAccent : .secondary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
             .background(

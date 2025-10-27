@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BrowseRegistryView: View {
-    @ObservedObject var registryService = MCPRegistryService.shared
+    @ObservedObject var registryService: MCPRegistryService
     @Environment(\.themeColors) private var themeColors
 
     @State private var servers: [RegistryServer] = []
@@ -66,7 +66,9 @@ struct BrowseRegistryView: View {
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                     Button("Retry") {
-                        loadServers()
+                        Task {
+                            await loadServers()
+                        }
                     }
                     .buttonStyle(.plain)
                     .padding(.horizontal, 20)
@@ -104,7 +106,7 @@ struct BrowseRegistryView: View {
         }
         .task {
             if isInitialLoad {
-                loadServers()
+                await loadServers()
             }
         }
     }
@@ -125,19 +127,17 @@ struct BrowseRegistryView: View {
 
     // MARK: - Private Methods
 
-    private func loadServers() {
+    private func loadServers() async {
         errorMessage = ""
-        Task {
-            do {
-                servers = try await registryService.fetchServers()
-                isInitialLoad = false
-            } catch {
-                errorMessage = "Failed to load servers: \(error.localizedDescription)"
-                isInitialLoad = false
-                #if DEBUG
-                print("BrowseRegistryView: Error loading servers - \(error)")
-                #endif
-            }
+        do {
+            servers = try await registryService.fetchServers()
+            isInitialLoad = false
+        } catch {
+            errorMessage = "Failed to load servers: \(error.localizedDescription)"
+            isInitialLoad = false
+            #if DEBUG
+            print("BrowseRegistryView: Error loading servers - \(error)")
+            #endif
         }
     }
 }
