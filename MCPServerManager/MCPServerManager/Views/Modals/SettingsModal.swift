@@ -13,6 +13,8 @@ struct SettingsModal: View {
     @State private var windowOpacity: Double = 1.0
     @State private var testingConnection: Bool = false
     @State private var testResult: String = ""
+    @State private var showBookmarkAlert: Bool = false
+    @State private var bookmarkAlertMessage: String = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -246,6 +248,11 @@ struct SettingsModal: View {
             fetchServerLogos = UserDefaults.standard.object(forKey: "fetchServerLogos") as? Bool ?? true
             windowOpacity = viewModel.settings.windowOpacity
         }
+        .alert("Bookmark Storage Failed", isPresented: $showBookmarkAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(bookmarkAlertMessage)
+        }
     }
 
     private func selectConfigFile(completion: @escaping (String) -> Void) {
@@ -255,10 +262,21 @@ struct SettingsModal: View {
         panel.canChooseFiles = true
         panel.allowedContentTypes = [UTType.json]
         panel.showsHiddenFiles = true
+        panel.message = "Select a config file to manage MCP servers"
 
         if panel.runModal() == .OK, let url = panel.url {
-            let path = url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
-            completion(path)
+            // Store security-scoped bookmark for this file
+            do {
+                try ConfigManager.shared.storeBookmarkForConfigFile(url: url, path: url.path)
+
+                let path = url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
+                completion(path)
+            } catch {
+                print("❌ Failed to store bookmark: \(error.localizedDescription)")
+                // Show alert and don't save the path
+                bookmarkAlertMessage = "Failed to create persistent access to the selected file. The app may not be able to access this file after restart.\n\nError: \(error.localizedDescription)"
+                showBookmarkAlert = true
+            }
         }
     }
 
