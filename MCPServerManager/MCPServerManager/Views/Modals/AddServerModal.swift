@@ -7,6 +7,12 @@ struct AddServerModal: View {
 
     @State private var jsonText: String = ""
     @State private var errorMessage: String = ""
+    @State private var entryMode: EntryMode = .manual
+
+    enum EntryMode {
+        case manual
+        case browse
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -35,45 +41,44 @@ struct AddServerModal: View {
 
             Divider()
 
-            // Content
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("SERVER JSON")
-                        .font(DesignTokens.Typography.labelSmall)
-                        .foregroundColor(.secondary)
-                        .tracking(1.5)
-
-                    Text("Paste server definitions in the format: {\"server-name\": {\"command\": \"...\"}} or just the config object")
-                        .font(DesignTokens.Typography.bodySmall)
-                        .foregroundColor(.secondary)
-
-                    TextEditor(text: $jsonText)
-                        .font(DesignTokens.Typography.codeLarge)
-                        .frame(height: 300)
-                        .scrollContentBackground(.hidden)
-                        .background(Color.black.opacity(0.3))
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                        )
-                        .focusable(true)
-
-                    if !errorMessage.isEmpty {
-                        HStack {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                            Text(errorMessage)
-                        }
-                        .font(DesignTokens.Typography.bodySmall)
-                        .foregroundColor(.red)
-                        .padding(12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.red.opacity(0.1))
-                        )
+            // Mode Switcher
+            HStack(spacing: 0) {
+                ModeButton(
+                    title: "Manual Entry",
+                    icon: "text.cursor",
+                    isSelected: entryMode == .manual,
+                    themeColors: themeColors
+                ) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        entryMode = .manual
                     }
                 }
-                .padding(24)
+
+                ModeButton(
+                    title: "Browse Registry",
+                    icon: "square.grid.2x2",
+                    isSelected: entryMode == .browse,
+                    themeColors: themeColors
+                ) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        entryMode = .browse
+                    }
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+
+            Divider()
+
+            // Content
+            Group {
+                if entryMode == .manual {
+                    manualEntryView
+                } else {
+                    BrowseRegistryView { selectedServer in
+                        handleServerSelection(selectedServer)
+                    }
+                }
             }
 
             Divider()
@@ -237,5 +242,108 @@ struct AddServerModal: View {
         isPresented = false
         jsonText = ""
         errorMessage = ""
+    }
+
+    // MARK: - Computed Views
+
+    private var manualEntryView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("SERVER JSON")
+                    .font(DesignTokens.Typography.labelSmall)
+                    .foregroundColor(.secondary)
+                    .tracking(1.5)
+
+                Text("Paste server definitions in the format: {\"server-name\": {\"command\": \"...\"}} or just the config object")
+                    .font(DesignTokens.Typography.bodySmall)
+                    .foregroundColor(.secondary)
+
+                TextEditor(text: $jsonText)
+                    .font(DesignTokens.Typography.codeLarge)
+                    .frame(height: 300)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.black.opacity(0.3))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                    )
+                    .focusable(true)
+
+                if !errorMessage.isEmpty {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                        Text(errorMessage)
+                    }
+                    .font(DesignTokens.Typography.bodySmall)
+                    .foregroundColor(.red)
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.red.opacity(0.1))
+                    )
+                }
+            }
+            .padding(24)
+        }
+    }
+
+    // MARK: - Server Selection Handler
+
+    private func handleServerSelection(_ server: RegistryServer) {
+        // Format the config as JSON
+        jsonText = server.configJSON
+
+        // Switch back to manual mode
+        withAnimation(.easeInOut(duration: 0.2)) {
+            entryMode = .manual
+        }
+
+        // Clear any errors
+        errorMessage = ""
+
+        #if DEBUG
+        print("AddServerModal: Selected server '\(server.name)', populated JSON")
+        #endif
+    }
+}
+
+// MARK: - Mode Button Component
+
+struct ModeButton: View {
+    let title: String
+    let icon: String
+    let isSelected: Bool
+    let themeColors: ThemeColors
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                Text(title)
+                    .font(DesignTokens.Typography.body)
+            }
+            .foregroundColor(isSelected ? Color(hex: "#1a1a1a") : .secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(
+                Group {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(themeColors.accentGradient)
+                    } else {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.white.opacity(0.03))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                            )
+                    }
+                }
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
