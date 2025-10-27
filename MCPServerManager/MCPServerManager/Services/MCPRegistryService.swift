@@ -220,7 +220,82 @@ class MCPRegistryService: ObservableObject {
             }
         }
 
+        // Pattern 3: Inline JSON with server name (e.g., "server-name": { ... })
+        // This catches configs like: "chroma": { "command": "uvx", "args": [...] }
+        let inlinePattern = #""[^"]+"\s*:\s*\{[\s\S]*?"command"\s*:[\s\S]*?\}"#
+        if let inlineRegex = try? NSRegularExpression(pattern: inlinePattern, options: []) {
+            let matches = inlineRegex.matches(in: markdown, range: NSRange(markdown.startIndex..., in: markdown))
+            for match in matches {
+                if let range = Range(match.range, in: markdown) {
+                    let jsonStr = String(markdown[range])
+                    // Try to find the complete JSON object (handle nested braces)
+                    if let completeJson = extractCompleteJSON(from: markdown, startingAt: range.lowerBound) {
+                        blocks.append(completeJson)
+                    } else {
+                        // Fallback: wrap in braces to make it valid JSON
+                        blocks.append("{\(jsonStr)}")
+                    }
+                }
+            }
+        }
+
         return blocks
+    }
+
+    /// Extract a complete JSON object with proper brace matching
+    private func extractCompleteJSON(from text: String, startingAt: String.Index) -> String? {
+        var depth = 0
+        var startIndex: String.Index?
+        var endIndex: String.Index?
+        var inString = false
+        var escapeNext = false
+
+        var currentIndex = startingAt
+
+        while currentIndex < text.endIndex {
+            let char = text[currentIndex]
+
+            if escapeNext {
+                escapeNext = false
+                currentIndex = text.index(after: currentIndex)
+                continue
+            }
+
+            if char == "\\" {
+                escapeNext = true
+                currentIndex = text.index(after: currentIndex)
+                continue
+            }
+
+            if char == "\"" {
+                inString.toggle()
+                currentIndex = text.index(after: currentIndex)
+                continue
+            }
+
+            if !inString {
+                if char == "{" {
+                    if startIndex == nil {
+                        startIndex = currentIndex
+                    }
+                    depth += 1
+                } else if char == "}" {
+                    depth -= 1
+                    if depth == 0 && startIndex != nil {
+                        endIndex = text.index(after: currentIndex)
+                        break
+                    }
+                }
+            }
+
+            currentIndex = text.index(after: currentIndex)
+        }
+
+        if let start = startIndex, let end = endIndex {
+            return String(text[start..<end])
+        }
+
+        return nil
     }
 
     /// Try to parse a JSON block as an MCP config
