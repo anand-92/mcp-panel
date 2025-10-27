@@ -8,6 +8,7 @@ struct AddServerModal: View {
     @State private var jsonText: String = ""
     @State private var errorMessage: String = ""
     @State private var entryMode: EntryMode = .manual
+    @State private var registryImages: [String: String] = [:] // Map server names to image URLs from registry
 
     enum EntryMode {
         case manual
@@ -245,10 +246,11 @@ struct AddServerModal: View {
     }
 
     private func addServers() {
-        viewModel.addServers(from: jsonText)
+        viewModel.addServers(from: jsonText, registryImages: registryImages.isEmpty ? nil : registryImages)
         isPresented = false
         jsonText = ""
         errorMessage = ""
+        registryImages = [:]
     }
 
     // MARK: - Computed Views
@@ -300,6 +302,14 @@ struct AddServerModal: View {
     private func handleServerSelection(_ server: RegistryServer) {
         // Wrap the config with the server name
         let wrappedConfig: [String: ServerConfig] = [server.displayName: server.config]
+
+        // Store the image URL for this server if available
+        if let imageUrl = server.imageUrl {
+            registryImages[server.displayName] = imageUrl
+            #if DEBUG
+            print("AddServerModal: Stored registry image for '\(server.displayName)': \(imageUrl)")
+            #endif
+        }
 
         // Format as pretty JSON
         let encoder = JSONEncoder()

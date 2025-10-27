@@ -10,19 +10,22 @@ struct RegistryServer: Identifiable, Codable {
     let repository: String
     let config: ServerConfig
     let metadata: RegistryMetadata
+    let imageUrl: String?
 
     init(id: String,
          name: String,
          description: String,
          repository: String,
          config: ServerConfig,
-         metadata: RegistryMetadata) {
+         metadata: RegistryMetadata,
+         imageUrl: String? = nil) {
         self.id = id
         self.name = name
         self.description = description
         self.repository = repository
         self.config = config
         self.metadata = metadata
+        self.imageUrl = imageUrl
     }
 
     /// Display name (without org prefix)
@@ -91,11 +94,37 @@ struct RegistryAPIServer: Codable {
     let remotes: [APIRemoteConfig]?
     let createdAt: String?
     let updatedAt: String?
+    let meta: ServerMeta?
 
     enum CodingKeys: String, CodingKey {
         case name, description, repository, packages, remotes
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+        case meta = "_meta"
+    }
+}
+
+struct ServerMeta: Codable {
+    let publisherProvided: PublisherProvided?
+
+    enum CodingKeys: String, CodingKey {
+        case publisherProvided = "io.modelcontextprotocol.registry/publisher-provided"
+    }
+}
+
+struct PublisherProvided: Codable {
+    let github: GitHubMetadata?
+}
+
+struct GitHubMetadata: Codable {
+    let opengraphImageUrl: String?
+    let ownerAvatarUrl: String?
+    let preferredImage: String?
+
+    enum CodingKeys: String, CodingKey {
+        case opengraphImageUrl = "opengraph_image_url"
+        case ownerAvatarUrl = "owner_avatar_url"
+        case preferredImage = "preferred_image"
     }
 }
 

@@ -153,15 +153,30 @@ struct ServerRow: View {
     var body: some View {
         Button(action: onSelect) {
             HStack(alignment: .top, spacing: 12) {
-                // Icon placeholder
-                Circle()
-                    .fill(themeColors.accentGradient.opacity(0.2))
-                    .frame(width: 40, height: 40)
-                    .overlay(
-                        Text(server.displayName.prefix(1).uppercased())
-                            .font(DesignTokens.Typography.title3)
-                            .foregroundColor(themeColors.primaryAccent)
-                    )
+                // Server icon/avatar
+                Group {
+                    if let imageUrl = server.imageUrl, let url = URL(string: imageUrl) {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .empty:
+                                ProgressView()
+                                    .frame(width: 40, height: 40)
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 40, height: 40)
+                                    .clipShape(Circle())
+                            case .failure:
+                                placeholderIcon
+                            @unknown default:
+                                placeholderIcon
+                            }
+                        }
+                    } else {
+                        placeholderIcon
+                    }
+                }
 
                 // Content
                 VStack(alignment: .leading, spacing: 4) {
@@ -222,6 +237,17 @@ struct ServerRow: View {
                 NSCursor.pop()
             }
         }
+    }
+
+    private var placeholderIcon: some View {
+        Circle()
+            .fill(themeColors.accentGradient.opacity(0.2))
+            .frame(width: 40, height: 40)
+            .overlay(
+                Text(server.displayName.prefix(1).uppercased())
+                    .font(DesignTokens.Typography.title3)
+                    .foregroundColor(themeColors.primaryAccent)
+            )
     }
 
     private func commandPreview(_ command: String, args: [String]?) -> String {

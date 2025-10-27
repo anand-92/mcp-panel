@@ -125,13 +125,18 @@ class MCPRegistryService: ObservableObject {
                 runtimeHint: packageInfo?.runtimeHint
             )
 
+            // Extract image URL from metadata (prefer preferredImage, fallback to ownerAvatarUrl)
+            let imageUrl = apiServer.meta?.publisherProvided?.github?.preferredImage
+                        ?? apiServer.meta?.publisherProvided?.github?.ownerAvatarUrl
+
             return RegistryServer(
                 id: apiServer.name,
                 name: apiServer.name,
                 description: apiServer.description,
                 repository: apiServer.repository?.url ?? "",
                 config: finalConfig,
-                metadata: metadata
+                metadata: metadata,
+                imageUrl: imageUrl
             )
         }
 
