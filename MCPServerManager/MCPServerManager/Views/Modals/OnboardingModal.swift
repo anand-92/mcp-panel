@@ -139,8 +139,17 @@ struct OnboardingModal: View {
         panel.allowedContentTypes = [UTType.json]
         panel.showsHiddenFiles = true
         panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
+        panel.message = "Select your Claude Code config file (usually ~/.claude.json)"
 
         if panel.runModal() == .OK, let url = panel.url {
+            // Store security-scoped bookmark for this file
+            do {
+                try ConfigManager.shared.storeBookmarkForConfigFile(url: url, path: url.path)
+                print("✅ Stored bookmark during onboarding")
+            } catch {
+                print("❌ Failed to store bookmark during onboarding: \(error.localizedDescription)")
+            }
+
             selectedPath = url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
         }
     }

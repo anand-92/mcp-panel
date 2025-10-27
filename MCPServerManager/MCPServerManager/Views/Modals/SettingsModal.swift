@@ -255,10 +255,21 @@ struct SettingsModal: View {
         panel.canChooseFiles = true
         panel.allowedContentTypes = [UTType.json]
         panel.showsHiddenFiles = true
+        panel.message = "Select a config file to manage MCP servers"
 
         if panel.runModal() == .OK, let url = panel.url {
-            let path = url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
-            completion(path)
+            // Store security-scoped bookmark for this file
+            do {
+                try ConfigManager.shared.storeBookmarkForConfigFile(url: url, path: url.path)
+
+                let path = url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
+                completion(path)
+            } catch {
+                print("❌ Failed to store bookmark: \(error.localizedDescription)")
+                // Still allow the user to use the path, but warn them
+                let path = url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
+                completion(path)
+            }
         }
     }
 
