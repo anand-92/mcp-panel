@@ -68,6 +68,19 @@ struct RegistryMetadata: Codable {
 
 struct RegistryAPIResponse: Codable {
     let servers: [RegistryAPIServer]
+    let metadata: PaginationMetadata?
+}
+
+struct PaginationMetadata: Codable {
+    let count: Int
+    let nextCursor: String?
+    let totalPages: Int
+
+    enum CodingKeys: String, CodingKey {
+        case count
+        case nextCursor = "next_cursor"
+        case totalPages = "total_pages"
+    }
 }
 
 struct RegistryAPIServer: Codable {

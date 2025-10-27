@@ -35,28 +35,50 @@ class MCPRegistryService: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        guard let url = URL(string: apiURL) else {
-            throw MCPRegistryError.invalidURL
-        }
+        // Fetch all pages
+        var allServers: [RegistryAPIServer] = []
+        var cursor: String? = nil
+        var pageCount = 0
 
-        let (data, response) = try await URLSession.shared.data(from: url)
+        repeat {
+            pageCount += 1
+            let pageURL = cursor == nil ? apiURL : "\(apiURL)?cursor=\(cursor!)"
 
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw MCPRegistryError.invalidResponse
-        }
+            guard let url = URL(string: pageURL) else {
+                throw MCPRegistryError.invalidURL
+            }
 
-        guard httpResponse.statusCode == 200 else {
-            throw MCPRegistryError.httpError(httpResponse.statusCode)
-        }
+            let (data, response) = try await URLSession.shared.data(from: url)
 
-        let apiResponse = try JSONDecoder().decode(RegistryAPIResponse.self, from: data)
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw MCPRegistryError.invalidResponse
+            }
+
+            guard httpResponse.statusCode == 200 else {
+                throw MCPRegistryError.httpError(httpResponse.statusCode)
+            }
+
+            let apiResponse = try JSONDecoder().decode(RegistryAPIResponse.self, from: data)
+
+            #if DEBUG
+            print("MCPRegistryService: Page \(pageCount) - Fetched \(apiResponse.servers.count) servers")
+            #endif
+
+            allServers.append(contentsOf: apiResponse.servers)
+
+            // Check for next page
+            cursor = apiResponse.metadata?.nextCursor
+            if cursor?.isEmpty == true {
+                cursor = nil
+            }
+        } while cursor != nil
 
         #if DEBUG
-        print("MCPRegistryService: Fetched \(apiResponse.servers.count) servers from API")
+        print("MCPRegistryService: Total \(allServers.count) servers fetched across \(pageCount) page(s)")
         #endif
 
         // Process servers and extract configs
-        let registryServers = apiResponse.servers.compactMap { apiServer -> RegistryServer? in
+        let registryServers = allServers.compactMap { apiServer -> RegistryServer? in
             guard let readme = apiServer.repository?.readme,
                   let config = extractConfigFromReadme(readme) else {
                 #if DEBUG
