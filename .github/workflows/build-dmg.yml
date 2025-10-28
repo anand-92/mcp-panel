@@ -69,6 +69,8 @@ jobs:
             <string>AppIcon</string>
             <key>SUFeedURL</key>
             <string>https://github.com/${{ github.repository }}/releases/download/latest/appcast.xml</string>
+            <key>SUPublicEDKey</key>
+            <string>SnkRxHZxaHrqHMoSW/Ls6dbeqZaGZBlS5AQ9I8OE3JI=</string>
             <key>SUEnableAutomaticChecks</key>
             <true/>
             <key>SUAutomaticallyUpdate</key>
@@ -130,21 +132,36 @@ jobs:
         cd build
         ln -sf "MCP-Server-Manager-v${VERSION}.dmg" MCP-Server-Manager.dmg
 
+    - name: Import Sparkle signing key
+      env:
+        SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+      run: |
+        # Import the EdDSA private key into the keychain for signing the appcast
+        if [ -n "$SPARKLE_PRIVATE_KEY" ]; then
+          security add-generic-password \
+            -a "ed25519" \
+            -s "https://sparkle-project.org" \
+            -w "$SPARKLE_PRIVATE_KEY" \
+            -D "Private key for signing Sparkle updates" \
+            -T /usr/local/bin/generate_appcast \
+            build.keychain
+          echo "✓ Sparkle signing key imported"
+        else
+          echo "⚠️  Warning: SPARKLE_PRIVATE_KEY not set - appcast will not be signed"
+        fi
+
     - name: Generate Appcast
       working-directory: MCPServerManager/build
       run: |
-        # Create appcast directory if it doesn't exist
-        mkdir -p appcast
-
         # Generate appcast.xml using Sparkle's tool
-        # This will scan all DMG files and generate the XML
+        # This will scan the current directory for DMG files
         generate_appcast --download-url-prefix "https://github.com/${{ github.repository }}/releases/download/latest/" \
                          --link "https://github.com/${{ github.repository }}" \
                          --full-release-notes-url "https://github.com/${{ github.repository }}/releases" \
-                         appcast/
+                         .
 
-        # Copy the appcast.xml to the build directory for upload
-        cp appcast/appcast.xml ./appcast.xml || echo "No appcast generated"
+        # The appcast.xml should now be in the current directory
+        ls -la appcast.xml || echo "No appcast generated"
 
     - name: List build artifacts
       run: |
