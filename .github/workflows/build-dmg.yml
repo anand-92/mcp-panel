@@ -241,6 +241,112 @@ jobs:
           exit 0
         fi
 
+    - name: Generate Release Notes HTML
+      id: release_notes
+      env:
+        REPO: ${{ github.repository }}
+        SHA: ${{ github.sha }}
+        RUN_NUMBER: ${{ github.run_number }}
+      run: |
+        VERSION="2.0.2.${RUN_NUMBER}"
+
+        # Create HTML release notes
+        cat > MCPServerManager/build/release-notes.html << 'NOTES_EOF'
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              font-size: 13px;
+              line-height: 1.6;
+              color: #333;
+              margin: 16px;
+            }
+            h2 {
+              font-size: 16px;
+              font-weight: 600;
+              margin-top: 0;
+              margin-bottom: 12px;
+              color: #1d1d1f;
+            }
+            h3 {
+              font-size: 14px;
+              font-weight: 600;
+              margin-top: 16px;
+              margin-bottom: 8px;
+              color: #1d1d1f;
+            }
+            ul {
+              margin: 8px 0;
+              padding-left: 24px;
+            }
+            li {
+              margin: 4px 0;
+            }
+            .highlight {
+              background: #f0f7ff;
+              padding: 2px 6px;
+              border-radius: 3px;
+              font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+              font-size: 12px;
+            }
+            .new-badge {
+              display: inline-block;
+              background: #007aff;
+              color: white;
+              font-size: 10px;
+              font-weight: 600;
+              padding: 2px 6px;
+              border-radius: 4px;
+              text-transform: uppercase;
+              margin-left: 6px;
+            }
+          </style>
+        </head>
+        <body>
+          <h2>What's New in This Update</h2>
+
+          <h3>✨ New Features</h3>
+          <ul>
+            <li><strong>MCP Registry Browser</strong> <span class="new-badge">New</span> - Browse and install servers from the official MCP registry</li>
+            <li><strong>Adaptive Themes</strong> - Auto-switching themes for Claude Code, Gemini CLI, and Default</li>
+            <li><strong>Server Logos</strong> - Automatically fetches and displays server icons</li>
+            <li><strong>Quick Actions Menu</strong> - Fast access to common tasks</li>
+            <li><strong>Window Transparency</strong> - Adjustable opacity with independent text visibility control</li>
+          </ul>
+
+          <h3>🔧 Improvements</h3>
+          <ul>
+            <li>Enhanced JSON editor with syntax highlighting and validation</li>
+            <li>Improved search and filtering across server configurations</li>
+            <li>Better error handling and user feedback</li>
+            <li>Performance optimizations throughout the app</li>
+          </ul>
+
+          <h3>🐛 Bug Fixes</h3>
+          <ul>
+            <li>Fixed config file reading on first launch</li>
+            <li>Resolved issues with server toggle states</li>
+            <li>Improved stability when managing multiple configs</li>
+          </ul>
+
+          <p style="margin-top: 20px; font-size: 12px; color: #666;">
+            <strong>Version:</strong> SPARKLE_VERSION_PLACEHOLDER<br>
+            <strong>Build:</strong> SPARKLE_BUILD_PLACEHOLDER
+          </p>
+        </body>
+        </html>
+        NOTES_EOF
+
+        # Replace version placeholders
+        sed -i.bak "s/SPARKLE_VERSION_PLACEHOLDER/${VERSION}/g" MCPServerManager/build/release-notes.html
+        sed -i.bak "s/SPARKLE_BUILD_PLACEHOLDER/${RUN_NUMBER}/g" MCPServerManager/build/release-notes.html
+        rm -f MCPServerManager/build/release-notes.html.bak
+
+        echo "✓ Release notes HTML created"
+
     - name: Generate and Sign Appcast
       working-directory: MCPServerManager/build
       env:
@@ -255,9 +361,13 @@ jobs:
         # Get DMG file size and signature
         DMG_SIZE=$(stat -f%z "$DMG_PATH" 2>/dev/null || stat -c%s "$DMG_PATH" 2>/dev/null || echo "0")
 
+        # Read release notes HTML and escape for XML
+        RELEASE_NOTES=$(<release-notes.html)
+
         # Create temp directory for archives
         mkdir -p archives
         cp "$DMG_PATH" "archives/"
+        cp release-notes.html "archives/${VERSION}.html"
 
         # Create private key file for Sparkle signing
         if [ -n "$SPARKLE_PRIVATE_KEY" ]; then
@@ -276,7 +386,7 @@ jobs:
             /usr/local/bin/generate_appcast \
               --ed-key-file sparkle_private_key.txt \
               --download-url-prefix "https://github.com/${REPO}/releases/download/latest/" \
-              --full-release-notes-url "https://github.com/${REPO}/releases" \
+              --release-notes-url-prefix "https://github.com/${REPO}/releases/download/latest/" \
               archives/ || echo "⚠️  generate_appcast failed, will fall back to unsigned"
           fi
 
@@ -286,52 +396,62 @@ jobs:
             echo "✓ Signed appcast generated successfully"
           else
             echo "⚠️  generate_appcast failed, creating unsigned appcast"
-            # Fallback to unsigned appcast using echo to avoid YAML heredoc issues
-            echo '<?xml version="1.0" encoding="utf-8"?>' > appcast.xml
-            echo '<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">' >> appcast.xml
-            echo '  <channel>' >> appcast.xml
-            echo '    <title>MCP Server Manager</title>' >> appcast.xml
-            echo '    <language>en</language>' >> appcast.xml
-            echo '    <item>' >> appcast.xml
-            echo "      <title>Version ${VERSION}</title>" >> appcast.xml
-            echo "      <pubDate>${PUBDATE}</pubDate>" >> appcast.xml
-            echo "      <sparkle:version>${VERSION}</sparkle:version>" >> appcast.xml
-            echo '      <sparkle:shortVersionString>2.0.2</sparkle:shortVersionString>' >> appcast.xml
-            echo "      <link>https://github.com/${REPO}/releases</link>" >> appcast.xml
-            echo '      <description>Latest release of MCP Server Manager</description>' >> appcast.xml
-            echo "      <enclosure url=\"https://github.com/${REPO}/releases/download/latest/${DMG_PATH}\"" >> appcast.xml
-            echo "                   length=\"${DMG_SIZE}\"" >> appcast.xml
-            echo '                   type="application/octet-stream"/>' >> appcast.xml
-            echo '    </item>' >> appcast.xml
-            echo '  </channel>' >> appcast.xml
-            echo '</rss>' >> appcast.xml
-            echo "✓ Unsigned appcast created"
+            # Fallback to unsigned appcast with inline release notes
+            cat > appcast.xml << APPCAST_EOF
+        <?xml version="1.0" encoding="utf-8"?>
+        <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+          <channel>
+            <title>MCP Server Manager</title>
+            <language>en</language>
+            <item>
+              <title>Version ${VERSION}</title>
+              <pubDate>${PUBDATE}</pubDate>
+              <sparkle:version>${VERSION}</sparkle:version>
+              <sparkle:shortVersionString>2.0.2</sparkle:shortVersionString>
+              <link>https://github.com/${REPO}/releases</link>
+              <sparkle:releaseNotesLink>https://github.com/${REPO}/releases/download/latest/${VERSION}.html</sparkle:releaseNotesLink>
+              <description><![CDATA[
+                ${RELEASE_NOTES}
+              ]]></description>
+              <enclosure url="https://github.com/${REPO}/releases/download/latest/${DMG_PATH}"
+                         length="${DMG_SIZE}"
+                         type="application/octet-stream"/>
+            </item>
+          </channel>
+        </rss>
+        APPCAST_EOF
+            echo "✓ Unsigned appcast created with release notes"
           fi
 
           # Cleanup
           rm -f sparkle_private_key.txt
         else
           echo "⚠️  SPARKLE_PRIVATE_KEY not set - creating unsigned appcast"
-          # Create unsigned appcast using echo to avoid YAML heredoc issues
-          echo '<?xml version="1.0" encoding="utf-8"?>' > appcast.xml
-          echo '<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">' >> appcast.xml
-          echo '  <channel>' >> appcast.xml
-          echo '    <title>MCP Server Manager</title>' >> appcast.xml
-          echo '    <language>en</language>' >> appcast.xml
-          echo '    <item>' >> appcast.xml
-          echo "      <title>Version ${VERSION}</title>" >> appcast.xml
-          echo "      <pubDate>${PUBDATE}</pubDate>" >> appcast.xml
-          echo "      <sparkle:version>${VERSION}</sparkle:version>" >> appcast.xml
-          echo '      <sparkle:shortVersionString>2.0.2</sparkle:shortVersionString>' >> appcast.xml
-          echo "      <link>https://github.com/${REPO}/releases</link>" >> appcast.xml
-          echo '      <description>Latest release of MCP Server Manager</description>' >> appcast.xml
-          echo "      <enclosure url=\"https://github.com/${REPO}/releases/download/latest/${DMG_PATH}\"" >> appcast.xml
-          echo "                   length=\"${DMG_SIZE}\"" >> appcast.xml
-          echo '                   type="application/octet-stream"/>' >> appcast.xml
-          echo '    </item>' >> appcast.xml
-          echo '  </channel>' >> appcast.xml
-          echo '</rss>' >> appcast.xml
-          echo "✓ Unsigned appcast created"
+          # Create unsigned appcast with inline release notes
+          cat > appcast.xml << APPCAST_EOF
+        <?xml version="1.0" encoding="utf-8"?>
+        <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+          <channel>
+            <title>MCP Server Manager</title>
+            <language>en</language>
+            <item>
+              <title>Version ${VERSION}</title>
+              <pubDate>${PUBDATE}</pubDate>
+              <sparkle:version>${VERSION}</sparkle:version>
+              <sparkle:shortVersionString>2.0.2</sparkle:shortVersionString>
+              <link>https://github.com/${REPO}/releases</link>
+              <sparkle:releaseNotesLink>https://github.com/${REPO}/releases/download/latest/${VERSION}.html</sparkle:releaseNotesLink>
+              <description><![CDATA[
+                ${RELEASE_NOTES}
+              ]]></description>
+              <enclosure url="https://github.com/${REPO}/releases/download/latest/${DMG_PATH}"
+                         length="${DMG_SIZE}"
+                         type="application/octet-stream"/>
+            </item>
+          </channel>
+        </rss>
+        APPCAST_EOF
+          echo "✓ Unsigned appcast created with release notes"
         fi
 
     - name: List build artifacts
@@ -365,12 +485,34 @@ jobs:
         tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
         name: ${{ startsWith(github.ref, 'refs/tags/') && format('Release {0}', github.ref_name) || format('Latest Build v2.0.2.{0}', github.run_number) }}
         body: |
-          Version: 2.0.2.${{ github.run_number }}
-          Commit: ${{ github.sha }}
+          ## 🚀 MCP Server Manager v2.0.2.${{ github.run_number }}
+
+          ### ✨ New Features
+          - **MCP Registry Browser** - Browse and install servers from the official MCP registry
+          - **Adaptive Themes** - Auto-switching themes for Claude Code, Gemini CLI, and Default
+          - **Server Logos** - Automatically fetches and displays server icons
+          - **Quick Actions Menu** - Fast access to common tasks
+          - **Window Transparency** - Adjustable opacity with independent text visibility control
+
+          ### 🔧 Improvements
+          - Enhanced JSON editor with syntax highlighting and validation
+          - Improved search and filtering across server configurations
+          - Better error handling and user feedback
+          - Performance optimizations throughout the app
+
+          ### 🐛 Bug Fixes
+          - Fixed config file reading on first launch
+          - Resolved issues with server toggle states
+          - Improved stability when managing multiple configs
+
+          ---
+
+          **Build:** ${{ github.run_number }} | **Commit:** ${{ github.sha }}
         generate_release_notes: ${{ startsWith(github.ref, 'refs/tags/') }}
         prerelease: false
         files: |
           MCPServerManager/build/MCP-Server-Manager-v*.dmg
           MCPServerManager/build/appcast.xml
+          MCPServerManager/build/*.html
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
