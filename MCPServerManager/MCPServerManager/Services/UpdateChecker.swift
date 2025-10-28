@@ -8,12 +8,13 @@ class UpdateChecker: ObservableObject {
     private var updaterController: SPUStandardUpdaterController?
 
     /// Check if this is an App Store build
-    /// App Store builds have a "receipt" file at the receipt URL
+    /// App Store builds have an actual receipt file that exists
     var isAppStoreBuild: Bool {
         guard let receiptURL = Bundle.main.appStoreReceiptURL else {
             return false
         }
-        return receiptURL.lastPathComponent == "receipt"
+        // Check if the receipt file actually exists (not just the URL structure)
+        return FileManager.default.fileExists(atPath: receiptURL.path)
     }
 
     /// Whether update checking is available (not an App Store build)
