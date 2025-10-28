@@ -154,6 +154,8 @@ jobs:
       continue-on-error: true
       timeout-minutes: 1
       working-directory: MCPServerManager/build
+      env:
+        REPO: ${{ github.repository }}
       run: |
         # Skip appcast generation for now - it's hanging in CI
         # TODO: Debug why generate_appcast hangs
@@ -161,7 +163,9 @@ jobs:
         echo "Creating placeholder appcast.xml..."
 
         VERSION="2.0.2.${{ github.run_number }}"
-        cat > appcast.xml << 'EOF'
+        PUBDATE=$(date -u +"%a, %d %b %Y %H:%M:%S %z")
+
+        cat > appcast.xml << EOF
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
@@ -169,12 +173,12 @@ jobs:
     <language>en</language>
     <item>
       <title>Version ${VERSION}</title>
-      <pubDate>$(date -u +"%a, %d %b %Y %H:%M:%S %z")</pubDate>
+      <pubDate>${PUBDATE}</pubDate>
       <sparkle:version>${VERSION}</sparkle:version>
       <sparkle:shortVersionString>2.0.2</sparkle:shortVersionString>
-      <link>https://github.com/${{ github.repository }}/releases</link>
+      <link>https://github.com/${REPO}/releases</link>
       <description>Latest release of MCP Server Manager</description>
-      <enclosure url="https://github.com/${{ github.repository }}/releases/download/latest/MCP-Server-Manager-v${VERSION}.dmg"
+      <enclosure url="https://github.com/${REPO}/releases/download/latest/MCP-Server-Manager-v${VERSION}.dmg"
                  type="application/octet-stream"/>
     </item>
   </channel>
