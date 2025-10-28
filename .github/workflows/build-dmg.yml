@@ -85,6 +85,7 @@ jobs:
       env:
         MAC_APP_STORE_CERT: ${{ secrets.MAC_APP_STORE_CERT }}
         MAC_INSTALLER_CERT: ${{ secrets.MAC_INSTALLER_CERT }}
+        CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
       run: |
         # Create temporary keychain
         security create-keychain -p actions build.keychain
@@ -92,13 +93,13 @@ jobs:
         security unlock-keychain -p actions build.keychain
         security set-keychain-settings -t 3600 -u build.keychain
 
-        # Decode and import App Store signing certificate (no password)
+        # Decode and import App Store signing certificate
         echo "$MAC_APP_STORE_CERT" | base64 --decode > appstore_cert.p12
-        security import appstore_cert.p12 -k build.keychain -P "" -T /usr/bin/codesign -T /usr/bin/productsign -A
+        security import appstore_cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign -A
 
-        # Decode and import Installer certificate (no password)
+        # Decode and import Installer certificate
         echo "$MAC_INSTALLER_CERT" | base64 --decode > installer_cert.p12
-        security import installer_cert.p12 -k build.keychain -P "" -T /usr/bin/codesign -T /usr/bin/productsign -A
+        security import installer_cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign -A
 
         # Set partition list
         security set-key-partition-list -S apple-tool:,apple:,codesign:,productsign: -s -k actions build.keychain
@@ -109,6 +110,38 @@ jobs:
 
         # Clean up
         rm appstore_cert.p12 installer_cert.p12
+
+    - name: Sign app bundle
+      working-directory: MCPServerManager
+      env:
+        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      run: |
+        # Find the signing identity
+        echo "Available signing identities:"
+        security find-identity -v -p codesigning
+
+        # Get the first valid Developer ID or Mac App Store certificate
+        IDENTITY=$(security find-identity -v -p codesigning | grep -E "Developer ID Application|Apple Distribution" | head -1 | awk -F'"' '{print $2}')
+
+        if [ -z "$IDENTITY" ]; then
+          echo "❌ No valid signing identity found"
+          echo "⚠️  App will not be signed - may show 'damaged' error on macOS"
+          exit 0
+        fi
+
+        echo "Signing with identity: $IDENTITY"
+
+        # Sign the app bundle with hardened runtime
+        codesign --force --deep --sign "$IDENTITY" \
+          --options runtime \
+          --entitlements ../entitlements.plist \
+          --timestamp \
+          build/MCP-Server-Manager.app
+
+        # Verify the signature
+        echo "Verifying signature..."
+        codesign --verify --verbose build/MCP-Server-Manager.app
+        echo "✓ App bundle signed successfully"
 
     - name: Install create-dmg tool
       run: brew install create-dmg
@@ -131,6 +164,44 @@ jobs:
         # Also create a "latest" symlink for consistent naming
         cd build
         ln -sf "MCP-Server-Manager-v${VERSION}.dmg" MCP-Server-Manager.dmg
+
+    - name: Notarize and staple DMG
+      working-directory: MCPServerManager
+      env:
+        APPLE_ID: ${{ secrets.APPLE_ID }}
+        APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      run: |
+        VERSION="2.0.2.${{ github.run_number }}"
+        DMG_PATH="build/MCP-Server-Manager-v${VERSION}.dmg"
+
+        if [ -z "$APPLE_ID" ] || [ -z "$APPLE_APP_SPECIFIC_PASSWORD" ]; then
+          echo "⚠️  Notarization credentials not found - skipping notarization"
+          echo "   DMG may show 'damaged' error on other Macs"
+          exit 0
+        fi
+
+        echo "Submitting DMG for notarization..."
+
+        # Submit for notarization
+        xcrun notarytool submit "$DMG_PATH" \
+          --apple-id "$APPLE_ID" \
+          --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+          --team-id "$APPLE_TEAM_ID" \
+          --wait
+
+        # Check notarization status
+        if [ $? -eq 0 ]; then
+          echo "✓ Notarization successful"
+
+          # Staple the notarization ticket to the DMG
+          echo "Stapling notarization ticket..."
+          xcrun stapler staple "$DMG_PATH"
+          echo "✓ DMG notarized and stapled"
+        else
+          echo "❌ Notarization failed"
+          exit 1
+        fi
 
     - name: Import Sparkle signing key
       env:
