@@ -1,6 +1,8 @@
-# MCP Server Manager
-
 <div align="center">
+
+<img src="app-icon.png" width="128" height="128" alt="MCP Server Manager Icon"/>
+
+# MCP Server Manager
 
 [![Download Latest DMG](https://img.shields.io/badge/Download-Latest%20DMG-blue?style=for-the-badge&logo=apple)](https://github.com/anand-92/mcp-panel/releases/latest)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/anand-92/mcp-panel?style=for-the-badge)](https://github.com/anand-92/mcp-panel/releases/latest)
@@ -8,20 +10,25 @@
 
 **[⬇️ Download MCP Server Manager for macOS](https://apps.apple.com/us/app/mcp-server-manager/id6753700883?mt=12)**
 
-</div>
-
 A native macOS application for managing Claude Code and Gemini CLI MCP server configurations, built with SwiftUI.
+
+</div>
 
 ## ⚡ Features
 
-- **Dual Config Management**: Manage two separate config files simultaneously (perfect for Claude Code + Gemini CLI)
-- **Server CRUD Operations**: Add, edit, delete, and toggle MCP servers with ease
-- **Multiple View Modes**: Grid view with cards, list view, and raw JSON editor
-- **Search & Filtering**: Real-time fuzzy search and filter by status (active/disabled/recent)
-- **Import/Export**: Bulk import/export server configurations
-- **Cyberpunk Mode**: Optional neon-themed UI for extra flair 💜
-- **Native macOS**: Built with SwiftUI for optimal performance and battery life
-- **Keyboard Shortcuts**: Full keyboard navigation support
+- **🎯 MCP Registry Browser**: Browse and install servers from the official MCP registry with one click
+- **📁 Dual Config Management**: Manage two separate config files simultaneously (perfect for Claude Code + Gemini CLI)
+- **🎨 Adaptive Themes**: Three beautiful themes that auto-switch based on your config (Claude Code, Gemini CLI, or Default)
+- **🖼️ Server Logos**: Automatically fetches and displays server icons from the web
+- **⚡ Quick Actions Menu**: Fast access to common tasks - explore registry, add servers, import/export
+- **✏️ Multiple View Modes**: Grid view with cards or raw JSON editor for power users
+- **🔍 Search & Filtering**: Real-time search and filter by status (all/active/disabled/recent)
+- **💾 Import/Export**: Bulk import/export server configurations
+- **🪟 Window Transparency**: Adjustable window opacity with independent text visibility control
+- **🔄 Auto-Updates**: Automatic updates for DMG builds (via Sparkle framework)
+- **⚙️ Full Server Management**: Add, edit, delete, and toggle MCP servers with ease
+- **⌨️ Keyboard Shortcuts**: Quick access to common actions
+- **🚀 Native macOS**: Built with SwiftUI for optimal performance and battery life
 
 ## 📋 Requirements
 
@@ -99,9 +106,17 @@ Manual build:
 3. Press **⌘⇧.** (Command+Shift+Period) to show hidden files if needed
 4. Click "Continue" to start using the app
 
+### MCP Registry Browser
+
+1. Click the **Quick Actions** button (starburst icon) or click **"New Server"**
+2. Switch to **"Browse Registry"** tab
+3. Search or browse official MCP servers
+4. Click on any server to view details and auto-populate the configuration
+5. Click **"Add Server"** to install
+
 ### Managing Servers
 
-- **Add Server**: Click "New Server" in the sidebar or press **⌘N**
+- **Add Server**: Click "New Server" or press **⌘N**, then paste JSON or browse the registry
 - **Edit Server**: Hover over a server card and click the edit button
 - **Delete Server**: Click the trash icon on any server card (confirmation optional in settings)
 - **Toggle Server**: Use the switch on each card to enable/disable for the active config
@@ -115,9 +130,9 @@ Manual build:
 
 ### Search & Filter
 
-- Press **⌘F** to focus the search bar
-- Type to search server names and configurations (fuzzy search enabled)
-- Use the filter dropdown to show:
+- Click the search bar in the header to search
+- Type to search server names and configurations in real-time
+- Use the filter pills in the toolbar to show:
   - **All Servers**: Show everything
   - **Active Only**: Enabled in current config
   - **Disabled Only**: Not in current config
@@ -125,42 +140,53 @@ Manual build:
 
 ### View Modes
 
-Toggle between three view modes using the picker in the toolbar:
-- **Grid View**: Card-based layout with full details
-- **List View**: Compact list format
-- **Raw JSON**: Direct JSON editor for advanced users
+Toggle between two view modes using the picker in the toolbar:
+- **Grid View**: Card-based layout with full server details and logos
+- **Raw JSON**: Direct JSON editor for advanced users with syntax highlighting
 
 ### Import/Export
 
-- **Import**: Click "Import JSON" in the sidebar to bulk import server definitions
-- **Export**: Click "Export JSON" to download the current config as JSON
+- **Import**: Click the Quick Actions button → "Import JSON" to bulk import server definitions
+- **Export**: Click the Quick Actions button → "Export JSON" to download the current config as JSON
+
+### Quick Actions Menu
+
+Click the **Quick Actions** button (top-left starburst icon) for fast access to:
+- **Explore New MCPs**: Opens the MCP Registry website
+- **New Server**: Add a new server manually or from registry
+- **Import JSON**: Bulk import server configurations
+- **Export JSON**: Export all servers to a file
 
 ### Settings
 
 Click the gear icon ⚙️ in the header to configure:
-- Config file paths (Config 1 and Config 2)
-- Confirmation dialogs (enable/disable delete confirmations)
-- Cyberpunk Mode (extra neon flair)
-- Test config file connections
+- **Config File Paths**: Set paths for Config 1 and Config 2 (with file browser)
+- **Window Opacity**: Adjust window transparency (30%-100%)
+- **Text Visibility Boost**: Control text brightness when window is translucent (0%-100%)
+- **Confirm Delete**: Toggle delete confirmation dialogs
+- **Fetch Server Logos**: Enable/disable automatic icon downloads
+- **Test Connection**: Verify config file accessibility and see server count
 
 ## ⌨️ Keyboard Shortcuts
 
 | Shortcut | Action |
 |----------|--------|
 | **⌘N** | New server |
-| **⌘F** | Focus search |
 | **⌘R** | Refresh from config files |
-| **⌘S** | Manual save (auto-saves by default) |
-| **Escape** | Close modals |
+| **⌘U** | Check for updates (DMG builds only) |
 
 ## 🎨 Design Philosophy
 
 Native SwiftUI design with glassmorphic aesthetics:
 
-- **Dark Theme**: Deep blue/purple gradients
-- **Glass Panels**: Frosted glass effect with subtle borders
+- **Adaptive Themes**: Three beautiful themes that auto-switch based on your active config
+  - **Claude Code Theme**: Dark with warm orange/cream accents
+  - **Gemini CLI Theme**: Pitch black with vibrant blue/purple/cyan gradients (Ayu Dark inspired)
+  - **Default Theme**: Deep blue with cyan/purple gradients (Cyberpunk style)
+- **Glass Panels**: Frosted glass effect with subtle borders and blur
+- **Window Transparency**: Adjustable opacity with smart text visibility boost
 - **Smooth Animations**: Spring-based transitions throughout
-- **Cyberpunk Mode**: Optional neon cyan accents and enhanced glow effects
+- **Server Logos**: Beautiful circular avatars with gradient backgrounds
 
 ## 📁 Configuration Format
 
@@ -182,42 +208,64 @@ The app manages `.claude.json` files with the following structure:
 
 Supports both stdio and HTTP transport types.
 
-## 🏗️ Project Structure
+## 🏗️ Technical Details
+
+Built with modern Swift and SwiftUI for native macOS performance:
+
+- **Architecture**: MVVM (Model-View-ViewModel) pattern
+- **UI Framework**: SwiftUI with custom components and modifiers
+- **Theme System**: Three adaptive themes with auto-detection
+- **Auto-Updates**: Sparkle framework integration (DMG builds)
+- **File Access**: Security-scoped bookmarks for App Sandbox compliance
+- **Icon Service**: Automatic logo fetching with caching
+- **Registry Integration**: MCP GitHub registry API client
+
+<details>
+<summary>View Project Structure</summary>
 
 ```
 MCPServerManager/
-├── MCPServerManager/
-│   ├── MCPServerManagerApp.swift      # App entry point
-│   ├── Models/                        # Data models
-│   │   ├── ServerConfig.swift
-│   │   ├── ServerModel.swift
-│   │   └── Settings.swift
-│   ├── ViewModels/                    # Business logic
-│   │   └── ServerViewModel.swift
-│   ├── Views/                         # UI components
-│   │   ├── ContentView.swift          # Main view
-│   │   ├── HeaderView.swift
-│   │   ├── SidebarView.swift
-│   │   ├── ServerGridView.swift
-│   │   ├── ServerCardView.swift
-│   │   ├── RawJSONView.swift
-│   │   ├── Components/
-│   │   │   ├── GlassPanel.swift
-│   │   │   ├── CustomToggleSwitch.swift
-│   │   │   ├── ToastView.swift
-│   │   │   └── ToolbarView.swift
-│   │   └── Modals/
-│   │       ├── AddServerModal.swift
-│   │       ├── SettingsModal.swift
-│   │       └── OnboardingModal.swift
-│   ├── Services/                      # File I/O and config management
-│   │   └── ConfigManager.swift
-│   └── Utilities/                     # Helpers and extensions
-│       ├── Constants.swift
-│       ├── Extensions.swift
-│       └── FontScale.swift
-└── Package.swift
+├── Models/                         # Data models
+│   ├── ServerConfig.swift          # MCP server configuration
+│   ├── ServerModel.swift           # In-memory server representation
+│   ├── Settings.swift              # App settings
+│   ├── Theme.swift                 # Theme system (3 themes)
+│   └── RegistryServer.swift        # MCP Registry models
+├── ViewModels/                     # Business logic
+│   └── ServerViewModel.swift       # Main state management
+├── Views/                          # UI components
+│   ├── ContentView.swift           # Main app container
+│   ├── HeaderView.swift            # Search & config switcher
+│   ├── ServerGridView.swift        # Grid display
+│   ├── ServerCardView.swift        # Server cards with logos
+│   ├── RawJSONView.swift           # JSON editor
+│   ├── Components/                 # Reusable UI
+│   │   ├── GlassPanel.swift
+│   │   ├── CustomToggleSwitch.swift
+│   │   ├── ToastView.swift
+│   │   ├── ToolbarView.swift
+│   │   ├── QuickActionsMenu.swift
+│   │   ├── ServerIconView.swift
+│   │   └── BrowseRegistryView.swift
+│   └── Modals/
+│       ├── AddServerModal.swift     # Add/edit with registry browser
+│       ├── SettingsModal.swift      # App preferences
+│       └── OnboardingModal.swift    # First-run setup
+├── Services/                       # Core services
+│   ├── ConfigManager.swift         # JSON config I/O
+│   ├── MCPRegistryService.swift    # Registry API client
+│   ├── IconService.swift           # Logo fetching
+│   ├── BookmarkManager.swift       # File access permissions
+│   └── UpdateChecker.swift         # Sparkle updates
+└── Utilities/                      # Helpers
+    ├── Constants.swift             # Design tokens
+    ├── Extensions.swift            # Swift extensions
+    ├── FontManager.swift           # Custom fonts
+    ├── DomainExtractor.swift       # Domain parsing
+    └── ServerExtractor.swift       # JSON parsing
 ```
+
+</details>
 
 ## 🐛 Troubleshooting
 
@@ -240,87 +288,92 @@ MCPServerManager/
 - Try downloading a fresh copy from releases
 - Check System Settings > Privacy & Security if you downloaded the DMG
 
-## 🚢 Distribution & CI/CD
+### Updates not working
+- Auto-updates only work for DMG builds (not App Store version)
+- Check for updates manually with **⌘U** or from the app menu
+- Make sure you have an internet connection
+- App Store version updates through the Mac App Store automatically
 
-### ✨ Simplified Workflow
+## 🔄 Updates
 
-**Just push to `main` or `swifty` branch and both builds happen automatically:**
+MCP Server Manager supports automatic updates:
 
+- **DMG builds** (from GitHub Releases): Auto-update via Sparkle framework
+  - Check manually: **⌘U** or App Menu → "Check for Updates"
+  - Updates download and install automatically in the background
+
+- **App Store builds**: Auto-update through the Mac App Store
+  - Updates are managed by macOS automatically
+  - No manual checks needed
+
+---
+
+<details>
+<summary><b>For Developers: Building & Distribution</b></summary>
+
+### Quick Start
+
+**Development build:**
 ```bash
-git add .
-git commit -m "Your changes"
-git push origin swifty
+cd MCPServerManager
+swift run                      # Run in development mode
 ```
 
-**What happens automatically:**
-- ✅ **DMG Build**: Signed, notarized, published as GitHub release (public)
-- ✅ **PKG Build**: Signed, auto-uploaded to App Store Connect (private)
+**Distribution builds:**
+```bash
+./build-appstore.sh            # Mac App Store PKG
+./build-and-sign-local.sh      # Notarized DMG for direct download
+```
 
-Both workflows run in parallel and complete in ~10 minutes.
+### Automated CI/CD
 
-See [`SIMPLE_PUSH.md`](SIMPLE_PUSH.md) for details.
+Push to `main` or `swifty` branch and both builds happen automatically:
 
----
+```bash
+git push origin main
+```
 
-### Two Workflows Explained
+**What happens:**
+- ✅ **DMG Build**: Signed, notarized, published as GitHub release with auto-update support
+- ✅ **PKG Build**: Signed, auto-uploaded to App Store Connect
 
-#### Developer ID Workflow (`.github/workflows/build-dmg.yml`)
-- **Triggers**: Push to main/swifty branches, tags starting with `v*`
-- **Output**: Signed and notarized DMG for direct download
-- **Creates**: Public GitHub Releases with DMG artifact
-- **Use case**: Public downloads, beta testing
+Both workflows run in parallel (~10 minutes).
 
-#### App Store Workflow (`.github/workflows/build-appstore.yml`)
-- **Triggers**: Push to main/swifty branches, tags starting with `appstore-v*`, manual dispatch
-- **Output**: Signed PKG for Mac App Store submission
-- **Auto-uploads**: To App Store Connect (configurable)
-- **Artifacts**: Available in Actions for 90 days (private)
-- **Use case**: App Store submissions
+### Distribution Channels
 
----
+| Method | Build Script | Auto-Update | Distribution |
+|--------|-------------|-------------|--------------|
+| **App Store** | `build-appstore.sh` | Via App Store | Mac App Store |
+| **Direct Download** | `build-and-sign-local.sh` | Via Sparkle | GitHub Releases |
 
-### First Time Setup
+### Requirements
 
-Before your first push, add 6 GitHub Secrets (one-time setup):
-- See [`COPY_PASTE_SECRETS.md`](COPY_PASTE_SECRETS.md) for exact values
-- See [`DO_THIS_NOW.md`](DO_THIS_NOW.md) for step-by-step checklist
+**For Mac App Store:**
+- "3rd Party Mac Developer Application" certificate
+- "3rd Party Mac Developer Installer" certificate
+- `embedded.provisionprofile` provisioning profile
 
-**Required secrets:**
-- `MAC_APP_STORE_CERT`, `MAC_INSTALLER_CERT`
+**For Direct Download (DMG):**
+- "Developer ID Application" certificate
+- Apple Developer account for notarization
+- `create-dmg` tool: `brew install create-dmg`
+
+### GitHub Actions Setup
+
+Required secrets (one-time setup):
+- `MAC_APP_STORE_CERT`, `MAC_INSTALLER_CERT` (App Store)
+- `MAC_CERTS` (Developer ID)
 - `CERT_PASSWORD`, `APPLE_TEAM_ID`
 - `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`
-
----
-
-### Advanced Options
-
-**Create release with specific version tag:**
-```bash
-# Public DMG release
-git tag v2.0.0
-git push origin v2.0.0
-
-# App Store PKG (auto-uploads)
-git tag appstore-v2.0.0
-git push origin appstore-v2.0.0
-```
-
-**Manual workflow trigger (disable auto-upload):**
-
-1. Go to [GitHub Actions](https://github.com/anand-92/mcp-panel/actions)
-2. Select "Build for Mac App Store"
-3. Click "Run workflow"
-4. Uncheck "Upload to App Store Connect" box
-5. PKG artifact created but not uploaded
-
----
+- `SPARKLE_PRIVATE_KEY` (optional, for signed updates)
 
 **Documentation:**
-- [`SIMPLE_PUSH.md`](SIMPLE_PUSH.md) - TL;DR simple workflow
+- [`SIMPLE_PUSH.md`](SIMPLE_PUSH.md) - Quick workflow guide
 - [`WORKFLOWS_EXPLAINED.md`](WORKFLOWS_EXPLAINED.md) - Detailed comparison
 - [`COPY_PASTE_SECRETS.md`](COPY_PASTE_SECRETS.md) - Exact secret values
-- [`DO_THIS_NOW.md`](DO_THIS_NOW.md) - Step-by-step setup
-- [`SECURITY_NOTE.md`](SECURITY_NOTE.md) - Why PKGs are private
+- [`DO_THIS_NOW.md`](DO_THIS_NOW.md) - Step-by-step setup checklist
+
+</details>
 
 ## 🤝 Contributing
 
@@ -339,6 +392,11 @@ MIT License - see LICENSE file for details
 ## 🙏 Credits
 
 Built with SwiftUI for macOS by [Nikhil Anand](https://github.com/nikhilanand)
+
+**Technologies:**
+- SwiftUI for native macOS UI
+- [Sparkle](https://sparkle-project.org/) for automatic updates
+- MCP GitHub Registry for server discovery
 
 Icon design: MCP logo with gradient effects
 
