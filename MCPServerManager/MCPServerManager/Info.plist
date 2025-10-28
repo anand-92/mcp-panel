@@ -33,5 +33,13 @@
 		<string>Resources/Fonts/CrimsonPro-SemiBold.ttf</string>
 		<string>Resources/Fonts/CrimsonPro-Bold.ttf</string>
 	</array>
+	<key>SUFeedURL</key>
+	<string>https://github.com/nikhilanand91/mcp-panel/releases/download/latest/appcast.xml</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUAutomaticallyUpdate</key>
+	<false/>
+	<key>SUAllowsAutomaticUpdates</key>
+	<true/>
 </dict>
 </plist>

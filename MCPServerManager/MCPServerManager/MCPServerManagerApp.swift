@@ -1,8 +1,10 @@
 import SwiftUI
+import Sparkle
 
 @main
 struct MCPServerManagerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @StateObject private var updateChecker = UpdateChecker.shared
 
     var body: some Scene {
         WindowGroup {
@@ -17,9 +19,14 @@ struct MCPServerManagerApp: App {
         .defaultSize(width: 1440, height: 900)
         .commands {
             CommandGroup(replacing: .newItem) {}
-            CommandGroup(after: .appInfo) {
-                Button("Check for Updates...") {
-                    // TODO: Implement update checking
+
+            // Only show "Check for Updates" for non-App Store builds
+            if updateChecker.canCheckForUpdates {
+                CommandGroup(after: .appInfo) {
+                    Button("Check for Updates...") {
+                        updateChecker.checkForUpdates()
+                    }
+                    .keyboardShortcut("U", modifiers: [.command])
                 }
             }
         }

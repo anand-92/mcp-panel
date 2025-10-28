@@ -67,6 +67,14 @@ jobs:
             <true/>
             <key>CFBundleIconFile</key>
             <string>AppIcon</string>
+            <key>SUFeedURL</key>
+            <string>https://github.com/${{ github.repository }}/releases/download/latest/appcast.xml</string>
+            <key>SUEnableAutomaticChecks</key>
+            <true/>
+            <key>SUAutomaticallyUpdate</key>
+            <false/>
+            <key>SUAllowsAutomaticUpdates</key>
+            <true/>
         </dict>
         </plist>
         EOF
@@ -103,6 +111,14 @@ jobs:
     - name: Install create-dmg tool
       run: brew install create-dmg
 
+    - name: Install Sparkle tools
+      run: |
+        # Download and install Sparkle's generate_appcast tool
+        curl -L https://github.com/sparkle-project/Sparkle/releases/download/2.5.2/Sparkle-2.5.2.tar.xz -o sparkle.tar.xz
+        tar -xf sparkle.tar.xz
+        chmod +x bin/generate_appcast
+        sudo cp bin/generate_appcast /usr/local/bin/
+
     - name: Create DMG
       working-directory: MCPServerManager
       run: |
@@ -114,12 +130,29 @@ jobs:
         cd build
         ln -sf "MCP-Server-Manager-v${VERSION}.dmg" MCP-Server-Manager.dmg
 
+    - name: Generate Appcast
+      working-directory: MCPServerManager/build
+      run: |
+        # Create appcast directory if it doesn't exist
+        mkdir -p appcast
+
+        # Generate appcast.xml using Sparkle's tool
+        # This will scan all DMG files and generate the XML
+        generate_appcast --download-url-prefix "https://github.com/${{ github.repository }}/releases/download/latest/" \
+                         --link "https://github.com/${{ github.repository }}" \
+                         --full-release-notes-url "https://github.com/${{ github.repository }}/releases" \
+                         appcast/
+
+        # Copy the appcast.xml to the build directory for upload
+        cp appcast/appcast.xml ./appcast.xml || echo "No appcast generated"
+
     - name: List build artifacts
       run: |
         echo "Build directory contents:"
         ls -la MCPServerManager/build/ || echo "No build directory"
         find . -name "*.dmg" -type f || echo "No DMG files found"
         find . -name "*.app" -type d || echo "No APP bundles found"
+        find . -name "appcast.xml" -type f || echo "No appcast.xml found"
 
     - name: Upload DMG artifact
       uses: actions/upload-artifact@v4
@@ -150,5 +183,6 @@ jobs:
         prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
         files: |
           MCPServerManager/build/MCP-Server-Manager-v*.dmg
+          MCPServerManager/build/appcast.xml
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

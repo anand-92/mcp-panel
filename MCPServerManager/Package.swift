@@ -12,11 +12,15 @@ let package = Package(
             targets: ["MCPServerManager"]
         )
     ],
-    dependencies: [],
+    dependencies: [
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.5.0")
+    ],
     targets: [
         .executableTarget(
             name: "MCPServerManager",
-            dependencies: [],
+            dependencies: [
+                .product(name: "Sparkle", package: "Sparkle")
+            ],
             path: "MCPServerManager",
             exclude: ["Info.plist"],
             resources: [
