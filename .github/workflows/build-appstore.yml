@@ -184,14 +184,16 @@ jobs:
         APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       run: |
-        echo "📤 Uploading to App Store Connect..."
+        echo "📤 Uploading to App Store Connect via iTMSTransporter..."
 
-        # Use notarytool for modern upload (altool is deprecated)
-        xcrun notarytool submit "$PKG_PATH" \
-          --apple-id "$APPLE_ID" \
-          --password "$APPLE_APP_SPECIFIC_PASSWORD" \
-          --team-id "$APPLE_TEAM_ID" \
-          --wait
+        # Use iTMSTransporter (the CLI behind Transporter app)
+        # This is the modern replacement for altool
+        xcrun iTMSTransporter -m upload \
+          -f "$PKG_PATH" \
+          -u "$APPLE_ID" \
+          -p "$APPLE_APP_SPECIFIC_PASSWORD" \
+          -t DAV \
+          -v eXtreme
 
         echo "✅ Upload complete! Check App Store Connect for processing status."
         echo "🔗 https://appstoreconnect.apple.com/apps"
