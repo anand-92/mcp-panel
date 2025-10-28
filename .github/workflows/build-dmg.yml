@@ -241,60 +241,92 @@ jobs:
           exit 0
         fi
 
-    - name: Import Sparkle signing key
-      env:
-        SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
-      run: |
-        # Import the EdDSA private key into the keychain for signing the appcast
-        if [ -n "$SPARKLE_PRIVATE_KEY" ]; then
-          security add-generic-password \
-            -a "ed25519" \
-            -s "https://sparkle-project.org" \
-            -w "$SPARKLE_PRIVATE_KEY" \
-            -D "Private key for signing Sparkle updates" \
-            -T /usr/local/bin/generate_appcast \
-            build.keychain
-          echo "✓ Sparkle signing key imported"
-        else
-          echo "⚠️  Warning: SPARKLE_PRIVATE_KEY not set - appcast will not be signed"
-        fi
-
-    - name: Generate Appcast
-      continue-on-error: true
-      timeout-minutes: 1
+    - name: Generate and Sign Appcast
       working-directory: MCPServerManager/build
       env:
         REPO: ${{ github.repository }}
         RUN_NUMBER: ${{ github.run_number }}
+        SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
       run: |
-        # Skip appcast generation for now - it's hanging in CI
-        # TODO: Debug why generate_appcast hangs
-        echo "⚠️  Skipping appcast generation (hangs in CI)"
-        echo "Creating placeholder appcast.xml..."
-
         VERSION="2.0.2.${RUN_NUMBER}"
         PUBDATE=$(date -u +"%a, %d %b %Y %H:%M:%S %z")
+        DMG_PATH="MCP-Server-Manager-v${VERSION}.dmg"
 
-        # Create appcast.xml manually to avoid YAML parsing issues with heredoc
-        echo '<?xml version="1.0" encoding="utf-8"?>' > appcast.xml
-        echo '<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">' >> appcast.xml
-        echo '  <channel>' >> appcast.xml
-        echo '    <title>MCP Server Manager</title>' >> appcast.xml
-        echo '    <language>en</language>' >> appcast.xml
-        echo '    <item>' >> appcast.xml
-        echo "      <title>Version ${VERSION}</title>" >> appcast.xml
-        echo "      <pubDate>${PUBDATE}</pubDate>" >> appcast.xml
-        echo "      <sparkle:version>${VERSION}</sparkle:version>" >> appcast.xml
-        echo '      <sparkle:shortVersionString>2.0.2</sparkle:shortVersionString>' >> appcast.xml
-        echo "      <link>https://github.com/${REPO}/releases</link>" >> appcast.xml
-        echo '      <description>Latest release of MCP Server Manager</description>' >> appcast.xml
-        echo "      <enclosure url=\"https://github.com/${REPO}/releases/download/latest/MCP-Server-Manager-v${VERSION}.dmg\"" >> appcast.xml
-        echo '                 type="application/octet-stream"/>' >> appcast.xml
-        echo '    </item>' >> appcast.xml
-        echo '  </channel>' >> appcast.xml
-        echo '</rss>' >> appcast.xml
+        # Get DMG file size and signature
+        DMG_SIZE=$(stat -f%z "$DMG_PATH" 2>/dev/null || stat -c%s "$DMG_PATH" 2>/dev/null || echo "0")
 
-        echo "✓ Placeholder appcast created"
+        # Create temp directory for archives
+        mkdir -p archives
+        cp "$DMG_PATH" "archives/"
+
+        # Create private key file for Sparkle signing
+        if [ -n "$SPARKLE_PRIVATE_KEY" ]; then
+          echo "$SPARKLE_PRIVATE_KEY" > sparkle_private_key.txt
+
+          # Use generate_appcast with the archives directory
+          # This will scan the archives folder and generate a signed appcast
+          /usr/local/bin/generate_appcast \
+            --ed-key-file sparkle_private_key.txt \
+            --download-url-prefix "https://github.com/${REPO}/releases/download/latest/" \
+            --full-release-notes-url "https://github.com/${REPO}/releases" \
+            archives/
+
+          # Move generated appcast to current directory
+          if [ -f archives/appcast.xml ]; then
+            mv archives/appcast.xml .
+            echo "✓ Signed appcast generated successfully"
+          else
+            echo "⚠️  generate_appcast failed, creating unsigned appcast"
+            # Fallback to unsigned appcast
+            cat > appcast.xml << EOF
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>MCP Server Manager</title>
+    <language>en</language>
+    <item>
+      <title>Version ${VERSION}</title>
+      <pubDate>${PUBDATE}</pubDate>
+      <sparkle:version>${VERSION}</sparkle:version>
+      <sparkle:shortVersionString>2.0.2</sparkle:shortVersionString>
+      <link>https://github.com/${REPO}/releases</link>
+      <description>Latest release of MCP Server Manager</description>
+      <enclosure url="https://github.com/${REPO}/releases/download/latest/${DMG_PATH}"
+                   length="${DMG_SIZE}"
+                   type="application/octet-stream"/>
+    </item>
+  </channel>
+</rss>
+EOF
+            echo "✓ Unsigned appcast created"
+          fi
+
+          # Cleanup
+          rm -f sparkle_private_key.txt
+        else
+          echo "⚠️  SPARKLE_PRIVATE_KEY not set - creating unsigned appcast"
+          cat > appcast.xml << EOF
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>MCP Server Manager</title>
+    <language>en</language>
+    <item>
+      <title>Version ${VERSION}</title>
+      <pubDate>${PUBDATE}</pubDate>
+      <sparkle:version>${VERSION}</sparkle:version>
+      <sparkle:shortVersionString>2.0.2</sparkle:shortVersionString>
+      <link>https://github.com/${REPO}/releases</link>
+      <description>Latest release of MCP Server Manager</description>
+      <enclosure url="https://github.com/${REPO}/releases/download/latest/${DMG_PATH}"
+                   length="${DMG_SIZE}"
+                   type="application/octet-stream"/>
+    </item>
+  </channel>
+</rss>
+EOF
+          echo "✓ Unsigned appcast created"
+        fi
 
     - name: List build artifacts
       run: |
