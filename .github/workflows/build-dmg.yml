@@ -261,15 +261,24 @@ jobs:
 
         # Create private key file for Sparkle signing
         if [ -n "$SPARKLE_PRIVATE_KEY" ]; then
-          echo "$SPARKLE_PRIVATE_KEY" > sparkle_private_key.txt
+          # Write the key to file (ensure proper line endings)
+          printf "%s" "$SPARKLE_PRIVATE_KEY" > sparkle_private_key.txt
 
-          # Use generate_appcast with the archives directory
-          # This will scan the archives folder and generate a signed appcast
-          /usr/local/bin/generate_appcast \
-            --ed-key-file sparkle_private_key.txt \
-            --download-url-prefix "https://github.com/${REPO}/releases/download/latest/" \
-            --full-release-notes-url "https://github.com/${REPO}/releases" \
-            archives/
+          # Debug: Check if key file was created
+          if [ ! -s sparkle_private_key.txt ]; then
+            echo "⚠️  Error: Private key file is empty"
+            echo "⚠️  Falling back to unsigned appcast"
+          else
+            echo "✓ Private key file created ($(wc -c < sparkle_private_key.txt) bytes)"
+
+            # Use generate_appcast with the archives directory
+            # This will scan the archives folder and generate a signed appcast
+            /usr/local/bin/generate_appcast \
+              --ed-key-file sparkle_private_key.txt \
+              --download-url-prefix "https://github.com/${REPO}/releases/download/latest/" \
+              --full-release-notes-url "https://github.com/${REPO}/releases" \
+              archives/ || echo "⚠️  generate_appcast failed, will fall back to unsigned"
+          fi
 
           # Move generated appcast to current directory
           if [ -f archives/appcast.xml ]; then
