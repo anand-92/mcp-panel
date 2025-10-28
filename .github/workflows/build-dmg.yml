@@ -153,15 +153,26 @@ jobs:
     - name: Generate Appcast
       working-directory: MCPServerManager/build
       run: |
+        # List DMG files we're processing
+        echo "DMG files found:"
+        ls -lh *.dmg
+
         # Generate appcast.xml using Sparkle's tool
-        # This will scan the current directory for DMG files
+        # Pass the specific DMG file instead of scanning a directory
+        VERSION="2.0.2.${{ github.run_number }}"
         generate_appcast --download-url-prefix "https://github.com/${{ github.repository }}/releases/download/latest/" \
                          --link "https://github.com/${{ github.repository }}" \
                          --full-release-notes-url "https://github.com/${{ github.repository }}/releases" \
-                         .
+                         "MCP-Server-Manager-v${VERSION}.dmg"
 
-        # The appcast.xml should now be in the current directory
-        ls -la appcast.xml || echo "No appcast generated"
+        # Verify appcast was created
+        if [ -f appcast.xml ]; then
+          echo "✓ Appcast generated successfully"
+          ls -lh appcast.xml
+        else
+          echo "✗ Failed to generate appcast"
+          exit 1
+        fi
 
     - name: List build artifacts
       run: |
