@@ -3,8 +3,8 @@
 <div align="center">
 
 [![Download Latest DMG](https://img.shields.io/badge/Download-Latest%20DMG-blue?style=for-the-badge&logo=apple)](https://github.com/anand-92/mcp-panel/releases/latest)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/nikhilanand/mcp-panel?style=for-the-badge)](https://github.com/anand-92/mcp-panel/releases/latest)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/nikhilanand/mcp-panel/build-dmg.yml?branch=swifty&style=for-the-badge)](https://github.com/nikhilanand/mcp-panel/actions)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/anand-92/mcp-panel?style=for-the-badge)](https://github.com/anand-92/mcp-panel/releases/latest)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/anand-92/mcp-panel/build-dmg.yml?branch=swifty&style=for-the-badge)](https://github.com/anand-92/mcp-panel/actions)
 
 **[⬇️ Download MCP Server Manager for macOS](https://apps.apple.com/us/app/mcp-server-manager/id6753700883?mt=12)**
 
@@ -307,7 +307,7 @@ git push origin appstore-v2.0.0
 
 **Manual workflow trigger (disable auto-upload):**
 
-1. Go to [GitHub Actions](https://github.com/nikhilanand/mcp-panel/actions)
+1. Go to [GitHub Actions](https://github.com/anand-92/mcp-panel/actions)
 2. Select "Build for Mac App Store"
 3. Click "Run workflow"
 4. Uncheck "Upload to App Store Connect" box
@@ -346,7 +346,7 @@ Icon design: MCP logo with gradient effects
 
 - [Mac App Store](https://apps.apple.com/us/app/mcp-server-manager/id6753700883?mt=12)
 - [GitHub Releases](https://github.com/anand-92/mcp-panel/releases)
-- [Report Issues](https://github.com/nikhilanand/mcp-panel/issues)
+- [Report Issues](https://github.com/anand-92/mcp-panel/issues)
 - [MCP Registry](https://lobehub.com/mcp) - Discover new MCP servers
 
 ---
