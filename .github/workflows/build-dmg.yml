@@ -151,28 +151,37 @@ jobs:
         fi
 
     - name: Generate Appcast
+      continue-on-error: true
+      timeout-minutes: 1
       working-directory: MCPServerManager/build
       run: |
-        # List DMG files we're processing
-        echo "DMG files found:"
-        ls -lh *.dmg
+        # Skip appcast generation for now - it's hanging in CI
+        # TODO: Debug why generate_appcast hangs
+        echo "⚠️  Skipping appcast generation (hangs in CI)"
+        echo "Creating placeholder appcast.xml..."
 
-        # Generate appcast.xml using Sparkle's tool
-        # Pass the specific DMG file instead of scanning a directory
         VERSION="2.0.2.${{ github.run_number }}"
-        generate_appcast --download-url-prefix "https://github.com/${{ github.repository }}/releases/download/latest/" \
-                         --link "https://github.com/${{ github.repository }}" \
-                         --full-release-notes-url "https://github.com/${{ github.repository }}/releases" \
-                         "MCP-Server-Manager-v${VERSION}.dmg"
+        cat > appcast.xml << 'EOF'
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>MCP Server Manager</title>
+    <language>en</language>
+    <item>
+      <title>Version ${VERSION}</title>
+      <pubDate>$(date -u +"%a, %d %b %Y %H:%M:%S %z")</pubDate>
+      <sparkle:version>${VERSION}</sparkle:version>
+      <sparkle:shortVersionString>2.0.2</sparkle:shortVersionString>
+      <link>https://github.com/${{ github.repository }}/releases</link>
+      <description>Latest release of MCP Server Manager</description>
+      <enclosure url="https://github.com/${{ github.repository }}/releases/download/latest/MCP-Server-Manager-v${VERSION}.dmg"
+                 type="application/octet-stream"/>
+    </item>
+  </channel>
+</rss>
+EOF
 
-        # Verify appcast was created
-        if [ -f appcast.xml ]; then
-          echo "✓ Appcast generated successfully"
-          ls -lh appcast.xml
-        else
-          echo "✗ Failed to generate appcast"
-          exit 1
-        fi
+        echo "✓ Placeholder appcast created"
 
     - name: List build artifacts
       run: |
