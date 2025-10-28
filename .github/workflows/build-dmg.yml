@@ -277,27 +277,25 @@ jobs:
             echo "✓ Signed appcast generated successfully"
           else
             echo "⚠️  generate_appcast failed, creating unsigned appcast"
-            # Fallback to unsigned appcast
-            cat > appcast.xml << EOF
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-  <channel>
-    <title>MCP Server Manager</title>
-    <language>en</language>
-    <item>
-      <title>Version ${VERSION}</title>
-      <pubDate>${PUBDATE}</pubDate>
-      <sparkle:version>${VERSION}</sparkle:version>
-      <sparkle:shortVersionString>2.0.2</sparkle:shortVersionString>
-      <link>https://github.com/${REPO}/releases</link>
-      <description>Latest release of MCP Server Manager</description>
-      <enclosure url="https://github.com/${REPO}/releases/download/latest/${DMG_PATH}"
-                   length="${DMG_SIZE}"
-                   type="application/octet-stream"/>
-    </item>
-  </channel>
-</rss>
-EOF
+            # Fallback to unsigned appcast using echo to avoid YAML heredoc issues
+            echo '<?xml version="1.0" encoding="utf-8"?>' > appcast.xml
+            echo '<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">' >> appcast.xml
+            echo '  <channel>' >> appcast.xml
+            echo '    <title>MCP Server Manager</title>' >> appcast.xml
+            echo '    <language>en</language>' >> appcast.xml
+            echo '    <item>' >> appcast.xml
+            echo "      <title>Version ${VERSION}</title>" >> appcast.xml
+            echo "      <pubDate>${PUBDATE}</pubDate>" >> appcast.xml
+            echo "      <sparkle:version>${VERSION}</sparkle:version>" >> appcast.xml
+            echo '      <sparkle:shortVersionString>2.0.2</sparkle:shortVersionString>' >> appcast.xml
+            echo "      <link>https://github.com/${REPO}/releases</link>" >> appcast.xml
+            echo '      <description>Latest release of MCP Server Manager</description>' >> appcast.xml
+            echo "      <enclosure url=\"https://github.com/${REPO}/releases/download/latest/${DMG_PATH}\"" >> appcast.xml
+            echo "                   length=\"${DMG_SIZE}\"" >> appcast.xml
+            echo '                   type="application/octet-stream"/>' >> appcast.xml
+            echo '    </item>' >> appcast.xml
+            echo '  </channel>' >> appcast.xml
+            echo '</rss>' >> appcast.xml
             echo "✓ Unsigned appcast created"
           fi
 
@@ -305,26 +303,25 @@ EOF
           rm -f sparkle_private_key.txt
         else
           echo "⚠️  SPARKLE_PRIVATE_KEY not set - creating unsigned appcast"
-          cat > appcast.xml << EOF
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-  <channel>
-    <title>MCP Server Manager</title>
-    <language>en</language>
-    <item>
-      <title>Version ${VERSION}</title>
-      <pubDate>${PUBDATE}</pubDate>
-      <sparkle:version>${VERSION}</sparkle:version>
-      <sparkle:shortVersionString>2.0.2</sparkle:shortVersionString>
-      <link>https://github.com/${REPO}/releases</link>
-      <description>Latest release of MCP Server Manager</description>
-      <enclosure url="https://github.com/${REPO}/releases/download/latest/${DMG_PATH}"
-                   length="${DMG_SIZE}"
-                   type="application/octet-stream"/>
-    </item>
-  </channel>
-</rss>
-EOF
+          # Create unsigned appcast using echo to avoid YAML heredoc issues
+          echo '<?xml version="1.0" encoding="utf-8"?>' > appcast.xml
+          echo '<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">' >> appcast.xml
+          echo '  <channel>' >> appcast.xml
+          echo '    <title>MCP Server Manager</title>' >> appcast.xml
+          echo '    <language>en</language>' >> appcast.xml
+          echo '    <item>' >> appcast.xml
+          echo "      <title>Version ${VERSION}</title>" >> appcast.xml
+          echo "      <pubDate>${PUBDATE}</pubDate>" >> appcast.xml
+          echo "      <sparkle:version>${VERSION}</sparkle:version>" >> appcast.xml
+          echo '      <sparkle:shortVersionString>2.0.2</sparkle:shortVersionString>' >> appcast.xml
+          echo "      <link>https://github.com/${REPO}/releases</link>" >> appcast.xml
+          echo '      <description>Latest release of MCP Server Manager</description>' >> appcast.xml
+          echo "      <enclosure url=\"https://github.com/${REPO}/releases/download/latest/${DMG_PATH}\"" >> appcast.xml
+          echo "                   length=\"${DMG_SIZE}\"" >> appcast.xml
+          echo '                   type="application/octet-stream"/>' >> appcast.xml
+          echo '    </item>' >> appcast.xml
+          echo '  </channel>' >> appcast.xml
+          echo '</rss>' >> appcast.xml
           echo "✓ Unsigned appcast created"
         fi
 
