@@ -132,11 +132,19 @@ jobs:
         echo "Signing with identity: $IDENTITY"
 
         # Sign the app bundle with hardened runtime
+        # Note: Using relaxed entitlements for direct distribution (DMG)
+        # App Store builds should NOT use these entitlements
         codesign --force --deep --sign "$IDENTITY" \
           --options runtime \
           --entitlements ../entitlements.plist \
           --timestamp \
-          build/MCP-Server-Manager.app
+          build/MCP-Server-Manager.app || {
+            echo "⚠️  Signing with entitlements failed, trying without..."
+            codesign --force --deep --sign "$IDENTITY" \
+              --options runtime \
+              --timestamp \
+              build/MCP-Server-Manager.app
+          }
 
         # Verify the signature
         echo "Verifying signature..."
