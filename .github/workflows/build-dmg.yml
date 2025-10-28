@@ -98,8 +98,9 @@ jobs:
         if [ -n "$MAC_CERTS" ]; then
           echo "$MAC_CERTS" | base64 --decode > developer_id_cert.p12
           security import developer_id_cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign -A || \
-            security import developer_id_cert.p12 -k build.keychain -P "" -T /usr/bin/codesign -T /usr/bin/productsign -A
-          rm developer_id_cert.p12
+            security import developer_id_cert.p12 -k build.keychain -P "" -T /usr/bin/codesign -T /usr/bin/productsign -A || \
+            echo "⚠️ Failed to import MAC_CERTS certificate (wrong password or corrupted file)"
+          rm -f developer_id_cert.p12
         fi
 
         # Decode and import App Store signing certificate
@@ -107,16 +108,18 @@ jobs:
           echo "$MAC_APP_STORE_CERT" | base64 --decode > appstore_cert.p12
           # Try with password first, then without if it fails
           security import appstore_cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign -A || \
-            security import appstore_cert.p12 -k build.keychain -P "" -T /usr/bin/codesign -T /usr/bin/productsign -A
-          rm appstore_cert.p12
+            security import appstore_cert.p12 -k build.keychain -P "" -T /usr/bin/codesign -T /usr/bin/productsign -A || \
+            echo "⚠️ Failed to import MAC_APP_STORE_CERT certificate (wrong password or corrupted file)"
+          rm -f appstore_cert.p12
         fi
 
         # Decode and import Installer certificate
         if [ -n "$MAC_INSTALLER_CERT" ]; then
           echo "$MAC_INSTALLER_CERT" | base64 --decode > installer_cert.p12
           security import installer_cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign -A || \
-            security import installer_cert.p12 -k build.keychain -P "" -T /usr/bin/codesign -T /usr/bin/productsign -A
-          rm installer_cert.p12
+            security import installer_cert.p12 -k build.keychain -P "" -T /usr/bin/codesign -T /usr/bin/productsign -A || \
+            echo "⚠️ Failed to import MAC_INSTALLER_CERT certificate (wrong password or corrupted file)"
+          rm -f installer_cert.p12
         fi
 
         # Set partition list
