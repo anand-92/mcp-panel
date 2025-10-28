@@ -154,16 +154,29 @@ jobs:
 
         echo "Signing with identity: $IDENTITY"
 
+        # First, sign the Sparkle framework (embedded frameworks must be signed before the app)
+        if [ -d "build/MCP-Server-Manager.app/Contents/Frameworks/Sparkle.framework" ]; then
+          echo "Signing Sparkle framework..."
+          codesign --force --sign "$IDENTITY" \
+            --options runtime \
+            --timestamp \
+            build/MCP-Server-Manager.app/Contents/Frameworks/Sparkle.framework
+          echo "✓ Sparkle framework signed"
+        else
+          echo "⚠️  Sparkle framework not found - app may crash on launch"
+        fi
+
         # Sign the app bundle with hardened runtime
         # Note: Using relaxed entitlements for direct distribution (DMG)
         # App Store builds should NOT use these entitlements
-        codesign --force --deep --sign "$IDENTITY" \
+        # Note: NOT using --deep here since we've already signed embedded frameworks
+        codesign --force --sign "$IDENTITY" \
           --options runtime \
           --entitlements ../entitlements.plist \
           --timestamp \
           build/MCP-Server-Manager.app || {
             echo "⚠️  Signing with entitlements failed, trying without..."
-            codesign --force --deep --sign "$IDENTITY" \
+            codesign --force --sign "$IDENTITY" \
               --options runtime \
               --timestamp \
               build/MCP-Server-Manager.app
