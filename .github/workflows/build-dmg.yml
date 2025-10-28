@@ -124,7 +124,8 @@ jobs:
         security find-identity -v -p codesigning
 
         # Get the first valid Developer ID or Mac App Store certificate
-        IDENTITY=$(security find-identity -v -p codesigning | grep -E "Developer ID Application|Apple Distribution" | head -1 | awk -F'"' '{print $2}')
+        # Prefer Developer ID Application for direct distribution, but accept App Store certs as fallback
+        IDENTITY=$(security find-identity -v -p codesigning | grep -E "Developer ID Application|Apple Distribution|3rd Party Mac Developer Application" | head -1 | awk -F'"' '{print $2}')
 
         if [ -z "$IDENTITY" ]; then
           echo "❌ No valid signing identity found"
