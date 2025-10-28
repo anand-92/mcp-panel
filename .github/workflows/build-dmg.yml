@@ -85,6 +85,7 @@ jobs:
       env:
         MAC_APP_STORE_CERT: ${{ secrets.MAC_APP_STORE_CERT }}
         MAC_INSTALLER_CERT: ${{ secrets.MAC_INSTALLER_CERT }}
+        MAC_CERTS: ${{ secrets.MAC_CERTS }}
         CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
       run: |
         # Create temporary keychain
@@ -93,16 +94,30 @@ jobs:
         security unlock-keychain -p actions build.keychain
         security set-keychain-settings -t 3600 -u build.keychain
 
+        # Decode and import Developer ID certificates (MAC_CERTS - likely contains Developer ID Application)
+        if [ -n "$MAC_CERTS" ]; then
+          echo "$MAC_CERTS" | base64 --decode > developer_id_cert.p12
+          security import developer_id_cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign -A || \
+            security import developer_id_cert.p12 -k build.keychain -P "" -T /usr/bin/codesign -T /usr/bin/productsign -A
+          rm developer_id_cert.p12
+        fi
+
         # Decode and import App Store signing certificate
-        echo "$MAC_APP_STORE_CERT" | base64 --decode > appstore_cert.p12
-        # Try with password first, then without if it fails
-        security import appstore_cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign -A || \
-          security import appstore_cert.p12 -k build.keychain -P "" -T /usr/bin/codesign -T /usr/bin/productsign -A
+        if [ -n "$MAC_APP_STORE_CERT" ]; then
+          echo "$MAC_APP_STORE_CERT" | base64 --decode > appstore_cert.p12
+          # Try with password first, then without if it fails
+          security import appstore_cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign -A || \
+            security import appstore_cert.p12 -k build.keychain -P "" -T /usr/bin/codesign -T /usr/bin/productsign -A
+          rm appstore_cert.p12
+        fi
 
         # Decode and import Installer certificate
-        echo "$MAC_INSTALLER_CERT" | base64 --decode > installer_cert.p12
-        security import installer_cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign -A || \
-          security import installer_cert.p12 -k build.keychain -P "" -T /usr/bin/codesign -T /usr/bin/productsign -A
+        if [ -n "$MAC_INSTALLER_CERT" ]; then
+          echo "$MAC_INSTALLER_CERT" | base64 --decode > installer_cert.p12
+          security import installer_cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign -A || \
+            security import installer_cert.p12 -k build.keychain -P "" -T /usr/bin/codesign -T /usr/bin/productsign -A
+          rm installer_cert.p12
+        fi
 
         # Set partition list
         security set-key-partition-list -S apple-tool:,apple:,codesign:,productsign: -s -k actions build.keychain
@@ -110,9 +125,6 @@ jobs:
         # Verify certificates
         echo "Imported certificates:"
         security find-identity -v -p codesigning
-
-        # Clean up
-        rm appstore_cert.p12 installer_cert.p12
 
     - name: Sign app bundle
       working-directory: MCPServerManager
