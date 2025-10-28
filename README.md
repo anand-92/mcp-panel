@@ -4,7 +4,7 @@
 
 [![Download Latest DMG](https://img.shields.io/badge/Download-Latest%20DMG-blue?style=for-the-badge&logo=apple)](https://github.com/anand-92/mcp-panel/releases/latest)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/anand-92/mcp-panel?style=for-the-badge)](https://github.com/anand-92/mcp-panel/releases/latest)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/anand-92/mcp-panel/build-dmg.yml?branch=swifty&style=for-the-badge)](https://github.com/anand-92/mcp-panel/actions)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/anand-92/mcp-panel/build-dmg.yml?branch=main&style=for-the-badge)](https://github.com/anand-92/mcp-panel/actions)
 
 **[⬇️ Download MCP Server Manager for macOS](https://apps.apple.com/us/app/mcp-server-manager/id6753700883?mt=12)**
 

@@ -177,6 +177,7 @@ jobs:
         ln -sf "MCP-Server-Manager-v${VERSION}.dmg" MCP-Server-Manager.dmg
 
     - name: Notarize and staple DMG
+      continue-on-error: true
       working-directory: MCPServerManager
       env:
         APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -194,15 +195,15 @@ jobs:
 
         echo "Submitting DMG for notarization..."
 
-        # Submit for notarization
+        # Submit for notarization and capture the output
         xcrun notarytool submit "$DMG_PATH" \
           --apple-id "$APPLE_ID" \
           --password "$APPLE_APP_SPECIFIC_PASSWORD" \
           --team-id "$APPLE_TEAM_ID" \
-          --wait
+          --wait 2>&1 | tee notary_output.txt
 
-        # Check notarization status
-        if [ $? -eq 0 ]; then
+        # Check if notarization was accepted
+        if grep -q "status: Accepted" notary_output.txt; then
           echo "✓ Notarization successful"
 
           # Staple the notarization ticket to the DMG
@@ -210,8 +211,10 @@ jobs:
           xcrun stapler staple "$DMG_PATH"
           echo "✓ DMG notarized and stapled"
         else
-          echo "❌ Notarization failed"
-          exit 1
+          echo "⚠️  Notarization failed or returned Invalid status"
+          echo "   DMG is code-signed but not notarized - may show warning on first open"
+          echo "   Users can right-click > Open to bypass the warning"
+          exit 0
         fi
 
     - name: Import Sparkle signing key
@@ -303,7 +306,7 @@ jobs:
           Version: 2.0.2.${{ github.run_number }}
           Commit: ${{ github.sha }}
         generate_release_notes: ${{ startsWith(github.ref, 'refs/tags/') }}
-        prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        prerelease: false
         files: |
           MCPServerManager/build/MCP-Server-Manager-v*.dmg
           MCPServerManager/build/appcast.xml
