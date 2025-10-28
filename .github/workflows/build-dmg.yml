@@ -36,9 +36,13 @@ jobs:
         # Create .app structure
         mkdir -p build/MCP-Server-Manager.app/Contents/MacOS
         mkdir -p build/MCP-Server-Manager.app/Contents/Resources
+        mkdir -p build/MCP-Server-Manager.app/Contents/Frameworks
 
         # Copy binary
         cp .build/release/MCPServerManager build/MCP-Server-Manager.app/Contents/MacOS/
+
+        # Copy Sparkle framework
+        cp -R .build/release/Sparkle.framework build/MCP-Server-Manager.app/Contents/Frameworks/
 
         # Copy app icon
         cp icons/AppIcon.icns build/MCP-Server-Manager.app/Contents/Resources/AppIcon.icns
