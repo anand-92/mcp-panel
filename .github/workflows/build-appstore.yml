@@ -57,15 +57,32 @@ jobs:
         # Clean up
         rm appstore_cert.p12 installer_cert.p12
 
-    - name: Build Swift app
+    - name: Build Swift app (App Store - no Sparkle)
       working-directory: MCPServerManager
       run: |
+        # Backup original Package.swift and use App Store version (no Sparkle dependency)
+        cp Package.swift Package.swift.backup
+        cp Package.swift.appstore Package.swift
+
         # Build for native architecture (GitHub runners are arm64)
+        # This build will NOT include Sparkle framework
         swift build -c release
+
+        # Restore original Package.swift
+        mv Package.swift.backup Package.swift
 
         # Verify binary was created
         ls -la .build/release/
         file .build/release/MCPServerManager
+
+        # Verify Sparkle is NOT linked in the binary (should not appear)
+        echo "Checking for Sparkle dependency..."
+        if otool -L .build/release/MCPServerManager | grep -i Sparkle; then
+          echo "❌ ERROR: Sparkle.framework should not be linked in App Store build!"
+          exit 1
+        else
+          echo "✅ Confirmed: No Sparkle dependency in binary (as expected for App Store)"
+        fi
 
     - name: Create .app bundle
       run: |
@@ -84,16 +101,11 @@ jobs:
         # Copy binary
         cp MCPServerManager/.build/release/MCPServerManager "$APP_PATH/Contents/MacOS/"
 
-        # Copy Sparkle framework (required even for App Store builds as it's linked at compile time)
-        # The app has runtime detection to disable Sparkle functionality in App Store builds
-        if [ -d "MCPServerManager/.build/release/Sparkle.framework" ]; then
-          cp -R MCPServerManager/.build/release/Sparkle.framework "$APP_PATH/Contents/Frameworks/"
-          echo "✅ Sparkle.framework copied"
-        else
-          echo "⚠️ Warning: Sparkle.framework not found - this may cause crashes"
-          ls -la MCPServerManager/.build/release/
-        fi
-        
+        # DO NOT copy Sparkle framework for App Store builds
+        # The binary is built without Sparkle dependency (using Package.swift.appstore)
+        # This prevents the dyld crash when Sparkle.framework is missing at runtime
+        echo "✅ App Store build: Sparkle.framework NOT included (using Apple's update mechanism)"
+
         # Copy app icon
         cp MCPServerManager/icons/AppIcon.icns "$APP_PATH/Contents/Resources/AppIcon.icns"
 

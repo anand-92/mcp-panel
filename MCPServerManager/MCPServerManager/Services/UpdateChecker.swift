@@ -1,11 +1,15 @@
 import Foundation
+#if canImport(Sparkle)
 import Sparkle
+#endif
 
 /// Service for handling app updates via Sparkle framework
 class UpdateChecker: ObservableObject {
     static let shared = UpdateChecker()
 
+    #if canImport(Sparkle)
     private var updaterController: SPUStandardUpdaterController?
+    #endif
 
     /// Check if this is an App Store build
     /// App Store builds have an actual receipt file that exists
@@ -17,18 +21,25 @@ class UpdateChecker: ObservableObject {
         return FileManager.default.fileExists(atPath: receiptURL.path)
     }
 
-    /// Whether update checking is available (not an App Store build)
+    /// Whether update checking is available (not an App Store build and Sparkle is available)
     var canCheckForUpdates: Bool {
+        #if canImport(Sparkle)
         return !isAppStoreBuild
+        #else
+        return false
+        #endif
     }
 
     private init() {
-        // Only initialize Sparkle if not an App Store build
+        #if canImport(Sparkle)
+        // Only initialize Sparkle if not an App Store build and Sparkle is available
         if !isAppStoreBuild {
             setupSparkle()
         }
+        #endif
     }
 
+    #if canImport(Sparkle)
     private func setupSparkle() {
         // Initialize Sparkle updater controller
         updaterController = SPUStandardUpdaterController(
@@ -37,19 +48,28 @@ class UpdateChecker: ObservableObject {
             userDriverDelegate: nil
         )
     }
+    #endif
 
     /// Manually check for updates
     func checkForUpdates() {
         guard canCheckForUpdates else {
-            print("Cannot check for updates: App Store build")
+            print("Cannot check for updates: App Store build or Sparkle not available")
             return
         }
 
+        #if canImport(Sparkle)
         updaterController?.checkForUpdates(nil)
+        #endif
     }
 
     /// Get the updater controller (for binding to menu items)
+    #if canImport(Sparkle)
     var updater: SPUUpdater? {
         return updaterController?.updater
     }
+    #else
+    var updater: Any? {
+        return nil
+    }
+    #endif
 }

@@ -32,10 +32,29 @@ PKG_PATH="$BUILD_DIR/MCPServerManager-v${VERSION}.pkg"
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
-# Step 1: Build the Swift binary
-echo "🔨 Building Swift binary..."
+# Step 1: Build the Swift binary (App Store version - no Sparkle)
+echo "🔨 Building Swift binary for App Store..."
 cd MCPServerManager
+
+# Backup original Package.swift and use App Store version (no Sparkle dependency)
+cp Package.swift Package.swift.backup
+cp Package.swift.appstore Package.swift
+
+# Build for release
 swift build -c release
+
+# Restore original Package.swift
+mv Package.swift.backup Package.swift
+
+# Verify Sparkle is NOT linked in the binary
+echo "🔍 Verifying no Sparkle dependency..."
+if otool -L .build/release/MCPServerManager | grep -i Sparkle; then
+  echo "❌ ERROR: Sparkle.framework should not be linked in App Store build!"
+  exit 1
+else
+  echo "✅ Confirmed: No Sparkle dependency in binary"
+fi
+
 cd ..
 
 # Step 2: Create .app bundle structure
