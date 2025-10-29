@@ -57,15 +57,27 @@ jobs:
         # Clean up
         rm appstore_cert.p12 installer_cert.p12
 
-    - name: Build Swift app
+    - name: Build Swift app (App Store - no Sparkle)
       working-directory: MCPServerManager
       run: |
+        # Replace Package.swift with App Store version (no Sparkle dependency)
+        cp Package.swift.appstore Package.swift
+        
         # Build for native architecture (GitHub runners are arm64)
+        # This build will NOT include Sparkle framework
         swift build -c release
 
         # Verify binary was created
         ls -la .build/release/
         file .build/release/MCPServerManager
+        
+        # Verify Sparkle is NOT in the build (should not exist)
+        if [ -d ".build/release/Sparkle.framework" ]; then
+          echo "❌ ERROR: Sparkle.framework should not be present in App Store build!"
+          exit 1
+        else
+          echo "✅ Confirmed: Sparkle.framework not included (as expected for App Store)"
+        fi
 
     - name: Create .app bundle
       run: |
@@ -84,15 +96,9 @@ jobs:
         # Copy binary
         cp MCPServerManager/.build/release/MCPServerManager "$APP_PATH/Contents/MacOS/"
 
-        # Copy Sparkle framework (required even for App Store builds as it's linked at compile time)
-        # The app has runtime detection to disable Sparkle functionality in App Store builds
-        if [ -d "MCPServerManager/.build/release/Sparkle.framework" ]; then
-          cp -R MCPServerManager/.build/release/Sparkle.framework "$APP_PATH/Contents/Frameworks/"
-          echo "✅ Sparkle.framework copied"
-        else
-          echo "⚠️ Warning: Sparkle.framework not found - this may cause crashes"
-          ls -la MCPServerManager/.build/release/
-        fi
+        # DO NOT copy Sparkle framework for App Store builds
+        # The binary is built without Sparkle dependency, so it won't be linked
+        # This prevents the dyld crash when Sparkle.framework is missing
         
         # Copy app icon
         cp MCPServerManager/icons/AppIcon.icns "$APP_PATH/Contents/Resources/AppIcon.icns"

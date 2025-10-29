@@ -1,5 +1,7 @@
 import SwiftUI
+#if canImport(Sparkle)
 import Sparkle
+#endif
 
 @main
 struct MCPServerManagerApp: App {

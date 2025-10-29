@@ -1,0 +1,32 @@
+// swift-tools-version: 5.9
+import PackageDescription
+
+let package = Package(
+    name: "MCPServerManager",
+    platforms: [
+        .macOS(.v13)
+    ],
+    products: [
+        .executable(
+            name: "MCPServerManager",
+            targets: ["MCPServerManager"]
+        )
+    ],
+    dependencies: [
+        // No Sparkle dependency for App Store builds
+    ],
+    targets: [
+        .executableTarget(
+            name: "MCPServerManager",
+            dependencies: [
+                // No Sparkle dependency for App Store builds
+            ],
+            path: "MCPServerManager",
+            exclude: ["Info.plist"],
+            resources: [
+                .process("Resources")
+            ]
+        )
+    ]
+)
+
