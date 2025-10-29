@@ -32,10 +32,10 @@ PKG_PATH="$BUILD_DIR/MCPServerManager-v${VERSION}.pkg"
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
-# Step 1: Build the Swift binary
-echo "🔨 Building Swift binary..."
+# Step 1: Build the Swift binary (with APPSTORE flag to exclude Sparkle)
+echo "🔨 Building Swift binary for App Store..."
 cd MCPServerManager
-swift build -c release
+swift build -c release -Xswiftc -D -Xswiftc APPSTORE
 cd ..
 
 # Step 2: Create .app bundle structure

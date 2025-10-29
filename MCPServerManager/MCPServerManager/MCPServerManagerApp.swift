@@ -1,5 +1,7 @@
 import SwiftUI
+#if !APPSTORE
 import Sparkle
+#endif
 
 @main
 struct MCPServerManagerApp: App {
@@ -21,6 +23,7 @@ struct MCPServerManagerApp: App {
             CommandGroup(replacing: .newItem) {}
 
             // Only show "Check for Updates" for non-App Store builds
+            #if !APPSTORE
             if updateChecker.canCheckForUpdates {
                 CommandGroup(after: .appInfo) {
                     Button("Check for Updates...") {
@@ -29,6 +32,7 @@ struct MCPServerManagerApp: App {
                     .keyboardShortcut("U", modifiers: [.command])
                 }
             }
+            #endif
         }
     }
 }

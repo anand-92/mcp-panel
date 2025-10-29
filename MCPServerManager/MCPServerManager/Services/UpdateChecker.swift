@@ -1,34 +1,32 @@
 import Foundation
+#if !APPSTORE
 import Sparkle
+#endif
 
 /// Service for handling app updates via Sparkle framework
 class UpdateChecker: ObservableObject {
     static let shared = UpdateChecker()
 
+    #if !APPSTORE
     private var updaterController: SPUStandardUpdaterController?
-
-    /// Check if this is an App Store build
-    /// App Store builds have an actual receipt file that exists
-    var isAppStoreBuild: Bool {
-        guard let receiptURL = Bundle.main.appStoreReceiptURL else {
-            return false
-        }
-        // Check if the receipt file actually exists (not just the URL structure)
-        return FileManager.default.fileExists(atPath: receiptURL.path)
-    }
+    #endif
 
     /// Whether update checking is available (not an App Store build)
     var canCheckForUpdates: Bool {
-        return !isAppStoreBuild
+        #if APPSTORE
+        return false
+        #else
+        return true
+        #endif
     }
 
     private init() {
-        // Only initialize Sparkle if not an App Store build
-        if !isAppStoreBuild {
-            setupSparkle()
-        }
+        #if !APPSTORE
+        setupSparkle()
+        #endif
     }
 
+    #if !APPSTORE
     private func setupSparkle() {
         // Initialize Sparkle updater controller
         updaterController = SPUStandardUpdaterController(
@@ -37,19 +35,21 @@ class UpdateChecker: ObservableObject {
             userDriverDelegate: nil
         )
     }
+    #endif
 
     /// Manually check for updates
     func checkForUpdates() {
-        guard canCheckForUpdates else {
-            print("Cannot check for updates: App Store build")
-            return
-        }
-
+        #if !APPSTORE
         updaterController?.checkForUpdates(nil)
+        #else
+        print("Cannot check for updates: App Store build")
+        #endif
     }
 
+    #if !APPSTORE
     /// Get the updater controller (for binding to menu items)
     var updater: SPUUpdater? {
         return updaterController?.updater
     }
+    #endif
 }

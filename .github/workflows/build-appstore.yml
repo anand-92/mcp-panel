@@ -61,7 +61,8 @@ jobs:
       working-directory: MCPServerManager
       run: |
         # Build for native architecture (GitHub runners are arm64)
-        swift build -c release
+        # Pass APPSTORE flag to exclude Sparkle framework
+        swift build -c release -Xswiftc -D -Xswiftc APPSTORE
 
         # Verify binary was created
         ls -la .build/release/
@@ -84,15 +85,8 @@ jobs:
         # Copy binary
         cp MCPServerManager/.build/release/MCPServerManager "$APP_PATH/Contents/MacOS/"
 
-        # Copy Sparkle framework (required even for App Store builds as it's linked at compile time)
-        # The app has runtime detection to disable Sparkle functionality in App Store builds
-        if [ -d "MCPServerManager/.build/release/Sparkle.framework" ]; then
-          cp -R MCPServerManager/.build/release/Sparkle.framework "$APP_PATH/Contents/Frameworks/"
-          echo "✅ Sparkle.framework copied"
-        else
-          echo "⚠️ Warning: Sparkle.framework not found - this may cause crashes"
-          ls -la MCPServerManager/.build/release/
-        fi
+        # Note: Sparkle is NOT included in App Store builds (excluded via APPSTORE compilation flag)
+        # App Store builds use Apple's update mechanism instead
         
         # Copy app icon
         cp MCPServerManager/icons/AppIcon.icns "$APP_PATH/Contents/Resources/AppIcon.icns"
