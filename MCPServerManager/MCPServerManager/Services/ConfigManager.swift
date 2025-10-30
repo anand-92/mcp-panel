@@ -45,11 +45,9 @@ class ConfigManager {
 
     func readConfig(from path: String) throws -> [String: ServerConfig] {
         return try withConfigAccess(path) { url in
+            // If file doesn't exist, return empty dictionary instead of trying to create it
+            // This prevents permission errors on app launch when bookmarks aren't established
             guard FileManager.default.fileExists(atPath: url.path) else {
-                // Create empty config if it doesn't exist
-                let emptyConfig: [String: Any] = ["mcpServers": [:]]
-                let data = try JSONSerialization.data(withJSONObject: emptyConfig, options: [.prettyPrinted, .sortedKeys])
-                try data.write(to: url)
                 return [:]
             }
 
