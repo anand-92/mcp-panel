@@ -30,7 +30,7 @@ class ConfigManager {
             throw NSError(
                 domain: "ConfigManager",
                 code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "Cannot access config file at path: \(path). Please select the file in Settings."]
+                userInfo: [NSLocalizedDescriptionKey: "Permission denied for '\(path)'. Click Settings → Browse to grant access."]
             )
         }
 
