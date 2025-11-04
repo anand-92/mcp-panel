@@ -49,8 +49,12 @@ struct ServerConfig: Codable, Equatable {
     var type: String?
     var url: String?
 
+    // Support for httpUrl format (GitHub Copilot MCP)
+    var httpUrl: String?
+    var headers: [String: String]?
+
     private enum CodingKeys: String, CodingKey {
-        case command, args, cwd, env, transport, remotes, type, url
+        case command, args, cwd, env, transport, remotes, type, url, httpUrl, headers
     }
 
     init(command: String? = nil,
@@ -60,7 +64,9 @@ struct ServerConfig: Codable, Equatable {
          transport: ServerTransportConfig? = nil,
          remotes: [ServerRemoteConfig]? = nil,
          type: String? = nil,
-         url: String? = nil) {
+         url: String? = nil,
+         httpUrl: String? = nil,
+         headers: [String: String]? = nil) {
         self.command = command
         self.args = args
         self.cwd = cwd
@@ -69,6 +75,8 @@ struct ServerConfig: Codable, Equatable {
         self.remotes = remotes
         self.type = type
         self.url = url
+        self.httpUrl = httpUrl
+        self.headers = headers
     }
 
     init(from decoder: Decoder) throws {
@@ -81,6 +89,8 @@ struct ServerConfig: Codable, Equatable {
         remotes = try container.decodeIfPresent([ServerRemoteConfig].self, forKey: .remotes)
         type = try container.decodeIfPresent(String.self, forKey: .type)
         url = try container.decodeIfPresent(String.self, forKey: .url)
+        httpUrl = try container.decodeIfPresent(String.self, forKey: .httpUrl)
+        headers = try container.decodeIfPresent([String: String].self, forKey: .headers)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -108,6 +118,12 @@ struct ServerConfig: Codable, Equatable {
 
         try container.encodeIfPresent(type, forKey: .type)
         try container.encodeIfPresent(url, forKey: .url)
+        try container.encodeIfPresent(httpUrl, forKey: .httpUrl)
+
+        // Only encode headers if not empty
+        if let headers = headers, !headers.isEmpty {
+            try container.encode(headers, forKey: .headers)
+        }
     }
 
     // MARK: - Validation
@@ -120,6 +136,11 @@ struct ServerConfig: Codable, Equatable {
 
         // Check for HTTP-type servers
         if type == "http", let urlString = url, !urlString.trimmingCharacters(in: .whitespaces).isEmpty {
+            return true
+        }
+
+        // Check for httpUrl-based servers (GitHub Copilot MCP format)
+        if let httpUrlString = httpUrl, !httpUrlString.trimmingCharacters(in: .whitespaces).isEmpty {
             return true
         }
 
@@ -136,6 +157,12 @@ struct ServerConfig: Codable, Equatable {
     var summary: String {
         if let cmd = command, !cmd.trimmingCharacters(in: .whitespaces).isEmpty {
             return cmd.trimmingCharacters(in: .whitespaces)
+        }
+
+        // Handle httpUrl-based servers
+        if let httpUrlString = httpUrl, !httpUrlString.trimmingCharacters(in: .whitespaces).isEmpty {
+            let urlHost = formatURLHost(httpUrlString)
+            return "HTTP → \(urlHost)"
         }
 
         if let transport = transport {
