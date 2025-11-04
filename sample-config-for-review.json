@@ -79,6 +79,10 @@
     "axios": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-axios"]
+    },
+    "honeycomb": {
+      "type": "sse",
+      "url": "https://mcp.honeycomb.io/sse"
     }
   },
   "globalShortcut": "CommandOrControl+Shift+;",

@@ -123,6 +123,11 @@ struct ServerConfig: Codable, Equatable {
             return true
         }
 
+        // Check for SSE-type servers (Server-Sent Events)
+        if type == "sse", let urlString = url, !urlString.trimmingCharacters(in: .whitespaces).isEmpty {
+            return true
+        }
+
         // Check for standard command-based servers
         let hasCommand = command?.trimmingCharacters(in: .whitespaces).isEmpty == false
         let hasTransport = transport != nil
@@ -134,6 +139,12 @@ struct ServerConfig: Codable, Equatable {
     // MARK: - Summary
 
     var summary: String {
+        // Handle URL-based servers (HTTP, SSE)
+        if let serverType = type, (serverType == "http" || serverType == "sse"), let urlString = url {
+            let urlHost = formatURLHost(urlString)
+            return "\(serverType.uppercased()) → \(urlHost)"
+        }
+
         if let cmd = command, !cmd.trimmingCharacters(in: .whitespaces).isEmpty {
             return cmd.trimmingCharacters(in: .whitespaces)
         }
