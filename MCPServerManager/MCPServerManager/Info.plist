@@ -34,7 +34,7 @@
 		<string>Resources/Fonts/CrimsonPro-Bold.ttf</string>
 	</array>
 	<key>SUFeedURL</key>
-	<string>https://github.com/nikhilanand91/mcp-panel/releases/download/latest/appcast.xml</string>
+	<string>https://github.com/anand-92/mcp-panel/releases/download/latest/appcast.xml</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUAutomaticallyUpdate</key>
