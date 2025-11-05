@@ -9,6 +9,7 @@ struct RawJSONView: View {
     @State private var showForceAlert: Bool = false
     @State private var invalidServerDetails: String = ""
     @State private var pendingSaveJSON: String = ""
+    @State private var pendingServerDict: [String: ServerConfig]?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -159,6 +160,7 @@ struct RawJSONView: View {
             Button("Cancel", role: .cancel) {
                 showForceAlert = false
                 pendingSaveJSON = ""
+                pendingServerDict = nil
                 invalidServerDetails = ""
             }
             Button("Force Save") {
@@ -217,6 +219,7 @@ struct RawJSONView: View {
 
             invalidServerDetails = details
             pendingSaveJSON = jsonText
+            pendingServerDict = result.serverDict  // Store parsed dictionary to avoid re-parsing
             showForceAlert = true
         } else {
             // JSON parsing error (toast already shown by viewModel)
@@ -226,11 +229,18 @@ struct RawJSONView: View {
 
     private func forceSave() {
         do {
-            try viewModel.applyRawJSONForced(pendingSaveJSON)
+            // Use parsed dictionary if available to avoid re-parsing
+            if let serverDict = pendingServerDict {
+                viewModel.applyRawJSONForced(serverDict: serverDict)
+            } else {
+                // Fallback to JSON parsing (shouldn't happen in normal flow)
+                try viewModel.applyRawJSONForced(pendingSaveJSON)
+            }
             isDirty = false
             errorMessage = ""
             showForceAlert = false
             pendingSaveJSON = ""
+            pendingServerDict = nil
             invalidServerDetails = ""
         } catch {
             errorMessage = "Failed to parse JSON: \(error.localizedDescription)"

@@ -1,5 +1,15 @@
 import Foundation
 
+// MARK: - String Extension for Validation
+
+private extension String? {
+    /// Returns true if the optional string is non-nil and contains non-whitespace characters
+    var isNonEmptyString: Bool {
+        guard let self = self else { return false }
+        return !self.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+}
+
 // MARK: - Server Configuration Models
 
 struct ServerTransportConfig: Codable, Equatable {
@@ -49,8 +59,12 @@ struct ServerConfig: Codable, Equatable {
     var type: String?
     var url: String?
 
+    // Support for httpUrl format (GitHub Copilot MCP)
+    var httpUrl: String?
+    var headers: [String: String]?
+
     private enum CodingKeys: String, CodingKey {
-        case command, args, cwd, env, transport, remotes, type, url
+        case command, args, cwd, env, transport, remotes, type, url, httpUrl, headers
     }
 
     init(command: String? = nil,
@@ -60,7 +74,9 @@ struct ServerConfig: Codable, Equatable {
          transport: ServerTransportConfig? = nil,
          remotes: [ServerRemoteConfig]? = nil,
          type: String? = nil,
-         url: String? = nil) {
+         url: String? = nil,
+         httpUrl: String? = nil,
+         headers: [String: String]? = nil) {
         self.command = command
         self.args = args
         self.cwd = cwd
@@ -69,6 +85,8 @@ struct ServerConfig: Codable, Equatable {
         self.remotes = remotes
         self.type = type
         self.url = url
+        self.httpUrl = httpUrl
+        self.headers = headers
     }
 
     init(from decoder: Decoder) throws {
@@ -81,6 +99,8 @@ struct ServerConfig: Codable, Equatable {
         remotes = try container.decodeIfPresent([ServerRemoteConfig].self, forKey: .remotes)
         type = try container.decodeIfPresent(String.self, forKey: .type)
         url = try container.decodeIfPresent(String.self, forKey: .url)
+        httpUrl = try container.decodeIfPresent(String.self, forKey: .httpUrl)
+        headers = try container.decodeIfPresent([String: String].self, forKey: .headers)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -108,28 +128,39 @@ struct ServerConfig: Codable, Equatable {
 
         try container.encodeIfPresent(type, forKey: .type)
         try container.encodeIfPresent(url, forKey: .url)
+        try container.encodeIfPresent(httpUrl, forKey: .httpUrl)
+
+        // Only encode headers if not empty
+        if let headers = headers, !headers.isEmpty {
+            try container.encode(headers, forKey: .headers)
+        }
     }
 
     // MARK: - Validation
 
     var isValid: Bool {
         // Check for stdio-type servers
-        if type == "stdio", let cmd = command, !cmd.trimmingCharacters(in: .whitespaces).isEmpty {
+        if type == "stdio", command.isNonEmptyString {
             return true
         }
 
         // Check for HTTP-type servers
-        if type == "http", let urlString = url, !urlString.trimmingCharacters(in: .whitespaces).isEmpty {
+        if type == "http", url.isNonEmptyString {
+            return true
+        }
+
+        // Check for httpUrl-based servers (GitHub Copilot MCP format)
+        if httpUrl.isNonEmptyString {
             return true
         }
 
         // Check for SSE-type servers (Server-Sent Events)
-        if type == "sse", let urlString = url, !urlString.trimmingCharacters(in: .whitespaces).isEmpty {
+        if type == "sse", url.isNonEmptyString {
             return true
         }
 
         // Check for standard command-based servers
-        let hasCommand = command?.trimmingCharacters(in: .whitespaces).isEmpty == false
+        let hasCommand = command.isNonEmptyString
         let hasTransport = transport != nil
         let hasRemotes = remotes?.isEmpty == false
 
@@ -140,13 +171,19 @@ struct ServerConfig: Codable, Equatable {
 
     var summary: String {
         // Handle URL-based servers (HTTP, SSE)
-        if let serverType = type, (serverType == "http" || serverType == "sse"), let urlString = url {
+        if let serverType = type, (serverType == "http" || serverType == "sse"), url.isNonEmptyString, let urlString = url {
             let urlHost = formatURLHost(urlString)
             return "\(serverType.uppercased()) → \(urlHost)"
         }
 
-        if let cmd = command, !cmd.trimmingCharacters(in: .whitespaces).isEmpty {
+        if command.isNonEmptyString, let cmd = command {
             return cmd.trimmingCharacters(in: .whitespaces)
+        }
+
+        // Handle httpUrl-based servers
+        if httpUrl.isNonEmptyString, let httpUrlString = httpUrl {
+            let urlHost = formatURLHost(httpUrlString)
+            return "HTTP → \(urlHost)"
         }
 
         if let transport = transport {

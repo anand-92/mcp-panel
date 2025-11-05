@@ -130,6 +130,8 @@ struct ServerExtractor {
         var remotes: [ServerRemoteConfig]?
         var type: String?
         var url: String?
+        var httpUrl: String?
+        var headers: [String: String]?
 
         // Extract type
         type = dict["type"] as? String
@@ -170,6 +172,16 @@ struct ServerExtractor {
         // Extract url
         url = dict["url"] as? String
 
+        // Extract httpUrl (GitHub Copilot MCP format)
+        httpUrl = dict["httpUrl"] as? String
+
+        // Extract headers (for httpUrl-based servers)
+        if let headersDict = dict["headers"] as? [String: String] {
+            headers = headersDict
+        } else if let headersDict = dict["headers"] as? [String: Any] {
+            headers = headersDict.compactMapValues { $0 as? String }
+        }
+
         // Extract transport
         if let transportDict = dict["transport"] as? [String: Any],
            let transportType = transportDict["type"] as? String {
@@ -203,7 +215,9 @@ struct ServerExtractor {
             transport: transport,
             remotes: remotes,
             type: type,
-            url: url
+            url: url,
+            httpUrl: httpUrl,
+            headers: headers
         )
     }
 }
