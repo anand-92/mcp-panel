@@ -70,23 +70,34 @@ struct RegistryMetadata: Codable {
 // MARK: - Registry API Response Models
 
 struct RegistryAPIResponse: Codable {
-    let servers: [RegistryAPIServer]
+    let servers: [RegistryAPIServerWrapper]
     let metadata: PaginationMetadata?
 }
 
 struct PaginationMetadata: Codable {
-    let count: Int
+    let count: Int?
     let nextCursor: String?
-    let totalPages: Int
 
     enum CodingKeys: String, CodingKey {
         case count
         case nextCursor = "next_cursor"
-        case totalPages = "total_pages"
+    }
+}
+
+struct RegistryAPIServerWrapper: Codable {
+    let server: RegistryAPIServer
+    let xGithub: GitHubMetadata?
+    let xRegistry: RegistryMeta?
+
+    enum CodingKeys: String, CodingKey {
+        case server
+        case xGithub = "x-github"
+        case xRegistry = "x-io.modelcontextprotocol.registry"
     }
 }
 
 struct RegistryAPIServer: Codable {
+    let id: String?
     let name: String
     let description: String
     let repository: RepositoryInfo?
@@ -94,37 +105,74 @@ struct RegistryAPIServer: Codable {
     let remotes: [APIRemoteConfig]?
     let createdAt: String?
     let updatedAt: String?
-    let meta: ServerMeta?
+    let versionDetail: VersionDetail?
 
     enum CodingKeys: String, CodingKey {
-        case name, description, repository, packages, remotes
+        case id, name, description, repository, packages, remotes
         case createdAt = "created_at"
         case updatedAt = "updated_at"
-        case meta = "_meta"
+        case versionDetail = "version_detail"
     }
 }
 
-struct ServerMeta: Codable {
-    let publisherProvided: PublisherProvided?
+struct VersionDetail: Codable {
+    let version: String
+    let isLatest: Bool?
+    let releaseDate: String?
 
     enum CodingKeys: String, CodingKey {
-        case publisherProvided = "io.modelcontextprotocol.registry/publisher-provided"
+        case version
+        case isLatest = "is_latest"
+        case releaseDate = "release_date"
     }
 }
 
-struct PublisherProvided: Codable {
-    let github: GitHubMetadata?
+struct RegistryMeta: Codable {
+    let id: String?
+    let publishedAt: String?
+    let updatedAt: String?
+    let isLatest: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case publishedAt = "published_at"
+        case updatedAt = "updated_at"
+        case isLatest = "is_latest"
+    }
 }
 
 struct GitHubMetadata: Codable {
+    let displayName: String?
+    let isInOrganization: Bool?
+    let license: String?
+    let name: String?
+    let nameWithOwner: String?
     let opengraphImageUrl: String?
     let ownerAvatarUrl: String?
     let preferredImage: String?
+    let primaryLanguage: String?
+    let primaryLanguageColor: String?
+    let pushedAt: String?
+    let readme: String?
+    let stargazerCount: Int?
+    let topics: [String]?
+    let usesCustomOpengraphImage: Bool?
 
     enum CodingKeys: String, CodingKey {
+        case displayName = "display_name"
+        case isInOrganization = "is_in_organization"
+        case license, name
+        case nameWithOwner = "name_with_owner"
         case opengraphImageUrl = "opengraph_image_url"
         case ownerAvatarUrl = "owner_avatar_url"
         case preferredImage = "preferred_image"
+        case primaryLanguage = "primary_language"
+        case primaryLanguageColor = "primary_language_color"
+        case pushedAt = "pushed_at"
+        case readme
+        case stargazerCount = "stargazer_count"
+        case topics
+        case usesCustomOpengraphImage = "uses_custom_opengraph_image"
     }
 }
 
@@ -156,20 +204,24 @@ struct APIHeaderVariable: Codable {
 }
 
 struct RepositoryInfo: Codable {
-    let url: String
+    let id: String?
     let readme: String?
+    let source: String?
+    let url: String?
 }
 
 struct PackageInfo: Codable {
-    let identifier: String?
+    let name: String?
+    let registryName: String?
+    let registryBaseUrl: String?
     let version: String?
-    let registryType: String?
     let runtimeHint: String?
 
     enum CodingKeys: String, CodingKey {
-        case identifier
+        case name
+        case registryName = "registry_name"
+        case registryBaseUrl = "registry_base_url"
         case version
-        case registryType = "registry_type"
         case runtimeHint = "runtime_hint"
     }
 }

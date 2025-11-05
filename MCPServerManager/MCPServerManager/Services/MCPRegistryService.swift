@@ -8,15 +8,15 @@ class MCPRegistryService: ObservableObject {
 
     @Published var isLoading: Bool = false
 
-    private let apiURL = "https://api.mcp.github.com/2025-09-15/v0/servers"
+    private let apiURL = "https://api.mcp.github.com/v0/servers"
     private var cachedServers: [RegistryServer]?
     private var cacheTimestamp: Date?
     private let cacheTimeout: TimeInterval = 3600 // 1 hour
 
     // Compiled regex patterns for better performance (Sendable, safe for concurrent access)
-    nonisolated(unsafe) private static let jsonBlockRegex = try! NSRegularExpression(pattern: #"```json\s*\n(.*?)\n```"#, options: [.dotMatchesLineSeparators])
-    nonisolated(unsafe) private static let codeBlockRegex = try! NSRegularExpression(pattern: #"```\s*\n(\{.*?\})\n```"#, options: [.dotMatchesLineSeparators])
-    nonisolated(unsafe) private static let inlineRegex = try! NSRegularExpression(pattern: #""[^"]+"\s*:\s*\{[\s\S]*?"command"\s*:[\s\S]*?\}"#, options: [])
+    private static let jsonBlockRegex = try! NSRegularExpression(pattern: #"```json\s*\n(.*?)\n```"#, options: [.dotMatchesLineSeparators])
+    private static let codeBlockRegex = try! NSRegularExpression(pattern: #"```\s*\n(\{.*?\})\n```"#, options: [.dotMatchesLineSeparators])
+    private static let inlineRegex = try! NSRegularExpression(pattern: #""[^"]+"\s*:\s*\{[\s\S]*?"command"\s*:[\s\S]*?\}"#, options: [])
 
     private init() {}
 
@@ -40,7 +40,7 @@ class MCPRegistryService: ObservableObject {
         defer { isLoading = false }
 
         // Fetch all pages (with safety limit to prevent infinite loops)
-        var allServers: [RegistryAPIServer] = []
+        var allServers: [RegistryAPIServerWrapper] = []
         var cursor: String? = nil
         var pageCount = 0
         let maxPages = 100 // Safety limit to prevent infinite loops
@@ -56,7 +56,7 @@ class MCPRegistryService: ObservableObject {
                 break
             }
 
-            let pageURL = apiURL + (cursor.flatMap { $0.isEmpty ? nil : $0 }.map { "?cursor=\($0)" } ?? "")
+            let pageURL = cursor.flatMap { $0.isEmpty ? nil : $0 }.map { apiURL + "?cursor=\($0)" } ?? apiURL
 
             guard let url = URL(string: pageURL) else {
                 throw MCPRegistryError.invalidURL
@@ -94,7 +94,10 @@ class MCPRegistryService: ObservableObject {
         #endif
 
         // Process servers and extract configs
-        let registryServers = allServers.compactMap { apiServer -> RegistryServer? in
+        let registryServers = allServers.compactMap { wrapper -> RegistryServer? in
+            let apiServer = wrapper.server
+            let xGithub = wrapper.xGithub
+
             // Try to get config from remotes first (HTTP/SSE servers)
             var config: ServerConfig?
 
@@ -107,8 +110,18 @@ class MCPRegistryService: ObservableObject {
                 #endif
             }
 
-            // Fall back to README extraction if no remotes
-            if config == nil, let readme = apiServer.repository?.readme {
+            // Try packages if no remotes
+            if config == nil, let packages = apiServer.packages, !packages.isEmpty {
+                config = createConfigFromPackages(packages)
+                #if DEBUG
+                if config != nil {
+                    print("MCPRegistryService: Using packages config for \(apiServer.name)")
+                }
+                #endif
+            }
+
+            // Fall back to README extraction if no remotes or packages
+            if config == nil, let readme = xGithub?.readme {
                 config = extractConfigFromReadme(readme)
                 #if DEBUG
                 if config != nil {
@@ -128,15 +141,14 @@ class MCPRegistryService: ObservableObject {
             let metadata = RegistryMetadata(
                 createdAt: apiServer.createdAt,
                 updatedAt: apiServer.updatedAt,
-                packageIdentifier: packageInfo?.identifier,
+                packageIdentifier: packageInfo?.name,
                 packageVersion: packageInfo?.version,
-                registryType: packageInfo?.registryType,
+                registryType: packageInfo?.registryName,
                 runtimeHint: packageInfo?.runtimeHint
             )
 
-            // Extract image URL from metadata (prefer preferredImage, fallback to ownerAvatarUrl)
-            let imageUrl = apiServer.meta?.publisherProvided?.github?.preferredImage
-                        ?? apiServer.meta?.publisherProvided?.github?.ownerAvatarUrl
+            // Extract image URL from GitHub metadata (prefer preferredImage, fallback to ownerAvatarUrl)
+            let imageUrl = xGithub?.preferredImage ?? xGithub?.ownerAvatarUrl
 
             return RegistryServer(
                 id: apiServer.name,
@@ -178,7 +190,7 @@ class MCPRegistryService: ObservableObject {
         switch remote.transportType.lowercased() {
         case "sse":
             transportType = "sse"
-        case "http", "https":
+        case "streamable-http", "http", "https":
             transportType = "http"
         default:
             transportType = remote.transportType
@@ -197,6 +209,52 @@ class MCPRegistryService: ObservableObject {
         )
 
         // Validate it's a proper remote config
+        guard config.isValid else { return nil }
+
+        return config
+    }
+
+    /// Create config from API packages data (stdio servers)
+    private func createConfigFromPackages(_ packages: [PackageInfo]) -> ServerConfig? {
+        // Use the first package
+        guard let package = packages.first,
+              let name = package.name,
+              let registryName = package.registryName else { return nil }
+
+        // Create config based on registry type
+        let command: String
+        let args: [String]
+
+        switch registryName.lowercased() {
+        case "npm":
+            command = package.runtimeHint ?? "npx"
+            args = [name]
+        case "pypi":
+            command = package.runtimeHint ?? "uvx"
+            args = [name]
+        case "oci":
+            // Docker-based servers
+            command = "docker"
+            args = ["run", "-i", name]
+        default:
+            #if DEBUG
+            print("MCPRegistryService: Unknown registry type: \(registryName)")
+            #endif
+            return nil
+        }
+
+        let config = ServerConfig(
+            command: command,
+            args: args,
+            cwd: nil,
+            env: nil,
+            transport: nil,
+            remotes: nil,
+            type: nil,
+            url: nil
+        )
+
+        // Validate it's a proper stdio config
         guard config.isValid else { return nil }
 
         return config
