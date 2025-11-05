@@ -15,6 +15,16 @@ struct ContentView: View {
             viewModel.themeColors.backgroundGradient
                 .ignoresSafeArea()
 
+            // Floating particles for ambient animation
+            FloatingParticlesView(
+                particleCount: 15,
+                colors: [
+                    viewModel.themeColors.primaryAccent.opacity(0.15),
+                    viewModel.themeColors.primaryAccent.opacity(0.1),
+                    Color.blue.opacity(0.1)
+                ]
+            )
+
             VStack(spacing: 0) {
                 // Header
                 HeaderView(
@@ -27,15 +37,24 @@ struct ContentView: View {
                 // Toolbar
                 ToolbarView(viewModel: viewModel)
 
-                // Main content area - switches based on view mode
+                // Main content area - switches based on view mode with smooth transitions
                 Group {
                     if viewModel.viewMode == .grid {
                         ServerGridView(viewModel: viewModel, showAddServer: $showAddServer)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .leading).combined(with: .opacity),
+                                removal: .move(edge: .trailing).combined(with: .opacity)
+                            ))
                     } else {
                         RawJSONView(viewModel: viewModel)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .trailing).combined(with: .opacity),
+                                removal: .move(edge: .leading).combined(with: .opacity)
+                            ))
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.viewMode)
             }
 
             // Toast notification - positioned to not block UI
