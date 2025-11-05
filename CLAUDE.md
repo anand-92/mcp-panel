@@ -161,6 +161,16 @@ When window opacity is 30% and boost is 100%:
 - **Operations**: Read, write, add servers, delete servers, toggle servers
 - **Backup**: App does not create backups - users should manage their own
 
+## Custom Icon Management
+
+- **Storage**: `~/Library/Application Support/MCPServerManager/CustomIcons/`
+- **User action**: Click server icon or right-click for context menu
+- **Validation**: Max 10MB file size, max 2048×2048px dimensions
+- **Naming**: Uses server UUID for filenames (prevents collisions, handles renames)
+- **Priority**: Custom > Registry > IconService > SF Symbol fallback
+- **Cleanup**: Orphaned icons removed on app startup
+- **Implementation**: `CustomIconManager.swift` handles all file operations
+
 ## Development Tips
 
 - **Live Preview**: Use Xcode's SwiftUI previews for rapid UI iteration
