@@ -12,6 +12,7 @@ struct SettingsModal: View {
     @State private var fetchServerLogos: Bool = true
     @State private var windowOpacity: Double = 1.0
     @State private var textVisibilityBoost: Double = 0.5
+    @State private var remoteControlEnabled: Bool = false
     @State private var testingConnection: Bool = false
     @State private var testResult: String = ""
     @State private var showBookmarkAlert: Bool = false
@@ -195,6 +196,46 @@ struct SettingsModal: View {
 
                     Divider()
 
+                    // Remote Control
+                    VStack(alignment: .leading, spacing: 12) {
+                        CheckboxToggle(isOn: $remoteControlEnabled, label: "Enable Remote Control")
+                            .onChange(of: remoteControlEnabled) { newValue in
+                                viewModel.toggleRemoteControl(newValue)
+                            }
+
+                        Text("Control MCP servers from your phone via QR code")
+                            .font(DesignTokens.Typography.bodySmall)
+                            .foregroundColor(.secondary)
+
+                        if remoteControlEnabled && viewModel.remoteControlServer.isRunning,
+                           let session = viewModel.remoteControlServer.session {
+                            VStack(spacing: 16) {
+                                QRCodeView(url: session.url, size: 200)
+                                    .padding(.top, 8)
+
+                                HStack(spacing: 8) {
+                                    Image(systemName: "wifi")
+                                        .foregroundColor(.green)
+                                    Text("Server running on \(session.ipAddress):\(session.port)")
+                                        .font(DesignTokens.Typography.bodySmall)
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.green.opacity(0.1))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                                        )
+                                )
+                            }
+                        }
+                    }
+
+                    Divider()
+
                     // Test Connection
                     VStack(alignment: .leading, spacing: 8) {
                         Button(action: testConnection) {
@@ -264,7 +305,7 @@ struct SettingsModal: View {
             }
             .padding(24)
         }
-        .frame(width: 550, height: 600)
+        .frame(width: 550, height: 700)
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .fill(Color(nsColor: .windowBackgroundColor))
@@ -277,6 +318,7 @@ struct SettingsModal: View {
             fetchServerLogos = UserDefaults.standard.object(forKey: "fetchServerLogos") as? Bool ?? true
             windowOpacity = viewModel.settings.windowOpacity
             textVisibilityBoost = viewModel.settings.textVisibilityBoost
+            remoteControlEnabled = viewModel.settings.remoteControlEnabled
         }
         .alert("Bookmark Storage Failed", isPresented: $showBookmarkAlert) {
             Button("OK", role: .cancel) {}

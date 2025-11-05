@@ -14,6 +14,7 @@ class ServerViewModel: ObservableObject {
     @Published var showToast: Bool = false
     @Published var toastMessage: String = ""
     @Published var toastType: ToastType = .success
+    @Published var remoteControlServer = RemoteControlServer()
 
     private let configManager = ConfigManager.shared
     private var skipSync = false
@@ -41,6 +42,33 @@ class ServerViewModel: ObservableObject {
         // Only load servers if onboarding is complete
         if !showOnboarding {
             loadServers()
+        }
+
+        // Setup remote control server callbacks
+        setupRemoteControlCallbacks()
+
+        // Start remote control if enabled
+        if settings.remoteControlEnabled {
+            startRemoteControl()
+        }
+    }
+
+    private func setupRemoteControlCallbacks() {
+        remoteControlServer.onGetServers = { [weak self] in
+            guard let self = self else { return [] }
+            return self.servers
+        }
+
+        remoteControlServer.onToggleServer = { [weak self] serverId in
+            guard let self = self else { return }
+            if let server = self.servers.first(where: { $0.id.uuidString == serverId }) {
+                self.toggleServer(server)
+            }
+        }
+
+        remoteControlServer.getActiveConfigIndex = { [weak self] in
+            guard let self = self else { return 0 }
+            return self.settings.activeConfigIndex
         }
     }
 
@@ -394,6 +422,11 @@ class ServerViewModel: ObservableObject {
 
         let status = updated.inConfigs[configIndex] ? "enabled" : "disabled"
         showToast(message: "\(server.name) \(status)", type: .success)
+
+        // Notify remote clients of the change
+        if remoteControlServer.isRunning {
+            remoteControlServer.broadcast(["type": "serverUpdate"])
+        }
     }
 
     func toggleAllServers(_ enable: Bool) {
@@ -419,6 +452,11 @@ class ServerViewModel: ObservableObject {
         syncToConfigs()
         let status = enable ? "enabled" : "disabled"
         showToast(message: "All servers \(status)", type: .success)
+
+        // Notify remote clients of the change
+        if remoteControlServer.isRunning {
+            remoteControlServer.broadcast(["type": "serverUpdate"])
+        }
     }
 
     // MARK: - Import/Export
@@ -461,6 +499,35 @@ class ServerViewModel: ObservableObject {
             } catch {
                 // Task was cancelled, ignore
             }
+        }
+    }
+
+    // MARK: - Remote Control
+
+    func startRemoteControl() {
+        do {
+            try remoteControlServer.start(port: settings.remoteControlPort)
+            settings.remoteControlEnabled = true
+            saveSettings()
+            showToast(message: "Remote control started", type: .success)
+        } catch {
+            showToast(message: "Failed to start remote control: \(error.localizedDescription)", type: .error)
+            settings.remoteControlEnabled = false
+        }
+    }
+
+    func stopRemoteControl() {
+        remoteControlServer.stop()
+        settings.remoteControlEnabled = false
+        saveSettings()
+        showToast(message: "Remote control stopped", type: .success)
+    }
+
+    func toggleRemoteControl(_ enabled: Bool) {
+        if enabled {
+            startRemoteControl()
+        } else {
+            stopRemoteControl()
         }
     }
 }
