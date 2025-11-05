@@ -27,7 +27,7 @@ struct ServerGridView: View {
                                 return viewModel.updateServer(server, with: json)
                             },
                             onCustomIconSelected: { iconPath in
-                                viewModel.updateCustomIcon(for: server, iconPath: iconPath)
+                                viewModel.updateCustomIcon(for: server, iconFilename: iconPath)
                             }
                         )
                     }
