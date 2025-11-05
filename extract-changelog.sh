@@ -33,7 +33,7 @@ cat > "$OUTPUT_HTML" << 'HTML_TEMPLATE'
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       font-size: 13px;
       line-height: 1.6;
-      color: #333;
+      color: #ffffff;
       margin: 16px;
     }
     h2 {
@@ -41,14 +41,14 @@ cat > "$OUTPUT_HTML" << 'HTML_TEMPLATE'
       font-weight: 600;
       margin-top: 0;
       margin-bottom: 12px;
-      color: #1d1d1f;
+      color: #ffffff;
     }
     h3 {
       font-size: 14px;
       font-weight: 600;
       margin-top: 16px;
       margin-bottom: 8px;
-      color: #1d1d1f;
+      color: #e0e0e0;
     }
     ul {
       margin: 8px 0;
@@ -56,12 +56,15 @@ cat > "$OUTPUT_HTML" << 'HTML_TEMPLATE'
     }
     li {
       margin: 4px 0;
+      color: #d0d0d0;
     }
     strong {
       font-weight: 600;
+      color: #ffffff;
     }
     code {
-      background: #f5f5f7;
+      background: #3a3a3c;
+      color: #00d4ff;
       padding: 2px 6px;
       border-radius: 3px;
       font-family: 'SF Mono', Monaco, 'Courier New', monospace;
