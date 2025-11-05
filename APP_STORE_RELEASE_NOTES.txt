@@ -1,0 +1,40 @@
+🎨 CUSTOM ICON PERSONALIZATION
+• Click any server icon to upload your own image
+• Supports PNG, JPG, SVG, and all standard image formats
+• Right-click icons for quick reset to default
+• Icons persist across app restarts
+• Smart validation (max 10MB, 2048×2048px)
+• Hover effects show when icons are customizable
+
+🎭 12 BEAUTIFUL THEME PRESETS
+Choose from professionally-designed themes:
+• Nord - Arctic north-bluish palette
+• Dracula - Purple/pink dark elegance
+• Solarized Dark & Light - Precision colors
+• Monokai Pro - Warm vibrant coding theme
+• One Dark - Atom's iconic dark theme
+• GitHub Dark - Authentic GitHub experience
+• Tokyo Night - Clean neon highlights
+• Catppuccin Mocha - Warm pastel comfort
+• Gruvbox - Retro groove aesthetics
+• Material Palenight - Deep ocean syntax
+• Auto mode for smart theme detection
+
+🔒 PRIVACY & FLEXIBILITY
+• Blur JSON previews to reduce visual clutter
+• Smart blur that auto-disables when editing
+• Perfect for screen sharing or public spaces
+• Force save option for custom configurations
+• Override validation with full control
+
+🌐 EXTENDED MCP FORMAT SUPPORT
+• HTTP-based servers (GitHub Copilot format)
+• Server-Sent Events (SSE) for streaming
+• Custom headers and authentication tokens
+• httpUrl field support with Bearer tokens
+
+🐛 BUG FIXES
+• Fixed permission errors when saving configs
+• Resolved security-scoped bookmark issues
+• Improved error handling throughout
+• Better validation for complex configs

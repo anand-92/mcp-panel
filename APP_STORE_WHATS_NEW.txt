@@ -1,0 +1,110 @@
+# What's New in MCP Server Manager
+
+## Major Update: Personalization & Enhanced MCP Support
+
+### 🎨 Custom Icon Personalization
+Make your server list uniquely yours with custom icons:
+• **Click to customize** - Simply click any server icon to upload your own image
+• **Universal format support** - Works with PNG, JPG, SVG, GIF, and all standard image formats
+• **Intelligent validation** - Automatically validates file size (max 10MB) and dimensions (max 2048×2048px)
+• **Persistent storage** - Icons are securely stored in Application Support and persist across restarts
+• **Easy management** - Right-click any icon for quick reset to default, or click to replace
+• **Visual feedback** - Hover effects show which icons are customizable
+• **Priority system** - Custom icons override all other icon sources (registry, fetched, defaults)
+
+Technical implementation ensures sandboxed security with proper file handling and cleanup of unused icons.
+
+### 🎭 12 Professional Theme Presets
+Transform your entire workspace with beautiful, professionally-designed themes:
+
+**Dark Themes:**
+• **Nord** - Arctic north-bluish palette with cool, calming tones
+• **Dracula** - Purple and pink accents with elegant dark backgrounds
+• **Monokai Pro** - Warm dark theme with vibrant yellows and reds
+• **One Dark** - Atom's iconic theme with perfectly balanced colors
+• **GitHub Dark** - Authentic GitHub dark mode experience
+• **Tokyo Night** - Clean dark theme with neon cyan highlights
+• **Catppuccin Mocha** - Warm pastel dark theme for comfortable coding
+• **Gruvbox Dark** - Retro groove color scheme with earthy tones
+• **Material Palenight** - Deep ocean syntax theme with purple accents
+
+**Light Themes:**
+• **Solarized Light** - Precision colors optimized for readability
+
+**Balanced:**
+• **Solarized Dark** - The perfect dark variant of Solarized
+
+**Smart Mode:**
+• **Auto** - Intelligently detects theme from your active config file
+
+Each theme includes carefully chosen color palettes for backgrounds, text, accents, borders, and UI elements. Themes override per-config colors and persist across all your work.
+
+### 🔒 Privacy & Workflow Enhancements
+New features for professionals who need flexibility:
+
+**Smart JSON Blur**
+• Toggle blur effect on JSON previews to reduce visual clutter
+• Perfect for screen sharing, pair programming, or working in public spaces
+• Blur intelligently disables when you start editing
+• Restores automatically when you save or cancel edits
+• Customizable via Settings with immediate preview
+
+**Force Save Override**
+• Full control over server configurations
+• When validation fails, you get a clear explanation
+• Choose to fix issues or force save anyway
+• Perfect for custom or experimental MCP configs
+• Detailed error messages show exactly what's invalid
+
+### 🌐 Extended MCP Protocol Support
+Now compatible with even more MCP server types and configurations:
+
+**HTTP-Based Servers**
+• Full support for GitHub Copilot's MCP format
+• `httpUrl` field for HTTP/HTTPS endpoints
+• Custom `headers` for authentication tokens
+• Bearer token support for secure APIs
+• Example: GitHub MCP with `$GITHUB_MCP_PAT`
+
+**Server-Sent Events (SSE)**
+• Real-time streaming server support
+• SSE transport type validation
+• Perfect for services like Honeycomb MCP
+• Proper summary display for SSE servers
+
+**Enhanced Validation**
+• Recognizes HTTP, SSE, stdio, and other transport types
+• Smart validation that adapts to server type
+• Clear error messages for invalid configurations
+
+### 🐛 Reliability Improvements
+Significant bug fixes and stability enhancements:
+
+**Permission Handling**
+• Fixed recurring permission errors when saving config files
+• Resolved security-scoped bookmark write failures
+• Removed problematic atomic writes that caused access denials
+• Direct writes now stay within security scope
+
+**Error Handling**
+• Better error messages throughout the app
+• Graceful fallbacks for icon loading failures
+• Improved validation error reporting
+• Debug logging for troubleshooting
+
+**Code Quality**
+• Swift 6 concurrency compliance
+• Proper actor isolation for thread safety
+• MVVM architecture consistency
+• Enhanced separation of concerns
+
+### Technical Details
+• Custom icons stored in `~/Library/Application Support/MCPServerManager/CustomIcons/`
+• UUID-based icon filenames prevent collisions and handle server renames
+• Automatic cleanup of orphaned icon files on app startup
+• Result-based error handling for better user feedback
+• Theme system integrates with existing codebase patterns
+
+---
+
+Every feature has been carefully designed to enhance your workflow while maintaining the app's powerful MCP server management capabilities.

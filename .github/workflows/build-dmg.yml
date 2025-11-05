@@ -241,111 +241,27 @@ jobs:
           exit 0
         fi
 
-    - name: Generate Release Notes HTML
+    - name: Generate Release Notes from CHANGELOG
       id: release_notes
       env:
-        REPO: ${{ github.repository }}
-        SHA: ${{ github.sha }}
         RUN_NUMBER: ${{ github.run_number }}
       run: |
         VERSION="2.0.2.${RUN_NUMBER}"
 
-        # Create HTML release notes
-        cat > MCPServerManager/build/release-notes.html << 'NOTES_EOF'
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-              font-size: 13px;
-              line-height: 1.6;
-              color: #333;
-              margin: 16px;
-            }
-            h2 {
-              font-size: 16px;
-              font-weight: 600;
-              margin-top: 0;
-              margin-bottom: 12px;
-              color: #1d1d1f;
-            }
-            h3 {
-              font-size: 14px;
-              font-weight: 600;
-              margin-top: 16px;
-              margin-bottom: 8px;
-              color: #1d1d1f;
-            }
-            ul {
-              margin: 8px 0;
-              padding-left: 24px;
-            }
-            li {
-              margin: 4px 0;
-            }
-            .highlight {
-              background: #f0f7ff;
-              padding: 2px 6px;
-              border-radius: 3px;
-              font-family: 'SF Mono', Monaco, 'Courier New', monospace;
-              font-size: 12px;
-            }
-            .new-badge {
-              display: inline-block;
-              background: #007aff;
-              color: white;
-              font-size: 10px;
-              font-weight: 600;
-              padding: 2px 6px;
-              border-radius: 4px;
-              text-transform: uppercase;
-              margin-left: 6px;
-            }
-          </style>
-        </head>
-        <body>
-          <h2>What's New in This Update</h2>
+        # Extract [Unreleased] section from CHANGELOG.md
+        bash extract-changelog.sh CHANGELOG.md MCPServerManager/build/release-notes.html MCPServerManager/build/release-notes.md
 
-          <h3>✨ New Features</h3>
-          <ul>
-            <li><strong>MCP Registry Browser</strong> <span class="new-badge">New</span> - Browse and install servers from the official MCP registry</li>
-            <li><strong>Adaptive Themes</strong> - Auto-switching themes for Claude Code, Gemini CLI, and Default</li>
-            <li><strong>Server Logos</strong> - Automatically fetches and displays server icons</li>
-            <li><strong>Quick Actions Menu</strong> - Fast access to common tasks</li>
-            <li><strong>Window Transparency</strong> - Adjustable opacity with independent text visibility control</li>
-          </ul>
-
-          <h3>🔧 Improvements</h3>
-          <ul>
-            <li>Enhanced JSON editor with syntax highlighting and validation</li>
-            <li>Improved search and filtering across server configurations</li>
-            <li>Better error handling and user feedback</li>
-            <li>Performance optimizations throughout the app</li>
-          </ul>
-
-          <h3>🐛 Bug Fixes</h3>
-          <ul>
-            <li>Fixed config file reading on first launch</li>
-            <li>Resolved issues with server toggle states</li>
-            <li>Improved stability when managing multiple configs</li>
-          </ul>
-
+        # Add version info to HTML
+        cat >> MCPServerManager/build/release-notes.html << VERSION_INFO
           <p style="margin-top: 20px; font-size: 12px; color: #666;">
-            <strong>Version:</strong> SPARKLE_VERSION_PLACEHOLDER<br>
-            <strong>Build:</strong> SPARKLE_BUILD_PLACEHOLDER
+            <strong>Version:</strong> ${VERSION}<br>
+            <strong>Build:</strong> ${RUN_NUMBER}
           </p>
         </body>
         </html>
-        NOTES_EOF
+        VERSION_INFO
 
-        # Replace version placeholders
-        sed -i.bak "s/SPARKLE_VERSION_PLACEHOLDER/${VERSION}/g" MCPServerManager/build/release-notes.html
-        sed -i.bak "s/SPARKLE_BUILD_PLACEHOLDER/${RUN_NUMBER}/g" MCPServerManager/build/release-notes.html
-        rm -f MCPServerManager/build/release-notes.html.bak
-
-        echo "✓ Release notes HTML created"
+        echo "✓ Release notes generated from CHANGELOG.md"
 
     - name: Generate and Sign Appcast
       working-directory: MCPServerManager/build
@@ -484,31 +400,8 @@ jobs:
       with:
         tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
         name: ${{ startsWith(github.ref, 'refs/tags/') && format('Release {0}', github.ref_name) || format('Latest Build v2.0.2.{0}', github.run_number) }}
-        body: |
-          ## 🚀 MCP Server Manager v2.0.2.${{ github.run_number }}
-
-          ### ✨ New Features
-          - **MCP Registry Browser** - Browse and install servers from the official MCP registry
-          - **Adaptive Themes** - Auto-switching themes for Claude Code, Gemini CLI, and Default
-          - **Server Logos** - Automatically fetches and displays server icons
-          - **Quick Actions Menu** - Fast access to common tasks
-          - **Window Transparency** - Adjustable opacity with independent text visibility control
-
-          ### 🔧 Improvements
-          - Enhanced JSON editor with syntax highlighting and validation
-          - Improved search and filtering across server configurations
-          - Better error handling and user feedback
-          - Performance optimizations throughout the app
-
-          ### 🐛 Bug Fixes
-          - Fixed config file reading on first launch
-          - Resolved issues with server toggle states
-          - Improved stability when managing multiple configs
-
-          ---
-
-          **Build:** ${{ github.run_number }} | **Commit:** ${{ github.sha }}
-        generate_release_notes: ${{ startsWith(github.ref, 'refs/tags/') }}
+        body_path: MCPServerManager/build/release-notes.md
+        generate_release_notes: false
         prerelease: false
         files: |
           MCPServerManager/build/MCP-Server-Manager-v*.dmg
