@@ -117,6 +117,10 @@ enum DesignTokens {
     static let cardPadding: CGFloat = 16
     static let gridSpacing: CGFloat = 16
 
+    // MARK: - Effects
+
+    static let jsonPreviewBlurRadius: CGFloat = 8
+
     // MARK: - Shadows
 
     static func glassCardShadow() -> some View {

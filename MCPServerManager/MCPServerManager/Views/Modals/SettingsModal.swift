@@ -10,8 +10,10 @@ struct SettingsModal: View {
     @State private var config2Path: String = ""
     @State private var confirmDelete: Bool = true
     @State private var fetchServerLogos: Bool = true
+    @State private var blurJSONPreviews: Bool = false
     @State private var windowOpacity: Double = 1.0
     @State private var textVisibilityBoost: Double = 0.5
+    @State private var selectedTheme: AppTheme = .auto
     @State private var testingConnection: Bool = false
     @State private var testResult: String = ""
     @State private var showBookmarkAlert: Bool = false
@@ -117,6 +119,30 @@ struct SettingsModal: View {
 
                     Divider()
 
+                    // Theme Selector
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Theme")
+                            .font(DesignTokens.Typography.label)
+
+                        Picker("", selection: $selectedTheme) {
+                            ForEach(AppTheme.allCases, id: \.self) { theme in
+                                Text(theme.rawValue).tag(theme)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .onChange(of: selectedTheme) { newTheme in
+                            // Update in real-time
+                            viewModel.settings.overrideTheme = newTheme == .auto ? nil : newTheme.rawValue
+                            viewModel.saveSettings()
+                        }
+
+                        Text("Select a theme to override auto-detection. 'Auto' will detect theme based on active config (Claude Code or Gemini CLI).")
+                            .font(DesignTokens.Typography.bodySmall)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Divider()
+
                     // Confirm Delete
                     VStack(alignment: .leading, spacing: 8) {
                         CheckboxToggle(isOn: $confirmDelete, label: "Confirm before deleting servers")
@@ -133,6 +159,17 @@ struct SettingsModal: View {
                         CheckboxToggle(isOn: $fetchServerLogos, label: "Fetch server logos from internet")
 
                         Text("Automatically download logos for servers. When disabled, only generic icons will be shown. Respects your privacy - no tracking.")
+                            .font(DesignTokens.Typography.bodySmall)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Divider()
+
+                    // Blur JSON Previews
+                    VStack(alignment: .leading, spacing: 8) {
+                        CheckboxToggle(isOn: $blurJSONPreviews, label: "Blur JSON previews")
+
+                        Text("Apply blur effect to JSON code previews in server cards. Blur is temporarily removed when editing.")
                             .font(DesignTokens.Typography.bodySmall)
                             .foregroundColor(.secondary)
                     }
@@ -275,8 +312,17 @@ struct SettingsModal: View {
             config2Path = viewModel.settings.config2Path
             confirmDelete = viewModel.settings.confirmDelete
             fetchServerLogos = UserDefaults.standard.object(forKey: "fetchServerLogos") as? Bool ?? true
+            blurJSONPreviews = viewModel.settings.blurJSONPreviews
             windowOpacity = viewModel.settings.windowOpacity
             textVisibilityBoost = viewModel.settings.textVisibilityBoost
+
+            // Load theme from settings
+            if let themeStr = viewModel.settings.overrideTheme,
+               let theme = AppTheme(rawValue: themeStr) {
+                selectedTheme = theme
+            } else {
+                selectedTheme = .auto
+            }
         }
         .alert("Bookmark Storage Failed", isPresented: $showBookmarkAlert) {
             Button("OK", role: .cancel) {}
@@ -333,6 +379,7 @@ struct SettingsModal: View {
     private func saveSettings() {
         viewModel.settings.configPaths = [config1Path, config2Path]
         viewModel.settings.confirmDelete = confirmDelete
+        viewModel.settings.blurJSONPreviews = blurJSONPreviews
         viewModel.settings.windowOpacity = windowOpacity
         UserDefaults.standard.set(fetchServerLogos, forKey: "fetchServerLogos")
         viewModel.saveSettings()
