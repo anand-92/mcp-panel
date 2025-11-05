@@ -6,9 +6,24 @@ import AppKit
 class CustomIconManager {
     static let shared = CustomIconManager()
 
+    // MARK: - Directory Constants
+
+    private enum Directory {
+        static let appName = "MCPServerManager"
+        static let customIcons = "CustomIcons"
+    }
+
     private init() {
         // Ensure custom icons directory exists
-        try? FileManager.default.createDirectory(at: customIconsDirectory, withIntermediateDirectories: true)
+        do {
+            try FileManager.default.createDirectory(at: customIconsDirectory, withIntermediateDirectories: true)
+        } catch {
+            #if DEBUG
+            print("CustomIconManager: Failed to create icons directory: \(error.localizedDescription)")
+            print("CustomIconManager: Path: \(customIconsDirectory.path)")
+            #endif
+            // Note: Operations will fail gracefully with proper error messages if directory doesn't exist
+        }
     }
 
     // MARK: - Directory Management
@@ -18,8 +33,8 @@ class CustomIconManager {
     private var customIconsDirectory: URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         return appSupport
-            .appendingPathComponent("MCPServerManager", isDirectory: true)
-            .appendingPathComponent("CustomIcons", isDirectory: true)
+            .appendingPathComponent(Directory.appName, isDirectory: true)
+            .appendingPathComponent(Directory.customIcons, isDirectory: true)
     }
 
     // MARK: - Validation Constants
@@ -70,7 +85,14 @@ class CustomIconManager {
         }
 
         // Copy file to custom icons directory
-        try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
+        do {
+            try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
+        } catch {
+            #if DEBUG
+            print("CustomIconManager: Copy failed - \(error.localizedDescription)")
+            #endif
+            throw CustomIconError.copyFailed
+        }
 
         #if DEBUG
         print("CustomIconManager: Stored icon for server ID '\(serverId.uuidString)' as '\(filename)'")
