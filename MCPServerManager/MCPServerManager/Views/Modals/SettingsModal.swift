@@ -13,6 +13,7 @@ struct SettingsModal: View {
     @State private var blurJSONPreviews: Bool = false
     @State private var windowOpacity: Double = 1.0
     @State private var textVisibilityBoost: Double = 0.5
+    @State private var selectedTheme: AppTheme = .auto
     @State private var testingConnection: Bool = false
     @State private var testResult: String = ""
     @State private var showBookmarkAlert: Bool = false
@@ -114,6 +115,30 @@ struct SettingsModal: View {
                             }
                             .buttonStyle(.plain)
                         }
+                    }
+
+                    Divider()
+
+                    // Theme Selector
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Theme")
+                            .font(DesignTokens.Typography.label)
+
+                        Picker("", selection: $selectedTheme) {
+                            ForEach(AppTheme.allCases, id: \.self) { theme in
+                                Text(theme.rawValue).tag(theme)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .onChange(of: selectedTheme) { newTheme in
+                            // Update in real-time
+                            viewModel.settings.overrideTheme = newTheme == .auto ? nil : newTheme.rawValue
+                            viewModel.saveSettings()
+                        }
+
+                        Text("Select a theme to override auto-detection. 'Auto' will detect theme based on active config (Claude Code or Gemini CLI).")
+                            .font(DesignTokens.Typography.bodySmall)
+                            .foregroundColor(.secondary)
                     }
 
                     Divider()
@@ -290,6 +315,14 @@ struct SettingsModal: View {
             blurJSONPreviews = viewModel.settings.blurJSONPreviews
             windowOpacity = viewModel.settings.windowOpacity
             textVisibilityBoost = viewModel.settings.textVisibilityBoost
+
+            // Load theme from settings
+            if let themeStr = viewModel.settings.overrideTheme,
+               let theme = AppTheme(rawValue: themeStr) {
+                selectedTheme = theme
+            } else {
+                selectedTheme = .auto
+            }
         }
         .alert("Bookmark Storage Failed", isPresented: $showBookmarkAlert) {
             Button("OK", role: .cancel) {}
