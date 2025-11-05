@@ -17,6 +17,7 @@ struct ServerGridView: View {
                             server: server,
                             activeConfigIndex: $viewModel.settings.activeConfigIndex,
                             confirmDelete: $viewModel.settings.confirmDelete,
+                            blurJSONPreviews: $viewModel.settings.blurJSONPreviews,
                             onToggle: {
                                 viewModel.toggleServer(server)
                             },
@@ -25,6 +26,9 @@ struct ServerGridView: View {
                             },
                             onUpdate: { json in
                                 return viewModel.updateServer(server, with: json)
+                            },
+                            onUpdateForced: { config in
+                                return viewModel.updateServerForced(server, config: config)
                             },
                             onCustomIconSelected: { iconPath in
                                 viewModel.updateCustomIcon(for: server, iconFilename: iconPath)

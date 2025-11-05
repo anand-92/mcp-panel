@@ -94,8 +94,11 @@ class ConfigManager {
             json["mcpServers"] = mcpServers
 
             // Write back to file
+            // IMPORTANT: Do NOT use .atomic option with security-scoped bookmarks!
+            // Atomic writes create temporary files that are outside the bookmark's scope,
+            // causing "permission denied" errors. Write directly to the file instead.
             let data = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
-            try data.write(to: url, options: .atomic)
+            try data.write(to: url)
         }
     }
 

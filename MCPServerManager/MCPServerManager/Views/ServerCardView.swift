@@ -4,15 +4,21 @@ struct ServerCardView: View {
     let server: ServerModel
     @Binding var activeConfigIndex: Int
     @Binding var confirmDelete: Bool
+    @Binding var blurJSONPreviews: Bool
     @State private var isEditing = false
     @State private var editedJSON: String = ""
     @State private var isHovering = false
     @State private var showingDeleteAlert = false
+    @State private var showForceAlert = false
+    @State private var invalidReason: String = ""
+    @State private var pendingSaveJSON: String = ""
+    @State private var pendingConfig: ServerConfig?
     @Environment(\.themeColors) private var themeColors
 
     let onToggle: () -> Void
     let onDelete: () -> Void
-    let onUpdate: (String) -> Bool
+    let onUpdate: (String) -> (success: Bool, invalidReason: String?, config: ServerConfig?)
+    let onUpdateForced: (ServerConfig) -> Bool
     let onCustomIconSelected: ((String?) -> Void)?
 
     var body: some View {
@@ -101,8 +107,15 @@ struct ServerCardView: View {
                             .buttonStyle(.plain)
 
                             Button(action: {
-                                if onUpdate(editedJSON) {
+                                let result = onUpdate(editedJSON)
+                                if result.success {
                                     isEditing = false
+                                } else if let reason = result.invalidReason {
+                                    // Show force save alert
+                                    invalidReason = reason
+                                    pendingSaveJSON = editedJSON
+                                    pendingConfig = result.config  // Store parsed config to avoid re-parsing
+                                    showForceAlert = true
                                 }
                             }) {
                                 HStack(spacing: 4) {
@@ -133,6 +146,7 @@ struct ServerCardView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(8)
                                 .secondaryTextVisibility()
+                                .blur(radius: (blurJSONPreviews && !isEditing) ? DesignTokens.jsonPreviewBlurRadius : 0)
                         }
                         .frame(height: 200)
                         .background(Color.black.opacity(0.3))
@@ -193,6 +207,28 @@ struct ServerCardView: View {
                 }
             }
             .padding(DesignTokens.cardPadding)
+        }
+        .alert("Invalid Server Configuration", isPresented: $showForceAlert) {
+            Button("Cancel", role: .cancel) {
+                showForceAlert = false
+                pendingSaveJSON = ""
+                pendingConfig = nil
+                invalidReason = ""
+            }
+            Button("Force Save") {
+                // Use parsed config if available to avoid re-parsing
+                if let config = pendingConfig {
+                    if onUpdateForced(config) {
+                        isEditing = false
+                    }
+                }
+                showForceAlert = false
+                pendingSaveJSON = ""
+                pendingConfig = nil
+                invalidReason = ""
+            }
+        } message: {
+            Text("This server has validation errors:\n\n\(invalidReason)\n\nDo you want to force save anyway? This will override all validations.")
         }
     }
 

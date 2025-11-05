@@ -6,6 +6,10 @@ struct RawJSONView: View {
     @State private var jsonText: String = ""
     @State private var isDirty: Bool = false
     @State private var errorMessage: String = ""
+    @State private var showForceAlert: Bool = false
+    @State private var invalidServerDetails: String = ""
+    @State private var pendingSaveJSON: String = ""
+    @State private var pendingServerDict: [String: ServerConfig]?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -66,6 +70,7 @@ struct RawJSONView: View {
                 .background(Color.black.opacity(0.3))
                 .padding(20)
                 .focusable(true)
+                .blur(radius: (viewModel.settings.blurJSONPreviews && !isDirty) ? DesignTokens.jsonPreviewBlurRadius : 0)
                 .onChange(of: jsonText) { newValue in
                     isDirty = newValue != serversToJSON()
                 }
@@ -151,6 +156,19 @@ struct RawJSONView: View {
                 jsonText = serversToJSON()
             }
         }
+        .alert("Invalid Server Configuration", isPresented: $showForceAlert) {
+            Button("Cancel", role: .cancel) {
+                showForceAlert = false
+                pendingSaveJSON = ""
+                pendingServerDict = nil
+                invalidServerDetails = ""
+            }
+            Button("Force Save") {
+                forceSave()
+            }
+        } message: {
+            Text("The following servers have validation errors:\n\n\(invalidServerDetails)\n\nDo you want to force save anyway? This will override all validations.")
+        }
     }
 
     private func serversToJSON() -> String {
@@ -187,53 +205,46 @@ struct RawJSONView: View {
     }
 
     private func applyChanges() {
-        do {
-            // Normalize quotes first (curly quotes from Notes/Word/Slack)
-            let normalized = jsonText.normalizingQuotes()
+        let result = viewModel.applyRawJSON(jsonText)
 
-            guard let data = normalized.data(using: .utf8) else {
-                throw NSError(domain: "Invalid JSON", code: -1)
-            }
-
-            let serverDict = try JSONDecoder().decode([String: ServerConfig].self, from: data)
-            let configIndex = viewModel.settings.activeConfigIndex
-
-            // Remove all servers from this config
-            for i in 0..<viewModel.servers.count {
-                viewModel.servers[i].inConfigs[configIndex] = false
-            }
-
-            // Add/update servers from JSON
-            for (name, config) in serverDict {
-                if let index = viewModel.servers.firstIndex(where: { $0.name == name }) {
-                    var updated = viewModel.servers[index]
-                    updated.config = config
-                    updated.inConfigs[configIndex] = true
-                    updated.updatedAt = Date()
-                    viewModel.servers[index] = updated
-                } else {
-                    var inConfigs = [false, false]
-                    inConfigs[configIndex] = true
-
-                    let newServer = ServerModel(
-                        name: name,
-                        config: config,
-                        updatedAt: Date(),
-                        inConfigs: inConfigs
-                    )
-                    viewModel.servers.append(newServer)
-                }
-            }
-
-            viewModel.servers.sort { $0.name < $1.name }
-            viewModel.objectWillChange.send()
-            viewModel.syncToConfigs()
-
+        if result.success {
+            // Success
             isDirty = false
             errorMessage = ""
-            viewModel.showToast(message: "Configuration updated", type: .success)
+        } else if let invalidServers = result.invalidServers {
+            // Validation failed, show force save alert
+            let details = invalidServers.map { name, reason in
+                "\(name): \(reason)"
+            }.joined(separator: "\n")
+
+            invalidServerDetails = details
+            pendingSaveJSON = jsonText
+            pendingServerDict = result.serverDict  // Store parsed dictionary to avoid re-parsing
+            showForceAlert = true
+        } else {
+            // JSON parsing error (toast already shown by viewModel)
+            // Keep isDirty as true and don't clear error
+        }
+    }
+
+    private func forceSave() {
+        do {
+            // Use parsed dictionary if available to avoid re-parsing
+            if let serverDict = pendingServerDict {
+                viewModel.applyRawJSONForced(serverDict: serverDict)
+            } else {
+                // Fallback to JSON parsing (shouldn't happen in normal flow)
+                try viewModel.applyRawJSONForced(pendingSaveJSON)
+            }
+            isDirty = false
+            errorMessage = ""
+            showForceAlert = false
+            pendingSaveJSON = ""
+            pendingServerDict = nil
+            invalidServerDetails = ""
         } catch {
             errorMessage = "Failed to parse JSON: \(error.localizedDescription)"
+            showForceAlert = false
         }
     }
 }

@@ -9,6 +9,11 @@ struct AddServerModal: View {
     @State private var errorMessage: String = ""
     @State private var entryMode: EntryMode = .manual
     @State private var registryImages: [String: String] = [:] // Map server names to image URLs from registry
+    @State private var showForceAlert: Bool = false
+    @State private var invalidServerDetails: String = ""
+    @State private var pendingSaveJSON: String = ""
+    @State private var pendingServerDict: [String: ServerConfig]?
+    @State private var pendingRegistryImages: [String: String]?
 
     enum EntryMode {
         case manual
@@ -174,6 +179,20 @@ struct AddServerModal: View {
                 .fill(Color(nsColor: .windowBackgroundColor))
                 .shadow(radius: 30)
         )
+        .alert("Invalid Server Configuration", isPresented: $showForceAlert) {
+            Button("Cancel", role: .cancel) {
+                showForceAlert = false
+                pendingSaveJSON = ""
+                pendingServerDict = nil
+                pendingRegistryImages = nil
+                invalidServerDetails = ""
+            }
+            Button("Force Save") {
+                forceSave()
+            }
+        } message: {
+            Text("The following servers have validation errors:\n\n\(invalidServerDetails)\n\nDo you want to force save anyway? This will override all validations.")
+        }
     }
 
     private func formatJSON() {
@@ -236,21 +255,56 @@ struct AddServerModal: View {
     }
 
     private func getInvalidReason(_ config: ServerConfig) -> String {
-        if config.command == nil && config.transport == nil && config.remotes == nil {
-            return "missing command, transport, or remotes"
+        if config.command == nil && config.httpUrl == nil && config.transport == nil && config.remotes == nil {
+            return "missing command, httpUrl, transport, or remotes"
         }
         if let cmd = config.command, cmd.trimmingCharacters(in: .whitespaces).isEmpty {
             return "empty command"
+        }
+        if let httpUrlString = config.httpUrl, httpUrlString.trimmingCharacters(in: .whitespaces).isEmpty {
+            return "empty httpUrl"
         }
         return "unknown issue"
     }
 
     private func addServers() {
-        viewModel.addServers(from: jsonText, registryImages: registryImages.isEmpty ? nil : registryImages)
+        if let result = viewModel.addServers(from: jsonText, registryImages: registryImages.isEmpty ? nil : registryImages) {
+            // Validation failed, show force save alert
+            let details = result.invalidServers.map { name, reason in
+                "\(name): \(reason)"
+            }.joined(separator: "\n")
+
+            invalidServerDetails = details
+            pendingSaveJSON = jsonText
+            pendingServerDict = result.serverDict  // Store parsed dictionary to avoid re-parsing
+            pendingRegistryImages = registryImages.isEmpty ? nil : registryImages
+            showForceAlert = true
+        } else {
+            // Success or no validation issues
+            isPresented = false
+            jsonText = ""
+            errorMessage = ""
+            registryImages = [:]
+        }
+    }
+
+    private func forceSave() {
+        // Use parsed dictionary if available to avoid re-parsing
+        if let serverDict = pendingServerDict {
+            viewModel.addServersForced(serverDict: serverDict, registryImages: pendingRegistryImages)
+        } else {
+            // Fallback to JSON parsing (shouldn't happen in normal flow)
+            viewModel.addServersForced(from: pendingSaveJSON, registryImages: pendingRegistryImages)
+        }
+        showForceAlert = false
         isPresented = false
         jsonText = ""
         errorMessage = ""
         registryImages = [:]
+        pendingSaveJSON = ""
+        pendingServerDict = nil
+        pendingRegistryImages = nil
+        invalidServerDetails = ""
     }
 
     // MARK: - Computed Views

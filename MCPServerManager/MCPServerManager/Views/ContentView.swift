@@ -181,7 +181,7 @@ struct ContentView: View {
             do {
                 let data = try Data(contentsOf: url)
                 if let jsonString = String(data: data, encoding: .utf8) {
-                    viewModel.addServers(from: jsonString)
+                    _ = viewModel.addServers(from: jsonString)  // Discard validation result for file import
                 }
             } catch {
                 print("ERROR: Import error: \(error)")
