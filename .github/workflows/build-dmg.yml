@@ -309,9 +309,11 @@ jobs:
               archives/ || echo "⚠️  generate_appcast failed, will fall back to unsigned"
           fi
 
-          # Move generated appcast to current directory
+          # Move generated appcast and HTML to current directory
           if [ -f archives/appcast.xml ]; then
             mv archives/appcast.xml .
+            # Also copy the versioned HTML file for GitHub release
+            cp "archives/MCP-Server-Manager-v${VERSION}.html" .
             echo "✓ Signed appcast generated successfully"
           else
             echo "⚠️  generate_appcast failed, creating unsigned appcast"
