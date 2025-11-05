@@ -161,15 +161,39 @@ When window opacity is 30% and boost is 100%:
 - **Operations**: Read, write, add servers, delete servers, toggle servers
 - **Backup**: App does not create backups - users should manage their own
 
-## Custom Icon Management
+## Features
 
+### Custom Icon Management
 - **Storage**: `~/Library/Application Support/MCPServerManager/CustomIcons/`
 - **User action**: Click server icon or right-click for context menu
-- **Validation**: Max 10MB file size, max 2048×2048px dimensions
-- **Naming**: Uses server UUID for filenames (prevents collisions, handles renames)
-- **Priority**: Custom > Registry > IconService > SF Symbol fallback
-- **Cleanup**: Orphaned icons removed on app startup
-- **Implementation**: `CustomIconManager.swift` handles all file operations
+- **Validation**: Max 10MB, 2048×2048px max, supports PNG/JPG/SVG/GIF
+- **Naming**: UUID-based filenames (prevents collisions, handles renames)
+- **Priority**: Custom > Registry > IconService > SF Symbol
+- **Implementation**: `CustomIconManager.swift`
+
+### Theme System
+- **12 Themes**: Nord, Dracula, Solarized Dark/Light, Monokai Pro, One Dark, GitHub Dark, Tokyo Night, Catppuccin Mocha, Gruvbox, Material Palenight
+- **Override**: Set in Settings, persists across config switches
+- **Auto mode**: Detects theme from active config
+- **Implementation**: `AppTheme` enum, `ThemeColors` presets
+
+### JSON Preview Blur
+- **Toggle**: Settings option to blur JSON previews
+- **Smart disable**: Auto-removes when editing starts
+- **Use case**: Privacy during screen sharing
+- **Implementation**: `blurJSONPreviews` setting, 8pt blur radius
+
+### Force Save Option
+- **Purpose**: Override validation for custom/experimental MCP configs
+- **Flow**: Validation fails → alert shows errors → user can force save
+- **Methods**: `addServersForced()`, `updateServerForced()`, `applyRawJSONForced()`
+- **Implementation**: ServerViewModel validation bypass methods
+
+### Extended MCP Protocol Support
+- **HTTP-based servers**: GitHub Copilot format with `httpUrl` and `headers` fields
+- **SSE transport**: Server-Sent Events for real-time streaming
+- **Validation**: Adapts to server type (stdio, http, sse)
+- **Implementation**: Enhanced ServerConfig validation
 
 ## Development Tips
 
