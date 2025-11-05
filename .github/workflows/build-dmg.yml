@@ -84,6 +84,8 @@ jobs:
             <false/>
             <key>SUAllowsAutomaticUpdates</key>
             <true/>
+            <key>SUEnableInstallerLauncherService</key>
+            <true/>
         </dict>
         </plist>
         EOF

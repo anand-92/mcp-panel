@@ -14,5 +14,12 @@
     <true/>
     <key>com.apple.security.app-sandbox</key>
     <true/>
+
+    <!-- Sparkle installer communication (required for sandboxed apps) -->
+    <key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
+    <array>
+        <string>org.sparkle-project.Sparkle.Installer-Connection</string>
+        <string>org.sparkle-project.Sparkle.Installer-Status</string>
+    </array>
 </dict>
 </plist>
