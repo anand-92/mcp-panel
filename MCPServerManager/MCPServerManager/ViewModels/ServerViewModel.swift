@@ -21,7 +21,14 @@ class ServerViewModel: ObservableObject {
     // MARK: - Theme Detection
 
     var currentTheme: AppTheme {
-        AppTheme.detect(from: settings.activeConfigPath)
+        // If override theme is set, use it (unless it's "auto")
+        if let overrideThemeStr = settings.overrideTheme,
+           let overrideTheme = AppTheme(rawValue: overrideThemeStr),
+           overrideTheme != .auto {
+            return overrideTheme
+        }
+        // Otherwise, auto-detect from config path
+        return AppTheme.detect(from: settings.activeConfigPath)
     }
 
     var themeColors: ThemeColors {
