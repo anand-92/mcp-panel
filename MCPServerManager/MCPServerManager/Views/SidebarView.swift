@@ -103,7 +103,7 @@ struct SidebarView: View {
                 let data = try Data(contentsOf: url)
                 if let jsonString = String(data: data, encoding: .utf8) {
                     print("DEBUG: Imported JSON length: \(jsonString.count) characters")
-                    viewModel.addServers(from: jsonString)
+                    _ = viewModel.addServers(from: jsonString)  // Discard validation result for file import
                 } else {
                     print("ERROR: Could not convert data to string")
                 }

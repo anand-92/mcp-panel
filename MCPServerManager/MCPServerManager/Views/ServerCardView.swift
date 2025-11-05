@@ -12,12 +12,13 @@ struct ServerCardView: View {
     @State private var showForceAlert = false
     @State private var invalidReason: String = ""
     @State private var pendingSaveJSON: String = ""
+    @State private var pendingConfig: ServerConfig?
     @Environment(\.themeColors) private var themeColors
 
     let onToggle: () -> Void
     let onDelete: () -> Void
-    let onUpdate: (String) -> (success: Bool, invalidReason: String?)
-    let onUpdateForced: (String) -> Bool
+    let onUpdate: (String) -> (success: Bool, invalidReason: String?, config: ServerConfig?)
+    let onUpdateForced: (ServerConfig) -> Bool
 
     var body: some View {
         GlassPanel {
@@ -108,6 +109,7 @@ struct ServerCardView: View {
                                     // Show force save alert
                                     invalidReason = reason
                                     pendingSaveJSON = editedJSON
+                                    pendingConfig = result.config  // Store parsed config to avoid re-parsing
                                     showForceAlert = true
                                 }
                             }) {
@@ -205,14 +207,19 @@ struct ServerCardView: View {
             Button("Cancel", role: .cancel) {
                 showForceAlert = false
                 pendingSaveJSON = ""
+                pendingConfig = nil
                 invalidReason = ""
             }
             Button("Force Save") {
-                if onUpdateForced(pendingSaveJSON) {
-                    isEditing = false
+                // Use parsed config if available to avoid re-parsing
+                if let config = pendingConfig {
+                    if onUpdateForced(config) {
+                        isEditing = false
+                    }
                 }
                 showForceAlert = false
                 pendingSaveJSON = ""
+                pendingConfig = nil
                 invalidReason = ""
             }
         } message: {

@@ -12,6 +12,7 @@ struct AddServerModal: View {
     @State private var showForceAlert: Bool = false
     @State private var invalidServerDetails: String = ""
     @State private var pendingSaveJSON: String = ""
+    @State private var pendingServerDict: [String: ServerConfig]?
     @State private var pendingRegistryImages: [String: String]?
 
     enum EntryMode {
@@ -182,6 +183,7 @@ struct AddServerModal: View {
             Button("Cancel", role: .cancel) {
                 showForceAlert = false
                 pendingSaveJSON = ""
+                pendingServerDict = nil
                 pendingRegistryImages = nil
                 invalidServerDetails = ""
             }
@@ -274,6 +276,7 @@ struct AddServerModal: View {
 
             invalidServerDetails = details
             pendingSaveJSON = jsonText
+            pendingServerDict = result.serverDict  // Store parsed dictionary to avoid re-parsing
             pendingRegistryImages = registryImages.isEmpty ? nil : registryImages
             showForceAlert = true
         } else {
@@ -286,13 +289,20 @@ struct AddServerModal: View {
     }
 
     private func forceSave() {
-        viewModel.addServersForced(from: pendingSaveJSON, registryImages: pendingRegistryImages)
+        // Use parsed dictionary if available to avoid re-parsing
+        if let serverDict = pendingServerDict {
+            viewModel.addServersForced(serverDict: serverDict, registryImages: pendingRegistryImages)
+        } else {
+            // Fallback to JSON parsing (shouldn't happen in normal flow)
+            viewModel.addServersForced(from: pendingSaveJSON, registryImages: pendingRegistryImages)
+        }
         showForceAlert = false
         isPresented = false
         jsonText = ""
         errorMessage = ""
         registryImages = [:]
         pendingSaveJSON = ""
+        pendingServerDict = nil
         pendingRegistryImages = nil
         invalidServerDetails = ""
     }
