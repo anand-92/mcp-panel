@@ -25,86 +25,83 @@ struct ServerCardView: View {
             VStack(alignment: .leading, spacing: 12) {
                 // Header with icon
                 HStack(alignment: .top) {
-                    Text(server.name)
-                        .font(DesignTokens.Typography.title2)
-                        .lineLimit(2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .primaryTextVisibility()
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(server.name)
+                            .font(DesignTokens.Typography.title2)
+                            .lineLimit(2)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .primaryTextVisibility()
+                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: server.name)
+
+                        // Config summary - moved here for better hierarchy
+                        Text(server.config.summary)
+                            .font(DesignTokens.Typography.bodySmall)
+                            .foregroundColor(.secondary)
+                            .lineLimit(2)
+                            .secondaryTextVisibility()
+                    }
 
                     Spacer()
 
                     ServerIconView(server: server, size: 40)
+                        .scaleEffect(isHovering && !isEditing ? 1.1 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isHovering)
                 }
 
-                // Config summary
-                Text(server.config.summary)
-                    .font(DesignTokens.Typography.bodySmall)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .secondaryTextVisibility()
-
-                // JSON preview or editor
+                // JSON preview or editor with smooth transition
                 if isEditing {
                     VStack(alignment: .trailing, spacing: 8) {
                         TextEditor(text: $editedJSON)
                             .font(DesignTokens.Typography.code)
                             .frame(height: 200)
                             .scrollContentBackground(.hidden)
-                            .background(Color.black.opacity(0.3))
-                            .cornerRadius(8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.black.opacity(0.4))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(themeColors.primaryAccent.opacity(0.3), lineWidth: 1)
+                                    )
+                            )
+                            .cornerRadius(12)
                             .focusable(true)
+                            .transition(.asymmetric(
+                                insertion: .scale(scale: 0.95).combined(with: .opacity),
+                                removal: .scale(scale: 0.95).combined(with: .opacity)
+                            ))
 
                         HStack(spacing: 8) {
-                            Button(action: {
-                                editedJSON = formatJSON(editedJSON)
-                            }) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "text.alignleft")
-                                        .font(.system(size: 12))
-                                    Text("Format")
-                                        .font(DesignTokens.Typography.labelSmall)
-                                        .primaryTextVisibility()
+                            StyledButton(
+                                icon: "text.alignleft",
+                                text: "Format",
+                                style: .secondary
+                            ) {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    editedJSON = formatJSON(editedJSON)
                                 }
-                                .foregroundColor(themeColors.primaryText)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(themeColors.glassBackground)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .stroke(themeColors.borderColor, lineWidth: 1)
-                                        )
-                                )
                             }
-                            .buttonStyle(.plain)
 
                             Spacer()
 
-                            Button(action: {
-                                isEditing = false
-                            }) {
-                                Text("Cancel")
-                                    .font(DesignTokens.Typography.labelSmall)
-                                    .foregroundColor(themeColors.primaryText)
-                                    .primaryTextVisibility()
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .fill(themeColors.glassBackground)
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 8)
-                                                    .stroke(themeColors.borderColor, lineWidth: 1)
-                                            )
-                                    )
+                            StyledButton(
+                                text: "Cancel",
+                                style: .secondary
+                            ) {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    isEditing = false
+                                }
                             }
-                            .buttonStyle(.plain)
 
-                            Button(action: {
+                            StyledButton(
+                                icon: "checkmark",
+                                text: "Save",
+                                style: .primary
+                            ) {
                                 let result = onUpdate(editedJSON)
                                 if result.success {
-                                    isEditing = false
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        isEditing = false
+                                    }
                                 } else if let reason = result.invalidReason {
                                     // Show force save alert
                                     invalidReason = reason
@@ -112,24 +109,7 @@ struct ServerCardView: View {
                                     pendingConfig = result.config  // Store parsed config to avoid re-parsing
                                     showForceAlert = true
                                 }
-                            }) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "checkmark")
-                                        .font(.system(size: 12))
-                                    Text("Save")
-                                        .font(DesignTokens.Typography.labelSmall)
-                                        .primaryTextVisibility()
-                                }
-                                .foregroundColor(Color(hex: "#1a1a1a"))
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(themeColors.accentGradient)
-                                )
-                                .shadow(color: themeColors.primaryAccent.opacity(0.3), radius: 6, x: 0, y: 2)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 } else {
@@ -139,33 +119,66 @@ struct ServerCardView: View {
                                 .font(DesignTokens.Typography.code)
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(8)
+                                .padding(12)
                                 .secondaryTextVisibility()
                                 .blur(radius: (blurJSONPreviews && !isEditing) ? DesignTokens.jsonPreviewBlurRadius : 0)
                         }
                         .frame(height: 200)
-                        .background(Color.black.opacity(0.3))
-                        .cornerRadius(8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.black.opacity(0.3))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(
+                                            isHovering ?
+                                                themeColors.primaryAccent.opacity(0.2) :
+                                                Color.white.opacity(0.05),
+                                            lineWidth: 1
+                                        )
+                                )
+                        )
+                        .cornerRadius(12)
 
                         if isHovering {
                             Button(action: {
                                 editedJSON = server.configJSON
-                                isEditing = true
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    isEditing = true
+                                }
                             }) {
                                 Image(systemName: "pencil")
-                                    .font(DesignTokens.Typography.labelSmall)
-                                    .padding(6)
-                                    .background(Color.blue.opacity(0.8))
+                                    .font(.system(size: 12, weight: .semibold))
                                     .foregroundColor(.white)
-                                    .clipShape(Circle())
+                                    .frame(width: 32, height: 32)
+                                    .background(
+                                        Circle()
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [
+                                                        themeColors.primaryAccent,
+                                                        themeColors.primaryAccent.opacity(0.8)
+                                                    ],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                            )
+                                            .shadow(color: themeColors.primaryAccent.opacity(0.4), radius: 8, x: 0, y: 4)
+                                    )
                             }
                             .buttonStyle(.plain)
-                            .padding(8)
+                            .padding(10)
+                            .transition(.scale.combined(with: .opacity))
+                            .scaleEffect(isHovering ? 1.0 : 0.8)
                         }
                     }
+                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isHovering)
                     .onHover { hovering in
                         isHovering = hovering
                     }
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.95).combined(with: .opacity),
+                        removal: .scale(scale: 0.95).combined(with: .opacity)
+                    ))
                 }
 
                 // Footer
