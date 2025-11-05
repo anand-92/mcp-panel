@@ -354,7 +354,7 @@ class ServerViewModel: ObservableObject {
 
             guard config.isValid else {
                 throw NSError(domain: "MCPServerManager", code: -1, userInfo: [
-                    NSLocalizedDescriptionKey: "Invalid server config: missing required fields (command, transport, or remotes)"
+                    NSLocalizedDescriptionKey: "Invalid server config: missing required fields (command, httpUrl, transport, or remotes)"
                 ])
             }
 

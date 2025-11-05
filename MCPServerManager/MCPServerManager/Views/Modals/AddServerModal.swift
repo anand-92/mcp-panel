@@ -236,11 +236,14 @@ struct AddServerModal: View {
     }
 
     private func getInvalidReason(_ config: ServerConfig) -> String {
-        if config.command == nil && config.transport == nil && config.remotes == nil {
-            return "missing command, transport, or remotes"
+        if config.command == nil && config.httpUrl == nil && config.transport == nil && config.remotes == nil {
+            return "missing command, httpUrl, transport, or remotes"
         }
         if let cmd = config.command, cmd.trimmingCharacters(in: .whitespaces).isEmpty {
             return "empty command"
+        }
+        if let httpUrlString = config.httpUrl, httpUrlString.trimmingCharacters(in: .whitespaces).isEmpty {
+            return "empty httpUrl"
         }
         return "unknown issue"
     }

@@ -1,5 +1,15 @@
 import Foundation
 
+// MARK: - String Extension for Validation
+
+private extension String? {
+    /// Returns true if the optional string is non-nil and contains non-whitespace characters
+    var isNonEmptyString: Bool {
+        guard let self = self else { return false }
+        return !self.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+}
+
 // MARK: - Server Configuration Models
 
 struct ServerTransportConfig: Codable, Equatable {
@@ -130,22 +140,22 @@ struct ServerConfig: Codable, Equatable {
 
     var isValid: Bool {
         // Check for stdio-type servers
-        if type == "stdio", let cmd = command, !cmd.trimmingCharacters(in: .whitespaces).isEmpty {
+        if type == "stdio", command.isNonEmptyString {
             return true
         }
 
         // Check for HTTP-type servers
-        if type == "http", let urlString = url, !urlString.trimmingCharacters(in: .whitespaces).isEmpty {
+        if type == "http", url.isNonEmptyString {
             return true
         }
 
         // Check for httpUrl-based servers (GitHub Copilot MCP format)
-        if let httpUrlString = httpUrl, !httpUrlString.trimmingCharacters(in: .whitespaces).isEmpty {
+        if httpUrl.isNonEmptyString {
             return true
         }
 
         // Check for standard command-based servers
-        let hasCommand = command?.trimmingCharacters(in: .whitespaces).isEmpty == false
+        let hasCommand = command.isNonEmptyString
         let hasTransport = transport != nil
         let hasRemotes = remotes?.isEmpty == false
 
@@ -155,12 +165,12 @@ struct ServerConfig: Codable, Equatable {
     // MARK: - Summary
 
     var summary: String {
-        if let cmd = command, !cmd.trimmingCharacters(in: .whitespaces).isEmpty {
+        if command.isNonEmptyString, let cmd = command {
             return cmd.trimmingCharacters(in: .whitespaces)
         }
 
         // Handle httpUrl-based servers
-        if let httpUrlString = httpUrl, !httpUrlString.trimmingCharacters(in: .whitespaces).isEmpty {
+        if httpUrl.isNonEmptyString, let httpUrlString = httpUrl {
             let urlHost = formatURLHost(httpUrlString)
             return "HTTP → \(urlHost)"
         }
