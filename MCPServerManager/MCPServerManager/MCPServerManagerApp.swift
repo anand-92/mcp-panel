@@ -22,6 +22,18 @@ struct MCPServerManagerApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {}
 
+            // Window menu for reopening closed windows (required by App Store)
+            CommandGroup(after: .windowList) {
+                Button("Show Main Window") {
+                    // Reopen the main window if it was closed
+                    if let window = NSApp.windows.first {
+                        window.makeKeyAndOrderFront(nil)
+                        NSApp.activate(ignoringOtherApps: true)
+                    }
+                }
+                .keyboardShortcut("0", modifiers: [.command])
+            }
+
             // Only show "Check for Updates" for non-App Store builds
             if updateChecker.canCheckForUpdates {
                 CommandGroup(after: .appInfo) {
