@@ -18,6 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Nothing yet
 
 ### Fixed
+- **Custom Icon Picker** - Fixed non-functional icon click by replacing SwiftUI fileImporter with native NSOpenPanel
+- **Registry API Update** - Updated to correct GitHub MCP registry endpoint (api.mcp.github.com/v0/servers)
+- **Sparkle Update Feed** - Corrected SUFeedURL to point to proper GitHub repository
+- **Icon Visibility** - Increased icon fill from 60% to 90% for better visibility
 - Permission errors when saving config files (removed atomic writes)
 - Security-scoped bookmark write failures
 - Better error handling throughout the app

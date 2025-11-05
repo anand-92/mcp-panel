@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #ffffff;
+      margin: 16px;
+    }
+    h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-top: 0;
+      margin-bottom: 12px;
+      color: #ffffff;
+    }
+    h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 16px;
+      margin-bottom: 8px;
+      color: #e0e0e0;
+    }
+    ul {
+      margin: 8px 0;
+      padding-left: 24px;
+    }
+    li {
+      margin: 4px 0;
+      color: #d0d0d0;
+    }
+    strong {
+      font-weight: 600;
+      color: #ffffff;
+    }
+    code {
+      background: #3a3a3c;
+      color: #00d4ff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h2>What's New in This Update</h2>
+  <h3>Added</h3>
+  <ul>
+    <li><strong>Custom Icon Personalization</strong> - Click any server icon to upload custom images (PNG, JPG, SVG). Icons persist across restarts with smart validation (10MB max, 2048×2048px)</li>
+    <li><strong>12 Professional Themes</strong> - Choose from Nord, Dracula, Solarized Dark/Light, Monokai Pro, One Dark, GitHub Dark, Tokyo Night, Catppuccin Mocha, Gruvbox, Material Palenight, plus Auto mode</li>
+    <li><strong>JSON Preview Blur</strong> - Toggle blur effect for privacy during screen sharing. Automatically disables when editing</li>
+    <li><strong>Force Save Option</strong> - Override validation for custom MCP configurations with detailed error messages</li>
+    <li><strong>HTTP-Based MCP Servers</strong> - Support for GitHub Copilot format with httpUrl and custom headers fields</li>
+    <li><strong>Server-Sent Events (SSE)</strong> - Full support for SSE transport type and streaming servers</li>
+  </ul>
+  <h3>Changed</h3>
+  <ul>
+    <li>Nothing yet</li>
+  </ul>
+  <h3>Fixed</h3>
+  <ul>
+    <li><strong>Custom Icon Picker</strong> - Fixed non-functional icon click by replacing SwiftUI fileImporter with native NSOpenPanel</li>
+    <li><strong>Registry API Update</strong> - Updated to correct GitHub MCP registry endpoint (api.mcp.github.com/v0/servers)</li>
+    <li><strong>Sparkle Update Feed</strong> - Corrected SUFeedURL to point to proper GitHub repository</li>
+    <li><strong>Icon Visibility</strong> - Increased icon fill from 60% to 90% for better visibility</li>
+    <li>Permission errors when saving config files (removed atomic writes)</li>
+    <li>Security-scoped bookmark write failures</li>
+    <li>Better error handling throughout the app</li>
+  </ul>
+</body>
+</html>
