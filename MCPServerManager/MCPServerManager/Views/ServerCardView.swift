@@ -4,6 +4,7 @@ struct ServerCardView: View {
     let server: ServerModel
     @Binding var activeConfigIndex: Int
     @Binding var confirmDelete: Bool
+    @Binding var blurJSONPreviews: Bool
     @State private var isEditing = false
     @State private var editedJSON: String = ""
     @State private var isHovering = false
@@ -128,6 +129,7 @@ struct ServerCardView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(8)
                                 .secondaryTextVisibility()
+                                .blur(radius: (blurJSONPreviews && !isEditing) ? DesignTokens.jsonPreviewBlurRadius : 0)
                         }
                         .frame(height: 200)
                         .background(Color.black.opacity(0.3))

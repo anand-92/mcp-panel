@@ -66,6 +66,7 @@ struct RawJSONView: View {
                 .background(Color.black.opacity(0.3))
                 .padding(20)
                 .focusable(true)
+                .blur(radius: (viewModel.settings.blurJSONPreviews && !isDirty) ? DesignTokens.jsonPreviewBlurRadius : 0)
                 .onChange(of: jsonText) { newValue in
                     isDirty = newValue != serversToJSON()
                 }
