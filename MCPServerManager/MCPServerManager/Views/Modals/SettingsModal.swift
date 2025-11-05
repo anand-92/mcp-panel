@@ -10,6 +10,7 @@ struct SettingsModal: View {
     @State private var config2Path: String = ""
     @State private var confirmDelete: Bool = true
     @State private var fetchServerLogos: Bool = true
+    @State private var blurJSONPreviews: Bool = false
     @State private var windowOpacity: Double = 1.0
     @State private var textVisibilityBoost: Double = 0.5
     @State private var testingConnection: Bool = false
@@ -133,6 +134,17 @@ struct SettingsModal: View {
                         CheckboxToggle(isOn: $fetchServerLogos, label: "Fetch server logos from internet")
 
                         Text("Automatically download logos for servers. When disabled, only generic icons will be shown. Respects your privacy - no tracking.")
+                            .font(DesignTokens.Typography.bodySmall)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Divider()
+
+                    // Blur JSON Previews
+                    VStack(alignment: .leading, spacing: 8) {
+                        CheckboxToggle(isOn: $blurJSONPreviews, label: "Blur JSON previews")
+
+                        Text("Apply blur effect to JSON code previews in server cards. Blur is temporarily removed when editing.")
                             .font(DesignTokens.Typography.bodySmall)
                             .foregroundColor(.secondary)
                     }
@@ -275,6 +287,7 @@ struct SettingsModal: View {
             config2Path = viewModel.settings.config2Path
             confirmDelete = viewModel.settings.confirmDelete
             fetchServerLogos = UserDefaults.standard.object(forKey: "fetchServerLogos") as? Bool ?? true
+            blurJSONPreviews = viewModel.settings.blurJSONPreviews
             windowOpacity = viewModel.settings.windowOpacity
             textVisibilityBoost = viewModel.settings.textVisibilityBoost
         }
@@ -333,6 +346,7 @@ struct SettingsModal: View {
     private func saveSettings() {
         viewModel.settings.configPaths = [config1Path, config2Path]
         viewModel.settings.confirmDelete = confirmDelete
+        viewModel.settings.blurJSONPreviews = blurJSONPreviews
         viewModel.settings.windowOpacity = windowOpacity
         UserDefaults.standard.set(fetchServerLogos, forKey: "fetchServerLogos")
         viewModel.saveSettings()

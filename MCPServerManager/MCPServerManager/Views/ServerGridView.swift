@@ -17,6 +17,7 @@ struct ServerGridView: View {
                             server: server,
                             activeConfigIndex: $viewModel.settings.activeConfigIndex,
                             confirmDelete: $viewModel.settings.confirmDelete,
+                            blurJSONPreviews: $viewModel.settings.blurJSONPreviews,
                             onToggle: {
                                 viewModel.toggleServer(server)
                             },

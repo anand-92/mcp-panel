@@ -6,6 +6,7 @@ struct AppSettings: Codable, Equatable {
     var activeConfigIndex: Int
     var windowOpacity: Double
     var textVisibilityBoost: Double
+    var blurJSONPreviews: Bool
 
     static let `default` = AppSettings(
         confirmDelete: true,
@@ -15,19 +16,22 @@ struct AppSettings: Codable, Equatable {
         ],
         activeConfigIndex: 0,
         windowOpacity: 1.0,
-        textVisibilityBoost: 0.5
+        textVisibilityBoost: 0.5,
+        blurJSONPreviews: false
     )
 
     init(confirmDelete: Bool = true,
          configPaths: [String] = ["~/.claude.json", "~/.settings.json"],
          activeConfigIndex: Int = 0,
          windowOpacity: Double = 1.0,
-         textVisibilityBoost: Double = 0.5) {
+         textVisibilityBoost: Double = 0.5,
+         blurJSONPreviews: Bool = false) {
         self.confirmDelete = confirmDelete
         self.configPaths = configPaths
         self.activeConfigIndex = max(0, min(activeConfigIndex, 1)) // Ensure 0 or 1
         self.windowOpacity = max(0.3, min(windowOpacity, 1.0)) // Clamp between 0.3 and 1.0
         self.textVisibilityBoost = max(0.0, min(textVisibilityBoost, 1.0)) // Clamp between 0.0 and 1.0
+        self.blurJSONPreviews = blurJSONPreviews
     }
 
     var activeConfigPath: String {
