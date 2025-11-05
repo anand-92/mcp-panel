@@ -26,6 +26,9 @@ struct ServerGridView: View {
                             },
                             onUpdate: { json in
                                 return viewModel.updateServer(server, with: json)
+                            },
+                            onUpdateForced: { json in
+                                return viewModel.updateServerForced(server, with: json)
                             }
                         )
                     }
