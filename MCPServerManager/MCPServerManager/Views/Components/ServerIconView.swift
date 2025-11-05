@@ -13,6 +13,10 @@ struct ServerIconView: View {
     @State private var showingFilePicker = false
     @Environment(\.themeColors) private var themeColors
 
+    private var isCustomIconSelectable: Bool {
+        onCustomIconSelected != nil
+    }
+
     var body: some View {
         ZStack {
             // Background circle
@@ -62,7 +66,7 @@ struct ServerIconView: View {
             }
 
             // Edit overlay on hover (only show if callback is provided)
-            if isHovering, onCustomIconSelected != nil {
+            if isHovering, isCustomIconSelectable {
                 Circle()
                     .fill(Color.black.opacity(0.6))
 
@@ -74,17 +78,17 @@ struct ServerIconView: View {
         .frame(width: size, height: size)
         .shadow(color: themeColors.primaryAccent.opacity(0.2), radius: 4, x: 0, y: 2)
         .onHover { hovering in
-            if onCustomIconSelected != nil {
+            if isCustomIconSelectable {
                 isHovering = hovering
             }
         }
         .onTapGesture {
-            if onCustomIconSelected != nil {
+            if isCustomIconSelectable {
                 showingFilePicker = true
             }
         }
         .contextMenu {
-            if onCustomIconSelected != nil {
+            if isCustomIconSelectable {
                 Button {
                     showingFilePicker = true
                 } label: {
