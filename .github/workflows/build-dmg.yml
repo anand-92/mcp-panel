@@ -283,7 +283,9 @@ jobs:
         # Create temp directory for archives
         mkdir -p archives
         cp "$DMG_PATH" "archives/"
-        cp release-notes.html "archives/${VERSION}.html"
+
+        # Copy release notes with matching DMG name pattern (Sparkle requirement)
+        cp release-notes.html "archives/MCP-Server-Manager-v${VERSION}.html"
 
         # Create private key file for Sparkle signing
         if [ -n "$SPARKLE_PRIVATE_KEY" ]; then
@@ -299,6 +301,7 @@ jobs:
 
             # Use generate_appcast with the archives directory
             # This will scan the archives folder and generate a signed appcast
+            # The tool will automatically link HTML files that match DMG names
             /usr/local/bin/generate_appcast \
               --ed-key-file sparkle_private_key.txt \
               --download-url-prefix "https://github.com/${REPO}/releases/download/latest/" \
