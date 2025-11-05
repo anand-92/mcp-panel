@@ -189,6 +189,90 @@ When window opacity is 30% and boost is 100%:
 - **Custom Modifiers**: Reusable view modifiers for consistent styling
 - **Sheet/Alert Modifiers**: For modal presentations
 
+## 🚨 IMPORTANT: Changelog & Release Notes Workflow
+
+### **ALWAYS UPDATE CHANGELOG.MD WHEN MAKING CHANGES**
+
+This app uses an **automated release notes system** that flows from CHANGELOG.md to Sparkle updates and GitHub releases.
+
+### How It Works
+
+1. **Edit `CHANGELOG.md`** - Add your changes to the `[Unreleased]` section
+2. **Push to main** - GitHub Actions automatically:
+   - Runs `extract-changelog.sh` to extract `[Unreleased]` content
+   - Generates HTML for Sparkle update dialog
+   - Generates Markdown for GitHub release page
+   - Includes release notes in the DMG update
+
+3. **Users see it** - When Sparkle checks for updates, users see:
+   - Your changelog in a beautiful HTML dialog
+   - All the features, changes, and fixes you documented
+
+### CHANGELOG.md Format
+
+```markdown
+## [Unreleased]
+
+### Added
+- **Feature Name** - Description with details
+- **Another Feature** - More details
+
+### Changed
+- Updated something important
+
+### Fixed
+- Bug fix description
+- Another fix
+```
+
+### Important Rules
+
+1. ✅ **ALWAYS add new features to `[Unreleased]`** when you implement them
+2. ✅ Use **bold text** for feature names: `**Feature Name**`
+3. ✅ Keep descriptions concise but informative
+4. ✅ Organize by category: Added, Changed, Fixed, Security, etc.
+5. ❌ **DON'T** edit the hardcoded release notes in `.github/workflows/build-dmg.yml`
+6. ❌ **DON'T** forget to update CHANGELOG.md - users won't know what changed!
+
+### Where Updates Appear
+
+- **Sparkle Dialog**: Users see the HTML version when updating via Sparkle
+- **GitHub Release**: The markdown version appears on the release page
+- **App Store**: Manually copy from CHANGELOG.md to App Store Connect
+
+### Files Involved
+
+- `CHANGELOG.md` - **THIS IS THE SOURCE OF TRUTH**
+- `extract-changelog.sh` - Extracts `[Unreleased]` and generates HTML/Markdown
+- `.github/workflows/build-dmg.yml` - Runs the extraction during builds
+- Generated files (automatic):
+  - `release-notes.html` - For Sparkle dialog
+  - `release-notes.md` - For GitHub releases
+  - `MCP-Server-Manager-v*.html` - Uploaded to GitHub releases
+
+### Example Workflow
+
+```bash
+# 1. Make changes to the app
+# 2. Update CHANGELOG.md
+# 3. Commit everything together
+git add .
+git commit -m "Add custom icons feature"
+git push
+
+# GitHub Actions will automatically:
+# - Extract your changelog
+# - Build the DMG
+# - Create release with notes
+# - Users see your changelog in Sparkle!
+```
+
+### Troubleshooting
+
+- **Users don't see release notes?** Check that HTML file matches DMG name pattern
+- **HTML looks broken?** Test with `bash extract-changelog.sh CHANGELOG.md test.html test.md`
+- **Want to preview?** Open the generated HTML in a browser
+
 ## Building & Distributing
 
 ### Local Development
