@@ -13,7 +13,7 @@ struct ServerCardView: View {
     let onToggle: () -> Void
     let onDelete: () -> Void
     let onUpdate: (String) -> Bool
-    let onCustomIconSelected: ((String) -> Void)?
+    let onCustomIconSelected: ((String?) -> Void)?
 
     var body: some View {
         GlassPanel {

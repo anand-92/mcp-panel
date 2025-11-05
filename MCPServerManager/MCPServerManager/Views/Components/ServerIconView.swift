@@ -5,7 +5,7 @@ import AppKit
 struct ServerIconView: View {
     let server: ServerModel
     let size: CGFloat
-    var onCustomIconSelected: ((String) -> Void)? = nil
+    var onCustomIconSelected: ((String?) -> Void)? = nil
 
     @State private var logoImage: NSImage?
     @State private var isLoading = true
@@ -93,6 +93,10 @@ struct ServerIconView: View {
 
                 if server.customIconPath != nil {
                     Button {
+                        // Remove the custom icon file
+                        if let filename = server.customIconPath {
+                            CustomIconManager.shared.removeCustomIcon(filename: filename)
+                        }
                         onCustomIconSelected?("")
                     } label: {
                         Label("Reset to Default Icon", systemImage: "arrow.counterclockwise")
@@ -116,15 +120,13 @@ struct ServerIconView: View {
     private func loadIcon() async {
         isLoading = true
 
-        // Highest priority: custom icon path (user-selected)
-        if let customIconPath = server.customIconPath {
-            let url = ConfigManager.shared.expandPath(customIconPath)
-
+        // Highest priority: custom icon (user-selected, stored in app container)
+        if let customIconFilename = server.customIconPath {
             #if DEBUG
-            print("ServerIconView: Loading custom icon for \(server.name): \(customIconPath)")
+            print("ServerIconView: Loading custom icon for \(server.name): \(customIconFilename)")
             #endif
 
-            if let image = NSImage(contentsOf: url) {
+            if let image = CustomIconManager.shared.loadCustomIcon(filename: customIconFilename) {
                 logoImage = image
                 isLoading = false
                 return
@@ -165,14 +167,40 @@ struct ServerIconView: View {
         case .success(let urls):
             guard let url = urls.first else { return }
 
-            // Store the path as a string (will be tilde-expanded when loaded)
-            let path = url.path
-            onCustomIconSelected?(path)
+            // Start accessing security-scoped resource
+            let accessing = url.startAccessingSecurityScopedResource()
+            defer {
+                if accessing {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            do {
+                // Validate and copy image to app container
+                let filename = try CustomIconManager.shared.storeCustomIcon(from: url, for: server.name)
+                onCustomIconSelected?(filename)
+
+                #if DEBUG
+                print("ServerIconView: Successfully stored custom icon as '\(filename)'")
+                #endif
+            } catch let error as CustomIconError {
+                #if DEBUG
+                print("ServerIconView: Validation error: \(error.localizedDescription)")
+                #endif
+                // Error will be shown via toast in ViewModel
+                onCustomIconSelected?(nil) // Trigger error toast
+            } catch {
+                #if DEBUG
+                print("ServerIconView: Unexpected error: \(error)")
+                #endif
+                onCustomIconSelected?(nil) // Trigger error toast
+            }
 
         case .failure(let error):
             #if DEBUG
             print("ServerIconView: Error selecting file: \(error)")
             #endif
+            onCustomIconSelected?(nil) // Trigger error toast
         }
     }
 }

@@ -396,18 +396,29 @@ class ServerViewModel: ObservableObject {
         showToast(message: "\(server.name) \(status)", type: .success)
     }
 
-    func updateCustomIcon(for server: ServerModel, iconPath: String) {
+    func updateCustomIcon(for server: ServerModel, iconFilename: String?) {
         guard let index = servers.firstIndex(where: { $0.id == server.id }) else { return }
 
+        // Handle error case (nil means error occurred)
+        guard let filename = iconFilename else {
+            showToast(message: "Failed to set custom icon. Please try again.", type: .error)
+            return
+        }
+
+        // Remove old custom icon if replacing
+        if let oldFilename = servers[index].customIconPath, !oldFilename.isEmpty, filename.isEmpty {
+            CustomIconManager.shared.removeCustomIcon(filename: oldFilename)
+        }
+
         var updated = servers[index]
-        updated.customIconPath = iconPath.isEmpty ? nil : iconPath
+        updated.customIconPath = filename.isEmpty ? nil : filename
         updated.updatedAt = Date()
         servers[index] = updated
 
         // Update cache (no need to sync to config files as custom icons are app-specific)
         UserDefaults.standard.cachedServers = servers
 
-        let message = iconPath.isEmpty ? "Icon reset for \(server.name)" : "Custom icon set for \(server.name)"
+        let message = filename.isEmpty ? "Icon reset for \(server.name)" : "Custom icon set for \(server.name)"
         showToast(message: message, type: .success)
     }
 
