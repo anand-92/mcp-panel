@@ -118,6 +118,10 @@ class ServerViewModel: ObservableObject {
                 // Cache to UserDefaults
                 UserDefaults.standard.cachedServers = servers
 
+                // Clean up unused custom icons
+                let usedIcons = Set(servers.compactMap { $0.customIconPath })
+                CustomIconManager.shared.cleanupUnusedIcons(usedFilenames: usedIcons)
+
                 skipSync = false
                 isLoading = false
             } catch {
@@ -126,6 +130,11 @@ class ServerViewModel: ObservableObject {
                 #endif
                 // Load from cache if available
                 servers = UserDefaults.standard.cachedServers
+
+                // Clean up unused custom icons
+                let usedIcons = Set(servers.compactMap { $0.customIconPath })
+                CustomIconManager.shared.cleanupUnusedIcons(usedFilenames: usedIcons)
+
                 skipSync = false
                 isLoading = false
                 showToast(message: "Failed to load config: \(error.localizedDescription)", type: .error)
@@ -583,30 +592,32 @@ class ServerViewModel: ObservableObject {
         showToast(message: "\(server.name) \(status)", type: .success)
     }
 
-    func updateCustomIcon(for server: ServerModel, iconFilename: String?) {
+    func updateCustomIcon(for server: ServerModel, result: Result<String, Error>) {
         guard let index = servers.firstIndex(where: { $0.id == server.id }) else { return }
 
-        // Handle error case (nil means error occurred)
-        guard let filename = iconFilename else {
-            showToast(message: "Failed to set custom icon. Please try again.", type: .error)
-            return
+        switch result {
+        case .success(let filename):
+            // Remove old custom icon if replacing or resetting
+            if let oldFilename = servers[index].customIconPath, oldFilename != filename {
+                CustomIconManager.shared.removeCustomIcon(filename: oldFilename)
+            }
+
+            var updated = servers[index]
+            updated.customIconPath = filename.isEmpty ? nil : filename
+            updated.updatedAt = Date()
+            servers[index] = updated
+
+            // Update cache (no need to sync to config files as custom icons are app-specific)
+            UserDefaults.standard.cachedServers = servers
+
+            let message = filename.isEmpty ? "Icon reset for \(server.name)" : "Custom icon set for \(server.name)"
+            showToast(message: message, type: .success)
+
+        case .failure(let error):
+            // Show specific error message from CustomIconError
+            let errorMessage = error.localizedDescription
+            showToast(message: errorMessage, type: .error)
         }
-
-        // Remove old custom icon if replacing
-        if let oldFilename = servers[index].customIconPath, !oldFilename.isEmpty, filename.isEmpty {
-            CustomIconManager.shared.removeCustomIcon(filename: oldFilename)
-        }
-
-        var updated = servers[index]
-        updated.customIconPath = filename.isEmpty ? nil : filename
-        updated.updatedAt = Date()
-        servers[index] = updated
-
-        // Update cache (no need to sync to config files as custom icons are app-specific)
-        UserDefaults.standard.cachedServers = servers
-
-        let message = filename.isEmpty ? "Icon reset for \(server.name)" : "Custom icon set for \(server.name)"
-        showToast(message: message, type: .success)
     }
 
     func toggleAllServers(_ enable: Bool) {

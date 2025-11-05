@@ -32,10 +32,10 @@ class CustomIconManager {
     /// Validates and copies a user-selected image to the custom icons directory
     /// - Parameters:
     ///   - sourceURL: The URL of the user-selected image file
-    ///   - serverName: The name of the server (used to generate unique filename)
+    ///   - serverId: The UUID of the server (used to generate unique filename)
     /// - Returns: The filename of the copied image (not full path)
     /// - Throws: Error if validation fails or copy fails
-    func storeCustomIcon(from sourceURL: URL, for serverName: String) throws -> String {
+    func storeCustomIcon(from sourceURL: URL, for serverId: UUID) throws -> String {
         // Validate file exists
         guard FileManager.default.fileExists(atPath: sourceURL.path) else {
             throw CustomIconError.fileNotFound
@@ -58,10 +58,9 @@ class CustomIconManager {
             throw CustomIconError.imageTooLarge(width: size.width, height: size.height)
         }
 
-        // Generate unique filename using server name and original extension
+        // Generate unique filename using server UUID and original extension
         let fileExtension = sourceURL.pathExtension
-        let sanitizedName = sanitizeServerName(serverName)
-        let filename = "\(sanitizedName).\(fileExtension)"
+        let filename = "\(serverId.uuidString).\(fileExtension)"
 
         let destinationURL = customIconsDirectory.appendingPathComponent(filename)
 
@@ -74,7 +73,7 @@ class CustomIconManager {
         try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
 
         #if DEBUG
-        print("CustomIconManager: Stored icon for '\(serverName)' as '\(filename)'")
+        print("CustomIconManager: Stored icon for server ID '\(serverId.uuidString)' as '\(filename)'")
         #endif
 
         return filename
@@ -140,23 +139,6 @@ class CustomIconManager {
         #endif
     }
 
-    // MARK: - Private Helpers
-
-    /// Sanitizes server name for use as filename
-    private func sanitizeServerName(_ name: String) -> String {
-        // Replace unsafe characters with underscores
-        let unsafe = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_")).inverted
-        let sanitized = name.components(separatedBy: unsafe).joined(separator: "_")
-
-        // Truncate to reasonable length (max 100 chars)
-        let maxLength = 100
-        if sanitized.count > maxLength {
-            let index = sanitized.index(sanitized.startIndex, offsetBy: maxLength)
-            return String(sanitized[..<index])
-        }
-
-        return sanitized
-    }
 }
 
 // MARK: - Custom Icon Errors

@@ -30,8 +30,8 @@ struct ServerGridView: View {
                             onUpdateForced: { config in
                                 return viewModel.updateServerForced(server, config: config)
                             },
-                            onCustomIconSelected: { iconPath in
-                                viewModel.updateCustomIcon(for: server, iconFilename: iconPath)
+                            onCustomIconSelected: { result in
+                                viewModel.updateCustomIcon(for: server, result: result)
                             }
                         )
                     }

@@ -5,7 +5,7 @@ import AppKit
 struct ServerIconView: View {
     let server: ServerModel
     let size: CGFloat
-    var onCustomIconSelected: ((String?) -> Void)? = nil
+    var onCustomIconSelected: ((Result<String, Error>) -> Void)? = nil
 
     @State private var logoImage: NSImage?
     @State private var isLoading = true
@@ -97,11 +97,8 @@ struct ServerIconView: View {
 
                 if server.customIconPath != nil {
                     Button {
-                        // Remove the custom icon file
-                        if let filename = server.customIconPath {
-                            CustomIconManager.shared.removeCustomIcon(filename: filename)
-                        }
-                        onCustomIconSelected?("")
+                        // Signal intent to reset to the ViewModel (file deletion handled there)
+                        onCustomIconSelected?(.success(""))
                     } label: {
                         Label("Reset to Default Icon", systemImage: "arrow.counterclockwise")
                     }
@@ -181,8 +178,8 @@ struct ServerIconView: View {
 
             do {
                 // Validate and copy image to app container
-                let filename = try CustomIconManager.shared.storeCustomIcon(from: url, for: server.name)
-                onCustomIconSelected?(filename)
+                let filename = try CustomIconManager.shared.storeCustomIcon(from: url, for: server.id)
+                onCustomIconSelected?(.success(filename))
 
                 #if DEBUG
                 print("ServerIconView: Successfully stored custom icon as '\(filename)'")
@@ -191,20 +188,20 @@ struct ServerIconView: View {
                 #if DEBUG
                 print("ServerIconView: Validation error: \(error.localizedDescription)")
                 #endif
-                // Error will be shown via toast in ViewModel
-                onCustomIconSelected?(nil) // Trigger error toast
+                // Pass specific error to ViewModel for detailed toast
+                onCustomIconSelected?(.failure(error))
             } catch {
                 #if DEBUG
                 print("ServerIconView: Unexpected error: \(error)")
                 #endif
-                onCustomIconSelected?(nil) // Trigger error toast
+                onCustomIconSelected?(.failure(error))
             }
 
         case .failure(let error):
             #if DEBUG
             print("ServerIconView: Error selecting file: \(error)")
             #endif
-            onCustomIconSelected?(nil) // Trigger error toast
+            onCustomIconSelected?(.failure(error))
         }
     }
 }
