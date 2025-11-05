@@ -1,0 +1,189 @@
+import Foundation
+import AppKit
+
+/// Manages custom icon storage in Application Support directory
+/// Copies user-selected images to a sandboxed location for persistent access
+class CustomIconManager {
+    static let shared = CustomIconManager()
+
+    // MARK: - Directory Constants
+
+    private enum Directory {
+        static let appName = "MCPServerManager"
+        static let customIcons = "CustomIcons"
+    }
+
+    private init() {
+        // Ensure custom icons directory exists
+        do {
+            try FileManager.default.createDirectory(at: customIconsDirectory, withIntermediateDirectories: true)
+        } catch {
+            #if DEBUG
+            print("CustomIconManager: Failed to create icons directory: \(error.localizedDescription)")
+            print("CustomIconManager: Path: \(customIconsDirectory.path)")
+            #endif
+            // Note: Operations will fail gracefully with proper error messages if directory doesn't exist
+        }
+    }
+
+    // MARK: - Directory Management
+
+    /// Directory where custom icons are stored
+    /// ~/Library/Application Support/MCPServerManager/CustomIcons/
+    private var customIconsDirectory: URL {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return appSupport
+            .appendingPathComponent(Directory.appName, isDirectory: true)
+            .appendingPathComponent(Directory.customIcons, isDirectory: true)
+    }
+
+    // MARK: - Validation Constants
+
+    private let maxImageDimension: CGFloat = 2048
+    private let maxFileSizeBytes: Int = 10 * 1024 * 1024 // 10MB
+
+    // MARK: - Public Methods
+
+    /// Validates and copies a user-selected image to the custom icons directory
+    /// - Parameters:
+    ///   - sourceURL: The URL of the user-selected image file
+    ///   - serverId: The UUID of the server (used to generate unique filename)
+    /// - Returns: The filename of the copied image (not full path)
+    /// - Throws: Error if validation fails or copy fails
+    func storeCustomIcon(from sourceURL: URL, for serverId: UUID) throws -> String {
+        // Validate file exists
+        guard FileManager.default.fileExists(atPath: sourceURL.path) else {
+            throw CustomIconError.fileNotFound
+        }
+
+        // Validate file size
+        let attributes = try FileManager.default.attributesOfItem(atPath: sourceURL.path)
+        let fileSize = attributes[.size] as? Int ?? 0
+        guard fileSize <= maxFileSizeBytes else {
+            throw CustomIconError.fileTooLarge(sizeInMB: Double(fileSize) / (1024 * 1024))
+        }
+
+        // Validate it's an image and check dimensions
+        guard let image = NSImage(contentsOf: sourceURL) else {
+            throw CustomIconError.invalidImageFormat
+        }
+
+        let size = image.size
+        guard size.width <= maxImageDimension && size.height <= maxImageDimension else {
+            throw CustomIconError.imageTooLarge(width: size.width, height: size.height)
+        }
+
+        // Generate unique filename using server UUID and original extension
+        let fileExtension = sourceURL.pathExtension
+        let filename = "\(serverId.uuidString).\(fileExtension)"
+
+        let destinationURL = customIconsDirectory.appendingPathComponent(filename)
+
+        // Remove existing file if present
+        if FileManager.default.fileExists(atPath: destinationURL.path) {
+            try FileManager.default.removeItem(at: destinationURL)
+        }
+
+        // Copy file to custom icons directory
+        do {
+            try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
+        } catch {
+            #if DEBUG
+            print("CustomIconManager: Copy failed - \(error.localizedDescription)")
+            #endif
+            throw CustomIconError.copyFailed
+        }
+
+        #if DEBUG
+        print("CustomIconManager: Stored icon for server ID '\(serverId.uuidString)' as '\(filename)'")
+        #endif
+
+        return filename
+    }
+
+    /// Loads a custom icon by filename
+    /// - Parameter filename: The filename of the custom icon
+    /// - Returns: NSImage if found and loadable, nil otherwise
+    func loadCustomIcon(filename: String) -> NSImage? {
+        let url = customIconsDirectory.appendingPathComponent(filename)
+
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            #if DEBUG
+            print("CustomIconManager: Icon file not found: \(filename)")
+            #endif
+            return nil
+        }
+
+        return NSImage(contentsOf: url)
+    }
+
+    /// Removes a custom icon file
+    /// - Parameter filename: The filename of the custom icon to remove
+    func removeCustomIcon(filename: String) {
+        let url = customIconsDirectory.appendingPathComponent(filename)
+
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            return
+        }
+
+        do {
+            try FileManager.default.removeItem(at: url)
+            #if DEBUG
+            print("CustomIconManager: Removed icon: \(filename)")
+            #endif
+        } catch {
+            #if DEBUG
+            print("CustomIconManager: Failed to remove icon \(filename): \(error)")
+            #endif
+        }
+    }
+
+    /// Removes all unused custom icons (icons not referenced by any server)
+    /// - Parameter usedFilenames: Set of filenames currently in use
+    func cleanupUnusedIcons(usedFilenames: Set<String>) {
+        guard let files = try? FileManager.default.contentsOfDirectory(at: customIconsDirectory, includingPropertiesForKeys: nil) else {
+            return
+        }
+
+        var removedCount = 0
+        for fileURL in files {
+            let filename = fileURL.lastPathComponent
+            if !usedFilenames.contains(filename) {
+                removeCustomIcon(filename: filename)
+                removedCount += 1
+            }
+        }
+
+        #if DEBUG
+        if removedCount > 0 {
+            print("CustomIconManager: Cleaned up \(removedCount) unused icon(s)")
+        }
+        #endif
+    }
+
+}
+
+// MARK: - Custom Icon Errors
+
+enum CustomIconError: LocalizedError {
+    case fileNotFound
+    case fileTooLarge(sizeInMB: Double)
+    case imageTooLarge(width: CGFloat, height: CGFloat)
+    case invalidImageFormat
+    case copyFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .fileNotFound:
+            return "Selected file could not be found"
+        case .fileTooLarge(let sizeMB):
+            return String(format: "Image file is too large (%.1f MB). Maximum size is 10 MB.", sizeMB)
+        case .imageTooLarge(let width, let height):
+            return String(format: "Image dimensions too large (%.0f × %.0f). Maximum is 2048 × 2048 pixels.", width, height)
+        case .invalidImageFormat:
+            return "Selected file is not a valid image format"
+        case .copyFailed:
+            return "Failed to save custom icon"
+        }
+    }
+}

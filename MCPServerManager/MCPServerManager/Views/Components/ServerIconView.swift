@@ -5,10 +5,17 @@ import AppKit
 struct ServerIconView: View {
     let server: ServerModel
     let size: CGFloat
+    var onCustomIconSelected: ((Result<String, Error>) -> Void)? = nil
 
     @State private var logoImage: NSImage?
     @State private var isLoading = true
+    @State private var isHovering = false
+    @State private var showingFilePicker = false
     @Environment(\.themeColors) private var themeColors
+
+    private var isCustomIconSelectable: Bool {
+        onCustomIconSelected != nil
+    }
 
     var body: some View {
         ZStack {
@@ -17,8 +24,8 @@ struct ServerIconView: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            themeColors.glassBackground.opacity(0.6),
-                            themeColors.glassBackground.opacity(0.3)
+                            themeColors.glassBackground.opacity(isHovering ? 0.8 : 0.6),
+                            themeColors.glassBackground.opacity(isHovering ? 0.5 : 0.3)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -26,7 +33,7 @@ struct ServerIconView: View {
                 )
                 .overlay(
                     Circle()
-                        .stroke(themeColors.borderColor.opacity(0.3), lineWidth: 1)
+                        .stroke(themeColors.borderColor.opacity(isHovering ? 0.6 : 0.3), lineWidth: isHovering ? 2 : 1)
                 )
 
             // Icon content
@@ -57,18 +64,81 @@ struct ServerIconView: View {
                         )
                     )
             }
+
+            // Edit overlay on hover (only show if callback is provided)
+            if isHovering, isCustomIconSelectable {
+                Circle()
+                    .fill(Color.black.opacity(0.6))
+
+                Image(systemName: "photo.badge.plus")
+                    .font(.system(size: size * 0.35))
+                    .foregroundColor(.white)
+            }
         }
         .frame(width: size, height: size)
         .shadow(color: themeColors.primaryAccent.opacity(0.2), radius: 4, x: 0, y: 2)
+        .onHover { hovering in
+            if isCustomIconSelectable {
+                isHovering = hovering
+            }
+        }
+        .onTapGesture {
+            if isCustomIconSelectable {
+                showingFilePicker = true
+            }
+        }
+        .contextMenu {
+            if isCustomIconSelectable {
+                Button {
+                    showingFilePicker = true
+                } label: {
+                    Label("Set Custom Icon", systemImage: "photo.badge.plus")
+                }
+
+                if server.customIconPath != nil {
+                    Button {
+                        // Signal intent to reset to the ViewModel (file deletion handled there)
+                        onCustomIconSelected?(.success(""))
+                    } label: {
+                        Label("Reset to Default Icon", systemImage: "arrow.counterclockwise")
+                    }
+                }
+            }
+        }
+        .fileImporter(
+            isPresented: $showingFilePicker,
+            allowedContentTypes: [.image],
+            allowsMultipleSelection: false
+        ) { result in
+            handleFileSelection(result)
+        }
         .task {
             await loadIcon()
         }
+        .id(server.customIconPath) // Reload when custom icon changes
     }
 
     private func loadIcon() async {
         isLoading = true
 
-        // Prefer registry image URL over fetched icons
+        // Highest priority: custom icon (user-selected, stored in app container)
+        if let customIconFilename = server.customIconPath {
+            #if DEBUG
+            print("ServerIconView: Loading custom icon for \(server.name): \(customIconFilename)")
+            #endif
+
+            if let image = CustomIconManager.shared.loadCustomIcon(filename: customIconFilename) {
+                logoImage = image
+                isLoading = false
+                return
+            }
+
+            #if DEBUG
+            print("ServerIconView: Failed to load custom icon, falling back")
+            #endif
+        }
+
+        // Second priority: registry image URL
         if let registryImageUrl = server.registryImageUrl,
            let url = URL(string: registryImageUrl) {
             #if DEBUG
@@ -88,9 +158,51 @@ struct ServerIconView: View {
             #endif
         }
 
-        // Fall back to IconService if no registry image or if loading failed
+        // Fall back to IconService if no custom/registry image or if loading failed
         logoImage = await IconService.shared.loadIcon(for: server.name, domain: server.iconDomain)
         isLoading = false
+    }
+
+    private func handleFileSelection(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+
+            // Start accessing security-scoped resource
+            let accessing = url.startAccessingSecurityScopedResource()
+            defer {
+                if accessing {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            do {
+                // Validate and copy image to app container
+                let filename = try CustomIconManager.shared.storeCustomIcon(from: url, for: server.id)
+                onCustomIconSelected?(.success(filename))
+
+                #if DEBUG
+                print("ServerIconView: Successfully stored custom icon as '\(filename)'")
+                #endif
+            } catch let error as CustomIconError {
+                #if DEBUG
+                print("ServerIconView: Validation error: \(error.localizedDescription)")
+                #endif
+                // Pass specific error to ViewModel for detailed toast
+                onCustomIconSelected?(.failure(error))
+            } catch {
+                #if DEBUG
+                print("ServerIconView: Unexpected error: \(error)")
+                #endif
+                onCustomIconSelected?(.failure(error))
+            }
+
+        case .failure(let error):
+            #if DEBUG
+            print("ServerIconView: Error selecting file: \(error)")
+            #endif
+            onCustomIconSelected?(.failure(error))
+        }
     }
 }
 

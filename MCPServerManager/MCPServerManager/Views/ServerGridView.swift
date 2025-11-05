@@ -29,6 +29,9 @@ struct ServerGridView: View {
                             },
                             onUpdateForced: { config in
                                 return viewModel.updateServerForced(server, config: config)
+                            },
+                            onCustomIconSelected: { result in
+                                viewModel.updateCustomIcon(for: server, result: result)
                             }
                         )
                     }

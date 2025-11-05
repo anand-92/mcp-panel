@@ -8,6 +8,7 @@ struct ServerModel: Identifiable, Codable, Equatable {
     var updatedAt: Date
     var inConfigs: [Bool] // [inConfig1, inConfig2]
     var registryImageUrl: String? // Image URL from MCP registry (takes precedence over fetched icons)
+    var customIconPath: String? // User-selected custom icon path (takes highest precedence)
 
     init(id: UUID = UUID(),
          name: String,
@@ -15,7 +16,8 @@ struct ServerModel: Identifiable, Codable, Equatable {
          enabled: Bool = false,
          updatedAt: Date = Date(),
          inConfigs: [Bool] = [false, false],
-         registryImageUrl: String? = nil) {
+         registryImageUrl: String? = nil,
+         customIconPath: String? = nil) {
         self.id = id
         self.name = name
         self.config = config
@@ -23,6 +25,7 @@ struct ServerModel: Identifiable, Codable, Equatable {
         self.updatedAt = updatedAt
         self.inConfigs = inConfigs
         self.registryImageUrl = registryImageUrl
+        self.customIconPath = customIconPath
     }
 
     // MARK: - Computed Properties

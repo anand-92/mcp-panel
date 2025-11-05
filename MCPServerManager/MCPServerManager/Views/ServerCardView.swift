@@ -19,6 +19,7 @@ struct ServerCardView: View {
     let onDelete: () -> Void
     let onUpdate: (String) -> (success: Bool, invalidReason: String?, config: ServerConfig?)
     let onUpdateForced: (ServerConfig) -> Bool
+    let onCustomIconSelected: ((Result<String, Error>) -> Void)?
 
     var body: some View {
         GlassPanel {
@@ -33,7 +34,11 @@ struct ServerCardView: View {
 
                     Spacer()
 
-                    ServerIconView(server: server, size: 40)
+                    ServerIconView(
+                        server: server,
+                        size: 40,
+                        onCustomIconSelected: onCustomIconSelected
+                    )
                 }
 
                 // Config summary
