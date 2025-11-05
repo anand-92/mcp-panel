@@ -129,7 +129,7 @@ struct ServerCardView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(8)
                                 .secondaryTextVisibility()
-                                .blur(radius: blurJSONPreviews ? 8 : 0)
+                                .blur(radius: (blurJSONPreviews && !isEditing) ? DesignTokens.jsonPreviewBlurRadius : 0)
                         }
                         .frame(height: 200)
                         .background(Color.black.opacity(0.3))
