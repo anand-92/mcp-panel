@@ -18,7 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Nothing yet
 
 ### Fixed
-- **Window Menu Compliance** - Added Window menu with "Show Main Window" option to meet App Store requirements. Users can now reopen the main window after closing it via Window → Show Main Window (⌘0)
+- **Show Main Window Button** - Fixed unresponsive "Show Main Window" menu option that prevented reopening closed windows. Now properly creates a new window when needed (Window → Show Main Window or ⌘0)
 - **Custom Icon Picker** - Fixed non-functional icon click by replacing SwiftUI fileImporter with native NSOpenPanel
 - **Registry API Update** - Updated to correct GitHub MCP registry endpoint (api.mcp.github.com/v0/servers)
 - **Sparkle Update Feed** - Corrected SUFeedURL to point to proper GitHub repository

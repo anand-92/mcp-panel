@@ -26,8 +26,13 @@ struct MCPServerManagerApp: App {
             CommandGroup(after: .windowList) {
                 Button("Show Main Window") {
                     // Reopen the main window if it was closed
-                    if let window = NSApp.windows.first {
+                    // Try to find an existing window first
+                    if let window = NSApp.windows.first(where: { $0.isVisible && $0.canBecomeKey }) {
                         window.makeKeyAndOrderFront(nil)
+                        NSApp.activate(ignoringOtherApps: true)
+                    } else {
+                        // If no window exists, create a new one
+                        NSApp.sendAction(#selector(NSResponder.newWindowForTab(_:)), to: nil, from: nil)
                         NSApp.activate(ignoringOtherApps: true)
                     }
                 }
