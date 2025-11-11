@@ -22,23 +22,6 @@ struct MCPServerManagerApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {}
 
-            // Window menu for reopening closed windows (required by App Store)
-            CommandGroup(after: .windowList) {
-                Button("Show Main Window") {
-                    // Reopen the main window if it was closed
-                    // Try to find an existing window first
-                    if let window = NSApp.windows.first(where: { $0.isVisible && $0.canBecomeKey }) {
-                        window.makeKeyAndOrderFront(nil)
-                        NSApp.activate(ignoringOtherApps: true)
-                    } else {
-                        // If no window exists, create a new one
-                        NSApp.sendAction(#selector(NSResponder.newWindowForTab(_:)), to: nil, from: nil)
-                        NSApp.activate(ignoringOtherApps: true)
-                    }
-                }
-                .keyboardShortcut("0", modifiers: [.command])
-            }
-
             // Only show "Check for Updates" for non-App Store builds
             if updateChecker.canCheckForUpdates {
                 CommandGroup(after: .appInfo) {
@@ -60,5 +43,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Make app key window and accept input
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // Quit the app when the last window is closed
+    // This is the standard behavior for single-window apps
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return true
     }
 }
