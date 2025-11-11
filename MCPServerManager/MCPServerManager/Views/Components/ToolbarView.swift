@@ -158,7 +158,7 @@ struct ToolbarView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
-        .background(themeColors.sidebarBackground.opacity(0.5))
+        .modifier(LiquidGlassModifier(shape: Rectangle(), fillColor: themeColors.sidebarBackground.opacity(0.5)))
     }
 
     // Helper function to get icon for filter mode

@@ -244,11 +244,8 @@ struct SettingsModal: View {
             .padding(24)
         }
         .frame(width: 550, height: 600)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(nsColor: .windowBackgroundColor))
-                .shadow(radius: 30)
-        )
+        .modifier(LiquidGlassModifier(shape: RoundedRectangle(cornerRadius: 20)))
+        .shadow(radius: 30)
         .onAppear {
             config1Path = viewModel.settings.config1Path
             config2Path = viewModel.settings.config2Path

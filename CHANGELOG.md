@@ -15,7 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Server-Sent Events (SSE)** - Full support for SSE transport type and streaming servers
 
 ### Changed
-- **Apple Liquid Glass Adoption** - Transitioned to Apple's native Liquid Glass design language (macOS 26+) for enhanced visual depth and system integration. Removed custom transparency controls in favor of automatic system-provided materials that seamlessly integrate with macOS Tahoe's design standards.
+- **Apple Liquid Glass Implementation** - Fully implemented Apple's native Liquid Glass design language with intelligent fallback support. On macOS 26 (Tahoe) and later, the app uses the new `.glassEffect()` modifier for authentic translucent materials that reflect and refract surroundings. On macOS 13-25, the app gracefully falls back to traditional glass morphism. Removed custom transparency sliders in Settings - the system now handles all glass effects automatically based on OS version.
 
 ### Fixed
 - **App Window Behavior** - Removed problematic "Show Main Window" menu item. App now quits when window is closed (standard single-window app behavior). This fixes App Store compliance issues.

@@ -81,11 +81,7 @@ struct HeaderView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
-        .background(
-            Rectangle()
-                .fill(Color.black.opacity(0.3))
-                .blur(radius: 10)
-        )
+        .modifier(LiquidGlassModifier(shape: Rectangle(), fillColor: Color.black.opacity(0.3)))
     }
 }
 
