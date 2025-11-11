@@ -12,8 +12,15 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             // Background - uses dynamic theme
-            viewModel.themeColors.backgroundGradient
-                .ignoresSafeArea()
+            if #available(macOS 26.0, *) {
+                // macOS 26: Allow window transparency to show through
+                Color.clear
+                    .ignoresSafeArea()
+            } else {
+                // macOS 13-25: Use gradient background
+                viewModel.themeColors.backgroundGradient
+                    .ignoresSafeArea()
+            }
 
             VStack(spacing: 0) {
                 // Header
@@ -76,7 +83,6 @@ struct ContentView: View {
 
                         Text("Loading configuration...")
                             .font(DesignTokens.Typography.bodyLarge)
-                            .primaryTextVisibility()
                     }
                     .padding(40)
                     .background(
@@ -148,8 +154,6 @@ struct ContentView: View {
         }
         .environment(\.themeColors, viewModel.themeColors)
         .environment(\.currentTheme, viewModel.currentTheme)
-        .environment(\.appSettings, viewModel.settings)
-        .windowOpacity(viewModel.settings.windowOpacity)
         .frame(minWidth: 900, minHeight: 600)
         .fileImporter(
             isPresented: $showImporter,

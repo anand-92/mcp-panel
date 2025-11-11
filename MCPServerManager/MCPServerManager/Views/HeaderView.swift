@@ -21,7 +21,6 @@ struct HeaderView: View {
             Text("MCP Server Manager")
                 .font(DesignTokens.Typography.title3)
                 .foregroundStyle(themeColors.accentGradient)
-                .primaryTextVisibility()
 
             Spacer()
 
@@ -82,11 +81,7 @@ struct HeaderView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
-        .background(
-            Rectangle()
-                .fill(Color.black.opacity(0.3))
-                .blur(radius: 10)
-        )
+        .modifier(LiquidGlassModifier(shape: Rectangle(), fillColor: Color.black.opacity(0.3)))
     }
 }
 
@@ -108,7 +103,6 @@ struct ConfigButton: View {
                         .fill(isActive ? AnyShapeStyle(themeColors.accentGradient) : AnyShapeStyle(themeColors.glassBackground))
                 )
                 .foregroundColor(isActive ? Color(hex: "#1a1a1a") : themeColors.mutedText)
-                .textVisibilityBoost(baseOpacity: isActive ? 1.0 : 0.5)
         }
         .buttonStyle(.plain)
     }

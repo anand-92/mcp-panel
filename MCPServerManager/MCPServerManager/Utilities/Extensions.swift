@@ -67,42 +67,4 @@ extension NSTextField {
         set { }
     }
 }
-
-// Window Opacity Modifier
-struct WindowOpacityModifier: ViewModifier {
-    let opacity: Double
-
-    func body(content: Content) -> some View {
-        content
-            .background(WindowAccessor(opacity: opacity))
-    }
-}
-
-struct WindowAccessor: NSViewRepresentable {
-    let opacity: Double
-
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async {
-            if let window = view.window {
-                window.alphaValue = CGFloat(opacity)
-                window.isOpaque = opacity >= 1.0
-            }
-        }
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {
-        if let window = nsView.window {
-            window.alphaValue = CGFloat(opacity)
-            window.isOpaque = opacity >= 1.0
-        }
-    }
-}
-
-extension View {
-    func windowOpacity(_ opacity: Double) -> some View {
-        modifier(WindowOpacityModifier(opacity: opacity))
-    }
-}
 #endif

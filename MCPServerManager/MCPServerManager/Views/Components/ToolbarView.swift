@@ -20,7 +20,6 @@ struct ToolbarView: View {
                                 .font(.system(size: 14, weight: .semibold))
                             Text(mode.displayName)
                                 .font(DesignTokens.Typography.label)
-                                .textVisibilityBoost(baseOpacity: viewModel.viewMode == mode ? 1.0 : 0.5)
                         }
                         .foregroundColor(viewModel.viewMode == mode ? Color(hex: "#1a1a1a") : themeColors.mutedText)
                         .padding(.horizontal, 16)
@@ -74,7 +73,6 @@ struct ToolbarView: View {
                             Text(labelForFilter(mode))
                                 .font(DesignTokens.Typography.labelSmall)
                                 .foregroundColor(viewModel.filterMode == mode ? themeColors.primaryText : themeColors.secondaryText)
-                                .textVisibilityBoost(baseOpacity: viewModel.filterMode == mode ? 1.0 : 0.7)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
@@ -120,7 +118,6 @@ struct ToolbarView: View {
                     Text(allEnabled ? "Disable All" : "Enable All")
                         .font(DesignTokens.Typography.label)
                         .foregroundColor(themeColors.primaryText)
-                        .primaryTextVisibility()
 
                     // Visual indicator only - the button wrapper handles the action
                     ZStack {
@@ -143,7 +140,6 @@ struct ToolbarView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.clockwise")
                     Text("Refresh")
-                        .primaryTextVisibility()
                 }
                 .foregroundColor(themeColors.primaryText)
                 .padding(.horizontal, 12)
@@ -162,7 +158,7 @@ struct ToolbarView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
-        .background(themeColors.sidebarBackground.opacity(0.5))
+        .modifier(LiquidGlassModifier(shape: Rectangle(), fillColor: themeColors.sidebarBackground.opacity(0.5)))
     }
 
     // Helper function to get icon for filter mode

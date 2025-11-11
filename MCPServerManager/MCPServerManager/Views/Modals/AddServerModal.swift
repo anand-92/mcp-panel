@@ -174,11 +174,8 @@ struct AddServerModal: View {
             idealHeight: 750,
             maxHeight: 900
         )
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(nsColor: .windowBackgroundColor))
-                .shadow(radius: 30)
-        )
+        .modifier(LiquidGlassModifier(shape: RoundedRectangle(cornerRadius: 20)))
+        .shadow(radius: 30)
         .alert("Invalid Server Configuration", isPresented: $showForceAlert) {
             Button("Cancel", role: .cancel) {
                 showForceAlert = false

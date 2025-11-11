@@ -15,7 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Server-Sent Events (SSE)** - Full support for SSE transport type and streaming servers
 
 ### Changed
-- Nothing yet
+- **Apple Liquid Glass Implementation** - Fully implemented Apple's native Liquid Glass design language with intelligent fallback support. On macOS 26 (Tahoe) and later, the app uses the new `.glassEffect()` modifier for authentic translucent materials that reflect and refract surroundings. On macOS 13-25, the app gracefully falls back to traditional glass morphism. Removed custom transparency sliders in Settings - the system now handles all glass effects automatically based on OS version.
 
 ### Fixed
 - **App Window Behavior** - Removed problematic "Show Main Window" menu item. App now quits when window is closed (standard single-window app behavior). This fixes App Store compliance issues.
@@ -36,7 +36,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Adaptive Themes** - Three beautiful themes that auto-switch based on your config (Claude Code, Gemini CLI, Default)
 - **Server Logos** - Automatically fetches and displays server icons from the web
 - **Quick Actions Menu** - Fast access to common tasks (explore registry, add servers, import/export)
-- **Window Transparency Controls** - Adjustable window opacity (30%-100%) with independent text visibility boost
 - **Auto-Update System** - Sparkle framework integration for automatic updates (DMG builds)
 - Sparkle update framework with release notes display
 
