@@ -35,6 +35,8 @@
 	</array>
 	<key>SUFeedURL</key>
 	<string>https://github.com/anand-92/mcp-panel/releases/download/latest/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>SnkRxHZxaHrqHMoSW/Ls6dbeqZaGZBlS5AQ9I8OE3JI=</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUAutomaticallyUpdate</key>
