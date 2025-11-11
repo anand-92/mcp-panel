@@ -188,9 +188,14 @@ struct APIRemoteConfig: Codable {
 }
 
 struct APIHeader: Codable {
-    let name: String
-    let value: String
+    let name: String?
+    let value: String?
     let variables: [String: APIHeaderVariable]?
+
+    // Only consider valid if both name and value exist
+    var isValid: Bool {
+        name != nil && value != nil
+    }
 }
 
 struct APIHeaderVariable: Codable {
