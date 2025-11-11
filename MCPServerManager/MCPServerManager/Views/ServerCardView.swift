@@ -30,7 +30,6 @@ struct ServerCardView: View {
                         .font(DesignTokens.Typography.title2)
                         .lineLimit(2)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .primaryTextVisibility()
 
                     Spacer()
 
@@ -46,7 +45,6 @@ struct ServerCardView: View {
                     .font(DesignTokens.Typography.bodySmall)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
-                    .secondaryTextVisibility()
 
                 // JSON preview or editor
                 if isEditing {
@@ -68,7 +66,6 @@ struct ServerCardView: View {
                                         .font(.system(size: 12))
                                     Text("Format")
                                         .font(DesignTokens.Typography.labelSmall)
-                                        .primaryTextVisibility()
                                 }
                                 .foregroundColor(themeColors.primaryText)
                                 .padding(.horizontal, 12)
@@ -92,7 +89,6 @@ struct ServerCardView: View {
                                 Text("Cancel")
                                     .font(DesignTokens.Typography.labelSmall)
                                     .foregroundColor(themeColors.primaryText)
-                                    .primaryTextVisibility()
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
                                     .background(
@@ -123,7 +119,6 @@ struct ServerCardView: View {
                                         .font(.system(size: 12))
                                     Text("Save")
                                         .font(DesignTokens.Typography.labelSmall)
-                                        .primaryTextVisibility()
                                 }
                                 .foregroundColor(Color(hex: "#1a1a1a"))
                                 .padding(.horizontal, 12)
@@ -145,7 +140,6 @@ struct ServerCardView: View {
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(8)
-                                .secondaryTextVisibility()
                                 .blur(radius: (blurJSONPreviews && !isEditing) ? DesignTokens.jsonPreviewBlurRadius : 0)
                         }
                         .frame(height: 200)
@@ -202,7 +196,6 @@ struct ServerCardView: View {
                         }
                     } message: {
                         Text("Are you sure you want to delete '\(server.name)'?")
-                            .secondaryTextVisibility()
                     }
                 }
             }
@@ -256,7 +249,6 @@ struct ConfigBadge: View {
             .font(DesignTokens.Typography.captionSmall)
             .foregroundColor(isActive ? .white : .gray)
             .frame(width: 18, height: 18)
-            .primaryTextVisibility()
             .background(
                 Circle()
                     .fill(badgeColor)

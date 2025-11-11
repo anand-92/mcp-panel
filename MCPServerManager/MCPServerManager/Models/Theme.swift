@@ -710,10 +710,6 @@ private struct CurrentThemeKey: EnvironmentKey {
     static let defaultValue: AppTheme = .default
 }
 
-private struct AppSettingsKey: EnvironmentKey {
-    static let defaultValue: AppSettings = .default
-}
-
 extension EnvironmentValues {
     var themeColors: ThemeColors {
         get { self[ThemeColorsKey.self] }
@@ -723,54 +719,5 @@ extension EnvironmentValues {
     var currentTheme: AppTheme {
         get { self[CurrentThemeKey.self] }
         set { self[CurrentThemeKey.self] = newValue }
-    }
-
-    var appSettings: AppSettings {
-        get { self[AppSettingsKey.self] }
-        set { self[AppSettingsKey.self] = newValue }
-    }
-}
-
-// MARK: - Text Visibility Boost Modifier
-
-/// View modifier that applies text visibility boost to maintain readability when window is translucent
-struct TextVisibilityBoostModifier: ViewModifier {
-    @Environment(\.appSettings) var settings
-    let baseOpacity: Double
-
-    func body(content: Content) -> some View {
-        let boost = settings.textOpacityBoost()
-
-        // When window is translucent, text appears dimmer
-        // Compensate by increasing brightness and adding subtle glow
-        let brightnessIncrease = boost * 0.4 // Up to 40% brighter
-        let glowRadius = boost * 6.0 // Up to 6pt glow
-
-        return content
-            .brightness(brightnessIncrease)
-            .shadow(color: .white.opacity(boost * 0.5), radius: glowRadius, x: 0, y: 0)
-    }
-}
-
-extension View {
-    /// Applies text visibility boost to maintain readability when window is translucent
-    /// - Parameter baseOpacity: The base opacity level of the text (e.g., 1.0 for primary, 0.7 for secondary)
-    func textVisibilityBoost(baseOpacity: Double = 1.0) -> some View {
-        modifier(TextVisibilityBoostModifier(baseOpacity: baseOpacity))
-    }
-
-    /// Convenience modifier for primary text (full opacity baseline)
-    func primaryTextVisibility() -> some View {
-        textVisibilityBoost(baseOpacity: 1.0)
-    }
-
-    /// Convenience modifier for secondary text (0.7 opacity baseline)
-    func secondaryTextVisibility() -> some View {
-        textVisibilityBoost(baseOpacity: 0.7)
-    }
-
-    /// Convenience modifier for muted text (0.5 opacity baseline)
-    func mutedTextVisibility() -> some View {
-        textVisibilityBoost(baseOpacity: 0.5)
     }
 }

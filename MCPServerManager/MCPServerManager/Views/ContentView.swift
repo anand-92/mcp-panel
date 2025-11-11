@@ -76,7 +76,6 @@ struct ContentView: View {
 
                         Text("Loading configuration...")
                             .font(DesignTokens.Typography.bodyLarge)
-                            .primaryTextVisibility()
                     }
                     .padding(40)
                     .background(
@@ -148,8 +147,6 @@ struct ContentView: View {
         }
         .environment(\.themeColors, viewModel.themeColors)
         .environment(\.currentTheme, viewModel.currentTheme)
-        .environment(\.appSettings, viewModel.settings)
-        .windowOpacity(viewModel.settings.windowOpacity)
         .frame(minWidth: 900, minHeight: 600)
         .fileImporter(
             isPresented: $showImporter,

@@ -11,8 +11,6 @@ struct SettingsModal: View {
     @State private var confirmDelete: Bool = true
     @State private var fetchServerLogos: Bool = true
     @State private var blurJSONPreviews: Bool = false
-    @State private var windowOpacity: Double = 1.0
-    @State private var textVisibilityBoost: Double = 0.5
     @State private var selectedTheme: AppTheme = .auto
     @State private var testingConnection: Bool = false
     @State private var testResult: String = ""
@@ -176,62 +174,6 @@ struct SettingsModal: View {
 
                     Divider()
 
-                    // Window Translucency
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Window Translucency")
-                                .font(DesignTokens.Typography.label)
-
-                            Spacer()
-
-                            Text("\(Int(windowOpacity * 100))%")
-                                .font(DesignTokens.Typography.bodySmall)
-                                .foregroundColor(.secondary)
-                                .monospacedDigit()
-                        }
-
-                        Slider(value: $windowOpacity, in: 0.3...1.0, step: 0.05)
-                            .onChange(of: windowOpacity) { newValue in
-                                // Update in real-time
-                                viewModel.settings.windowOpacity = newValue
-                                viewModel.saveSettings()
-                            }
-
-                        Text("Adjust the transparency of the application window")
-                            .font(DesignTokens.Typography.bodySmall)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Divider()
-
-                    // Text Visibility Boost
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Text Visibility Boost")
-                                .font(DesignTokens.Typography.label)
-
-                            Spacer()
-
-                            Text("\(Int(textVisibilityBoost * 100))%")
-                                .font(DesignTokens.Typography.bodySmall)
-                                .foregroundColor(.secondary)
-                                .monospacedDigit()
-                        }
-
-                        Slider(value: $textVisibilityBoost, in: 0.0...1.0, step: 0.05)
-                            .onChange(of: textVisibilityBoost) { newValue in
-                                // Update in real-time
-                                viewModel.settings.textVisibilityBoost = newValue
-                                viewModel.saveSettings()
-                            }
-
-                        Text("Keep text more visible when window is translucent (0% = text fades with window, 100% = text stays bright)")
-                            .font(DesignTokens.Typography.bodySmall)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Divider()
-
                     // Test Connection
                     VStack(alignment: .leading, spacing: 8) {
                         Button(action: testConnection) {
@@ -313,8 +255,6 @@ struct SettingsModal: View {
             confirmDelete = viewModel.settings.confirmDelete
             fetchServerLogos = UserDefaults.standard.object(forKey: "fetchServerLogos") as? Bool ?? true
             blurJSONPreviews = viewModel.settings.blurJSONPreviews
-            windowOpacity = viewModel.settings.windowOpacity
-            textVisibilityBoost = viewModel.settings.textVisibilityBoost
 
             // Load theme from settings
             if let themeStr = viewModel.settings.overrideTheme,
@@ -380,7 +320,6 @@ struct SettingsModal: View {
         viewModel.settings.configPaths = [config1Path, config2Path]
         viewModel.settings.confirmDelete = confirmDelete
         viewModel.settings.blurJSONPreviews = blurJSONPreviews
-        viewModel.settings.windowOpacity = windowOpacity
         UserDefaults.standard.set(fetchServerLogos, forKey: "fetchServerLogos")
         viewModel.saveSettings()
         isPresented = false

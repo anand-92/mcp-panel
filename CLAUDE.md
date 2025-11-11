@@ -99,58 +99,27 @@ The app uses a consistent design system defined in `Utilities/Constants.swift`:
 - **Cyberpunk Mode**: Optional neon cyan accents and enhanced glows
 - **Font Scaling**: 1.5x scaling applied to all text for better readability
 
-### Text Visibility Boost
+### Apple Liquid Glass
 
-The app includes an independent text visibility control that maintains text readability when the window becomes translucent:
+The app uses **Apple's Liquid Glass design language**, introduced in macOS 26 (Tahoe), iOS 26, and other Apple platforms at WWDC 2025. Liquid Glass is a translucent material that reflects and refracts its surroundings while dynamically transforming to bring greater focus to content.
 
-- **Window Opacity**: Controls overall window transparency (30%-100%)
-- **Text Visibility Boost**: Controls how much text resists becoming transparent (0%-100%)
-  - 0% = Text fades proportionally with window
-  - 50% = Text maintains moderate visibility (default)
-  - 100% = Text stays at maximum brightness
+**Key Benefits:**
+- **Native macOS Integration**: Seamlessly integrates with the system's design language
+- **Automatic Adaptation**: The app automatically adopts Liquid Glass when compiled with macOS 26 SDK
+- **Enhanced Depth**: Creates a sense of depth and hierarchy through translucent layering
+- **Dynamic Materials**: Responds to user interaction and system appearance changes
 
-**Implementation Details:**
-- Settings stored in `AppSettings.textVisibilityBoost` (Models/Settings.swift)
-- UI controls in Settings modal with real-time preview
-- View modifiers available for applying boost to text elements:
-  - `.primaryTextVisibility()` - For main text elements
-  - `.secondaryTextVisibility()` - For secondary text (0.7 opacity baseline)
-  - `.mutedTextVisibility()` - For muted text (0.5 opacity baseline)
-  - `.textVisibilityBoost(baseOpacity:)` - Custom opacity baseline
+**Implementation:**
+- The app leverages SwiftUI's native support for Liquid Glass
+- No custom transparency controls needed - the system handles material rendering
+- Works automatically across all themes and color schemes
+- Optimized for both light and dark modes
 
-**Example Usage:**
-```swift
-Text("Server Name")
-    .font(DesignTokens.Typography.title)
-    .foregroundColor(themeColors.primaryText)
-    .primaryTextVisibility()  // Apply boost for better visibility
-
-Text("Description")
-    .font(DesignTokens.Typography.body)
-    .foregroundColor(themeColors.secondaryText)
-    .secondaryTextVisibility()  // Apply boost with secondary baseline
-```
-
-**Algorithm:**
-```
-textOpacityBoost = (1.0 - windowOpacity) × textVisibilityBoost
-brightnessIncrease = textOpacityBoost × 0.4 (up to 40% brighter)
-glowRadius = textOpacityBoost × 6.0 (up to 6pt glow)
-```
-
-The modifier applies two effects to compensate for window translucency:
-1. **Brightness increase** - Makes text brighter to maintain contrast
-2. **White glow/shadow** - Adds subtle halo effect for better visibility
-
-When window opacity is 30% and boost is 50%:
-- Boost = (1.0 - 0.3) × 0.5 = 0.35
-- Brightness = +14% (0.35 × 0.4)
-- Glow radius = 2.1pt (0.35 × 6.0)
-
-When window opacity is 30% and boost is 100%:
-- Boost = (1.0 - 0.3) × 1.0 = 0.7
-- Brightness = +28% (0.7 × 0.4)
-- Glow radius = 4.2pt (0.7 × 6.0)
+**Technical Details:**
+- Requires macOS 26 (Tahoe) or later
+- Uses standard SwiftUI components that automatically adopt Liquid Glass
+- All glass panels and UI elements use system-provided materials
+- Ensures consistency with other macOS 26 apps
 
 ## Config File Management
 

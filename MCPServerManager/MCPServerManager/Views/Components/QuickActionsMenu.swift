@@ -98,7 +98,6 @@ struct QuickActionButton: View {
                 Text(title)
                     .font(DesignTokens.Typography.label)
                     .foregroundColor(themeColors.primaryText)
-                    .primaryTextVisibility()
             }
             .padding(.vertical, 6)
             .padding(.horizontal, 8)
