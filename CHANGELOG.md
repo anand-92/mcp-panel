@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Server-Sent Events (SSE)** - Full support for SSE transport type and streaming servers
 
 ### Changed
+- **Settings Modal Layout** - Redesigned settings interface with organized sections (Configuration, Appearance, Privacy & Security, Network). Added visual icons, better spacing, and card-based grouping for improved readability and navigation
 - **Apple Liquid Glass Implementation** - Fully implemented Apple's native Liquid Glass design language with intelligent fallback support. On macOS 26 (Tahoe) and later, the app uses the new `.glassEffect()` modifier for authentic translucent materials that reflect and refract surroundings. On macOS 13-25, the app gracefully falls back to traditional glass morphism. Removed custom transparency sliders in Settings - the system now handles all glass effects automatically based on OS version.
 
 ### Fixed

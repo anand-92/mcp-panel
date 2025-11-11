@@ -46,154 +46,181 @@ struct SettingsModal: View {
 
             // Content
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    // Config Path 1
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Config Path 1")
-                            .font(DesignTokens.Typography.label)
-
-                        HStack {
-                            TextField("~/.claude.json", text: $config1Path)
-                                .textFieldStyle(.roundedBorder)
-                                .focusable(true)
-
-                            Button(action: {
-                                selectConfigFile { path in
-                                    config1Path = path
+                VStack(alignment: .leading, spacing: 20) {
+                    // Configuration Files Section
+                    SettingsSection(
+                        icon: "doc.text.fill",
+                        title: "Configuration Files",
+                        description: "Manage MCP server config files"
+                    ) {
+                        VStack(spacing: 16) {
+                            // Config Path 1
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Image(systemName: "1.circle.fill")
+                                        .foregroundColor(themeColors.primaryAccent)
+                                    Text("Config Path 1")
+                                        .font(DesignTokens.Typography.label)
                                 }
-                            }) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "folder")
-                                    Text("Browse")
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.white.opacity(0.1))
-                                        .overlay(
+
+                                HStack {
+                                    TextField("~/.claude.json", text: $config1Path)
+                                        .textFieldStyle(.roundedBorder)
+                                        .focusable(true)
+
+                                    Button(action: {
+                                        selectConfigFile { path in
+                                            config1Path = path
+                                        }
+                                    }) {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "folder")
+                                            Text("Browse")
+                                        }
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
+                                        .background(
                                             RoundedRectangle(cornerRadius: 8)
-                                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                                .fill(Color.white.opacity(0.1))
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 8)
+                                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                                )
                                         )
-                                )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
-                            .buttonStyle(.plain)
-                        }
-                    }
 
-                    // Config Path 2
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Config Path 2")
-                            .font(DesignTokens.Typography.label)
-
-                        HStack {
-                            TextField("~/.settings.json", text: $config2Path)
-                                .textFieldStyle(.roundedBorder)
-                                .focusable(true)
-
-                            Button(action: {
-                                selectConfigFile { path in
-                                    config2Path = path
+                            // Config Path 2
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Image(systemName: "2.circle.fill")
+                                        .foregroundColor(themeColors.primaryAccent)
+                                    Text("Config Path 2")
+                                        .font(DesignTokens.Typography.label)
                                 }
-                            }) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "folder")
-                                    Text("Browse")
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.white.opacity(0.1))
-                                        .overlay(
+
+                                HStack {
+                                    TextField("~/.settings.json", text: $config2Path)
+                                        .textFieldStyle(.roundedBorder)
+                                        .focusable(true)
+
+                                    Button(action: {
+                                        selectConfigFile { path in
+                                            config2Path = path
+                                        }
+                                    }) {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "folder")
+                                            Text("Browse")
+                                        }
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
+                                        .background(
                                             RoundedRectangle(cornerRadius: 8)
-                                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                                .fill(Color.white.opacity(0.1))
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 8)
+                                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                                )
                                         )
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-
-                    Divider()
-
-                    // Theme Selector
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Theme")
-                            .font(DesignTokens.Typography.label)
-
-                        Picker("", selection: $selectedTheme) {
-                            ForEach(AppTheme.allCases, id: \.self) { theme in
-                                Text(theme.rawValue).tag(theme)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .onChange(of: selectedTheme) { newTheme in
-                            // Update in real-time
-                            viewModel.settings.overrideTheme = newTheme == .auto ? nil : newTheme.rawValue
-                            viewModel.saveSettings()
-                        }
-
-                        Text("Select a theme to override auto-detection. 'Auto' will detect theme based on active config (Claude Code or Gemini CLI).")
-                            .font(DesignTokens.Typography.bodySmall)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Divider()
-
-                    // Confirm Delete
-                    VStack(alignment: .leading, spacing: 8) {
-                        CheckboxToggle(isOn: $confirmDelete, label: "Confirm before deleting servers")
-
-                        Text("Show confirmation dialog when deleting servers")
-                            .font(DesignTokens.Typography.bodySmall)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Divider()
-
-                    // Fetch Server Logos
-                    VStack(alignment: .leading, spacing: 8) {
-                        CheckboxToggle(isOn: $fetchServerLogos, label: "Fetch server logos from internet")
-
-                        Text("Automatically download logos for servers. When disabled, only generic icons will be shown. Respects your privacy - no tracking.")
-                            .font(DesignTokens.Typography.bodySmall)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Divider()
-
-                    // Blur JSON Previews
-                    VStack(alignment: .leading, spacing: 8) {
-                        CheckboxToggle(isOn: $blurJSONPreviews, label: "Blur JSON previews")
-
-                        Text("Apply blur effect to JSON code previews in server cards. Blur is temporarily removed when editing.")
-                            .font(DesignTokens.Typography.bodySmall)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Divider()
-
-                    // Test Connection
-                    VStack(alignment: .leading, spacing: 8) {
-                        Button(action: testConnection) {
-                            HStack {
-                                if testingConnection {
-                                    ProgressView()
-                                        .scaleEffect(0.7)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                Text(testingConnection ? "Testing..." : "Test Connection")
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
                         }
-                        .buttonStyle(.bordered)
-                        .disabled(testingConnection)
+                    }
 
-                        if !testResult.isEmpty {
-                            Text(testResult)
+                    // Appearance Section
+                    SettingsSection(
+                        icon: "paintbrush.fill",
+                        title: "Appearance",
+                        description: "Customize the app's look and feel"
+                    ) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Theme")
+                                .font(DesignTokens.Typography.label)
+
+                            Picker("", selection: $selectedTheme) {
+                                ForEach(AppTheme.allCases, id: \.self) { theme in
+                                    Text(theme.rawValue).tag(theme)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .onChange(of: selectedTheme) { newTheme in
+                                viewModel.settings.overrideTheme = newTheme == .auto ? nil : newTheme.rawValue
+                                viewModel.saveSettings()
+                            }
+
+                            Text("'Auto' detects theme based on active config (Claude Code or Gemini CLI)")
                                 .font(DesignTokens.Typography.bodySmall)
                                 .foregroundColor(.secondary)
+                        }
+                    }
+
+                    // Privacy & Security Section
+                    SettingsSection(
+                        icon: "lock.shield.fill",
+                        title: "Privacy & Security",
+                        description: "Control data visibility and confirmations"
+                    ) {
+                        VStack(spacing: 16) {
+                            SettingsToggleRow(
+                                isOn: $confirmDelete,
+                                icon: "trash.circle.fill",
+                                label: "Confirm before deleting",
+                                description: "Show confirmation dialog when deleting servers"
+                            )
+
+                            SettingsToggleRow(
+                                isOn: $blurJSONPreviews,
+                                icon: "eye.slash.fill",
+                                label: "Blur JSON previews",
+                                description: "Apply blur to code previews (removed when editing)"
+                            )
+                        }
+                    }
+
+                    // Network Section
+                    SettingsSection(
+                        icon: "network",
+                        title: "Network",
+                        description: "Configure internet-based features"
+                    ) {
+                        VStack(spacing: 16) {
+                            SettingsToggleRow(
+                                isOn: $fetchServerLogos,
+                                icon: "photo.circle.fill",
+                                label: "Fetch server logos",
+                                description: "Download logos from internet (no tracking)"
+                            )
+
+                            Divider()
+
+                            // Test Connection
+                            VStack(alignment: .leading, spacing: 8) {
+                                Button(action: testConnection) {
+                                    HStack {
+                                        Image(systemName: testingConnection ? "arrow.triangle.2.circlepath" : "network.badge.shield.half.filled")
+                                        if testingConnection {
+                                            ProgressView()
+                                                .scaleEffect(0.7)
+                                        }
+                                        Text(testingConnection ? "Testing..." : "Test Connection")
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                }
+                                .buttonStyle(.bordered)
+                                .disabled(testingConnection)
+
+                                if !testResult.isEmpty {
+                                    Text(testResult)
+                                        .font(DesignTokens.Typography.bodySmall)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
                         }
                     }
                 }
@@ -243,7 +270,7 @@ struct SettingsModal: View {
             }
             .padding(24)
         }
-        .frame(width: 550, height: 600)
+        .frame(width: 600, height: 700)
         .modifier(LiquidGlassModifier(shape: RoundedRectangle(cornerRadius: 20)))
         .shadow(radius: 30)
         .onAppear {
@@ -320,5 +347,86 @@ struct SettingsModal: View {
         UserDefaults.standard.set(fetchServerLogos, forKey: "fetchServerLogos")
         viewModel.saveSettings()
         isPresented = false
+    }
+}
+
+// MARK: - Settings Section Component
+
+struct SettingsSection<Content: View>: View {
+    let icon: String
+    let title: String
+    let description: String
+    let content: () -> Content
+
+    @Environment(\.themeColors) private var themeColors
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Section Header
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(themeColors.primaryAccent)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(DesignTokens.Typography.title3)
+
+                    Text(description)
+                        .font(DesignTokens.Typography.bodySmall)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            // Section Content
+            VStack(alignment: .leading, spacing: 12) {
+                content()
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.white.opacity(0.03))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                    )
+            )
+        }
+    }
+}
+
+// MARK: - Settings Toggle Row Component
+
+struct SettingsToggleRow: View {
+    @Binding var isOn: Bool
+    let icon: String
+    let label: String
+    let description: String
+
+    @Environment(\.themeColors) private var themeColors
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            // Icon
+            Image(systemName: icon)
+                .font(.system(size: 18))
+                .foregroundColor(themeColors.primaryAccent.opacity(0.8))
+                .frame(width: 24)
+
+            // Text content
+            VStack(alignment: .leading, spacing: 4) {
+                Text(label)
+                    .font(DesignTokens.Typography.label)
+
+                Text(description)
+                    .font(DesignTokens.Typography.bodySmall)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            // Toggle
+            CheckboxToggle(isOn: $isOn, label: "")
+        }
     }
 }
