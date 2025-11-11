@@ -15,6 +15,15 @@ struct MCPServerManagerApp: App {
                 .onAppear {
                     // Ensure window accepts keyboard input
                     NSApp.activate(ignoringOtherApps: true)
+
+                    // Apply Liquid Glass to window background
+                    if let window = NSApp.windows.first {
+                        if #available(macOS 26.0, *) {
+                            window.isOpaque = false
+                            window.backgroundColor = .clear
+                            window.titlebarAppearsTransparent = true
+                        }
+                    }
                 }
         }
         .windowStyle(.hiddenTitleBar)
