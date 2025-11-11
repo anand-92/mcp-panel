@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Apple Liquid Glass Implementation** - Fully implemented Apple's native Liquid Glass design language with intelligent fallback support. On macOS 26 (Tahoe) and later, the app uses the new `.glassEffect()` modifier for authentic translucent materials that reflect and refract surroundings. On macOS 13-25, the app gracefully falls back to traditional glass morphism. Removed custom transparency sliders in Settings - the system now handles all glass effects automatically based on OS version.
 
 ### Fixed
+- **Sparkle Update Installation** - Fixed "An error occurred while launching the installer" by disabling app sandboxing for DMG builds. Sparkle's installer requires non-sandboxed environment to properly replace the app bundle. Removed SUEnableInstallerLauncherService flag as it's only needed for sandboxed apps
 - **Registry Browser Decoding** - Fixed "Browse Registry" failing to load servers due to strict header field requirements. Made APIHeader.name and APIHeader.value optional to handle servers with missing or incomplete header definitions
 - **Sparkle Update Verification** - Added SUPublicEDKey to Info.plist to fix "error occurred in retrieving update information" when checking for updates
 - **App Window Behavior** - Removed problematic "Show Main Window" menu item. App now quits when window is closed (standard single-window app behavior). This fixes App Store compliance issues.

@@ -2,6 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <!-- DMG Distribution Entitlements (Non-Sandboxed for Sparkle updates) -->
+    <!-- Note: App Store builds MUST use appstore.entitlements instead -->
+
     <key>com.apple.security.cs.allow-jit</key>
     <true/>
     <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
@@ -10,18 +13,22 @@
     <true/>
     <key>com.apple.security.cs.allow-dyld-environment-variables</key>
     <true/>
-    <key>com.apple.security.files.user-selected.read-write</key>
-    <true/>
+
+    <!-- IMPORTANT: Sandboxing is DISABLED for DMG builds to allow Sparkle updates -->
+    <!-- Sparkle's installer cannot work properly in a sandboxed environment -->
     <key>com.apple.security.app-sandbox</key>
-    <true/>
+    <false/>
+
+    <!-- Network access for downloading updates and checking MCP registry -->
     <key>com.apple.security.network.client</key>
     <true/>
 
-    <!-- Sparkle installer communication (required for sandboxed apps) -->
-    <key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
-    <array>
-        <string>org.sparkle-project.Sparkle.Installer-Connection</string>
-        <string>org.sparkle-project.Sparkle.Installer-Status</string>
-    </array>
+    <!-- File access for reading/writing config files -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+
+    <!-- Hardened Runtime flags (required for notarization) -->
+    <key>com.apple.security.cs.disable-executable-page-protection</key>
+    <true/>
 </dict>
 </plist>
