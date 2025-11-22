@@ -621,12 +621,8 @@ class ServerViewModel: ObservableObject {
 
     func applyRawTOML(_ tomlText: String) -> (success: Bool, invalidServers: [String: String]?, serverDict: [String: ServerConfig]?) {
         do {
-            guard let data = tomlText.data(using: .utf8) else {
-                throw NSError(domain: "Invalid TOML", code: -1)
-            }
-
             // Parse TOML
-            let toml = try TOMLTable(data: data)
+            let toml = try TOMLTable(string: tomlText)
             guard let mcpServers = toml["mcpServers"] as? TOMLTable else {
                 throw NSError(domain: "Missing mcpServers section", code: -1)
             }
@@ -668,11 +664,7 @@ class ServerViewModel: ObservableObject {
     }
 
     func applyRawTOMLForced(_ tomlText: String) throws {
-        guard let data = tomlText.data(using: .utf8) else {
-            throw NSError(domain: "Invalid TOML", code: -1)
-        }
-
-        let toml = try TOMLTable(data: data)
+        let toml = try TOMLTable(string: tomlText)
         guard let mcpServers = toml["mcpServers"] as? TOMLTable else {
             throw NSError(domain: "Missing mcpServers section", code: -1)
         }
