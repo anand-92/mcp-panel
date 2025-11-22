@@ -159,50 +159,12 @@ struct RawTOMLView: View {
                 result[server.name] = server.config
             }
 
-        // Convert servers to TOML
-        var mcpServersTable = TOMLTable()
-
-        for (name, config) in filteredServers {
-            // Encode ServerConfig to JSON dict first, then convert to TOML
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-
-            guard let data = try? encoder.encode(config),
-                  let jsonDict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let serverTable = jsonDictToTOMLTable(jsonDict) else {
-                continue
-            }
-
-            mcpServersTable[name] = serverTable
+        // Use centralized TOML utilities
+        guard let tomlString = try? TOMLUtils.serversToTOMLString(filteredServers) else {
+            return "[mcpServers]\n"
         }
 
-        var toml = TOMLTable()
-        toml["mcpServers"] = mcpServersTable
-        return toml.toml()
-    }
-
-    private func jsonDictToTOMLTable(_ dict: [String: Any]) -> TOMLTable? {
-        var table = TOMLTable()
-
-        for (key, value) in dict {
-            if let dictValue = value as? [String: Any] {
-                if let nestedTable = jsonDictToTOMLTable(dictValue) {
-                    table[key] = nestedTable
-                }
-            } else if let arrayValue = value as? [Any] {
-                table[key] = arrayValue
-            } else if let stringValue = value as? String {
-                table[key] = stringValue
-            } else if let intValue = value as? Int {
-                table[key] = intValue
-            } else if let doubleValue = value as? Double {
-                table[key] = doubleValue
-            } else if let boolValue = value as? Bool {
-                table[key] = boolValue
-            }
-        }
-
-        return table
+        return tomlString
     }
 
     private func applyChanges() {

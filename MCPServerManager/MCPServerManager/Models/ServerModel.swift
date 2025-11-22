@@ -50,41 +50,15 @@ struct ServerModel: Identifiable, Codable, Equatable {
     }
 
     var configTOML: String {
-        // Encode to JSON dict first, then convert to TOML
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-
-        guard let data = try? encoder.encode(config),
-              let jsonDict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let tomlTable = jsonDictToTOMLTable(jsonDict) else {
+        // Use centralized TOML utilities
+        guard let tomlString = try? TOMLUtils.serversToTOMLString([name: config]) else {
             return ""
         }
 
-        return tomlTable.toml()
-    }
-
-    private func jsonDictToTOMLTable(_ dict: [String: Any]) -> TOMLTable? {
-        var table = TOMLTable()
-
-        for (key, value) in dict {
-            if let dictValue = value as? [String: Any] {
-                if let nestedTable = jsonDictToTOMLTable(dictValue) {
-                    table[key] = nestedTable
-                }
-            } else if let arrayValue = value as? [Any] {
-                table[key] = arrayValue
-            } else if let stringValue = value as? String {
-                table[key] = stringValue
-            } else if let intValue = value as? Int {
-                table[key] = intValue
-            } else if let doubleValue = value as? Double {
-                table[key] = doubleValue
-            } else if let boolValue = value as? Bool {
-                table[key] = boolValue
-            }
-        }
-
-        return table
+        // Extract just the server section (remove [mcpServers] header and server name)
+        let lines = tomlString.split(separator: "\n")
+        let serverLines = lines.dropFirst(3) // Skip [mcpServers], blank line, and [mcpServers.name]
+        return serverLines.joined(separator: "\n")
     }
 
     var isInConfig1: Bool { inConfigs.count > 0 ? inConfigs[0] : false }

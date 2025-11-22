@@ -635,7 +635,7 @@ class ServerViewModel: ObservableObject {
             var serverDict: [String: ServerConfig] = [:]
             for (name, value) in mcpServers {
                 guard let serverTable = value as? TOMLTable,
-                      let jsonDict = tomlTableToJSONDict(serverTable) else {
+                      let jsonDict = TOMLUtils.tomlTableToDictionary(serverTable) else {
                     throw NSError(domain: "Invalid server config for \(name)", code: -1)
                 }
 
@@ -680,7 +680,7 @@ class ServerViewModel: ObservableObject {
         var serverDict: [String: ServerConfig] = [:]
         for (name, value) in mcpServers {
             guard let serverTable = value as? TOMLTable,
-                  let jsonDict = tomlTableToJSONDict(serverTable) else {
+                  let jsonDict = TOMLUtils.tomlTableToDictionary(serverTable) else {
                 throw NSError(domain: "Invalid server config for \(name)", code: -1)
             }
 
@@ -694,24 +694,6 @@ class ServerViewModel: ObservableObject {
 
     func applyRawTOMLForced(serverDict: [String: ServerConfig]) {
         applyRawJSONInternal(serverDict: serverDict, skipValidation: true)
-    }
-
-    private func tomlTableToJSONDict(_ table: TOMLTable) -> [String: Any]? {
-        var dict: [String: Any] = [:]
-
-        for (key, value) in table {
-            if let nestedTable = value as? TOMLTable {
-                if let nestedDict = tomlTableToJSONDict(nestedTable) {
-                    dict[key] = nestedDict
-                }
-            } else if let array = value as? [Any] {
-                dict[key] = array
-            } else {
-                dict[key] = value
-            }
-        }
-
-        return dict
     }
 
     func deleteServer(_ server: ServerModel) {

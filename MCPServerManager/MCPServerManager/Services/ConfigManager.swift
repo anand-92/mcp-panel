@@ -214,54 +214,9 @@ class ConfigManager {
     }
 
     private func writeTOMLConfig(servers: [String: ServerConfig], to url: URL) throws {
-        // Create TOML structure
-        var toml = TOMLTable()
-        var mcpServersTable = TOMLTable()
-
-        // Convert each server to TOML table
-        for (name, config) in servers {
-            // Encode ServerConfig to JSON dict first, then convert to TOML
-            let encoder = JSONEncoder()
-            let data = try encoder.encode(config)
-            let jsonDict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-
-            // Convert JSON dict to TOML table
-            if let serverTable = self.jsonDictToTOMLTable(jsonDict) {
-                mcpServersTable[name] = serverTable
-            }
-        }
-
-        toml["mcpServers"] = mcpServersTable
-
-        // Write TOML to file
-        let tomlString = toml.toml()
+        // Use centralized TOML utilities
+        let tomlString = try TOMLUtils.serversToTOMLString(servers)
         try tomlString.write(to: url, atomically: false, encoding: .utf8)
-    }
-
-    private func jsonDictToTOMLTable(_ dict: [String: Any]) -> TOMLTable? {
-        var table = TOMLTable()
-
-        for (key, value) in dict {
-            if let dictValue = value as? [String: Any] {
-                // Nested object
-                if let nestedTable = jsonDictToTOMLTable(dictValue) {
-                    table[key] = nestedTable
-                }
-            } else if let arrayValue = value as? [Any] {
-                // Array
-                table[key] = arrayValue
-            } else if let stringValue = value as? String {
-                table[key] = stringValue
-            } else if let intValue = value as? Int {
-                table[key] = intValue
-            } else if let doubleValue = value as? Double {
-                table[key] = doubleValue
-            } else if let boolValue = value as? Bool {
-                table[key] = boolValue
-            }
-        }
-
-        return table
     }
 
     func testConnection(to path: String) throws -> Int {
