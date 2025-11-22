@@ -6,18 +6,23 @@ struct ServerModel: Identifiable, Codable, Equatable {
     var config: ServerConfig
     var enabled: Bool
     var updatedAt: Date
-    var inConfigs: [Bool] // [inConfig1, inConfig2]
+    var inConfigs: [Bool] // [inConfig1, inConfig2, inConfig3]
     var registryImageUrl: String? // Image URL from MCP registry (takes precedence over fetched icons)
     var customIconPath: String? // User-selected custom icon path (takes highest precedence)
+
+    // UNIVERSE ISOLATION: Which universe this server belongs to (0/1 = Claude/Gemini, 2 = Codex)
+    // Once set, this NEVER changes. Servers stay in their universe forever.
+    let sourceUniverse: Int
 
     init(id: UUID = UUID(),
          name: String,
          config: ServerConfig,
          enabled: Bool = false,
          updatedAt: Date = Date(),
-         inConfigs: [Bool] = [false, false],
+         inConfigs: [Bool] = [false, false, false],
          registryImageUrl: String? = nil,
-         customIconPath: String? = nil) {
+         customIconPath: String? = nil,
+         sourceUniverse: Int = 0) {
         self.id = id
         self.name = name
         self.config = config
@@ -26,6 +31,7 @@ struct ServerModel: Identifiable, Codable, Equatable {
         self.inConfigs = inConfigs
         self.registryImageUrl = registryImageUrl
         self.customIconPath = customIconPath
+        self.sourceUniverse = sourceUniverse
     }
 
     // MARK: - Computed Properties
@@ -44,6 +50,11 @@ struct ServerModel: Identifiable, Codable, Equatable {
 
     var isInConfig1: Bool { inConfigs.count > 0 ? inConfigs[0] : false }
     var isInConfig2: Bool { inConfigs.count > 1 ? inConfigs[1] : false }
+    var isInConfig3: Bool { inConfigs.count > 2 ? inConfigs[2] : false }
+
+    // UNIVERSE CHECKS: Strict separation between Claude/Gemini and Codex
+    var isClaudeGeminiUniverse: Bool { sourceUniverse == 0 || sourceUniverse == 1 }
+    var isCodexUniverse: Bool { sourceUniverse == 2 }
 
     /// Extract domain for icon fetching
     var iconDomain: String? {

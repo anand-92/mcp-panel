@@ -55,13 +55,23 @@ class ServerViewModel: ObservableObject {
 
     var filteredServers: [ServerModel] {
         let activeIndex = settings.activeConfigIndex
-
         var filtered = servers
 
-        // Apply filter mode
+        // 🚨 NUCLEAR UNIVERSE ISOLATION 🚨
+        // Codex servers NEVER appear in Claude/Gemini, and vice versa
+        // This is NOT a suggestion, it's the LAW
+        if activeIndex == 2 {
+            // Codex universe: ONLY show Codex servers
+            filtered = filtered.filter { $0.isCodexUniverse }
+        } else {
+            // Claude/Gemini universe: ONLY show Claude/Gemini servers
+            filtered = filtered.filter { $0.isClaudeGeminiUniverse }
+        }
+
+        // Apply filter mode (within the universe)
         switch filterMode {
         case .all:
-            break
+            break  // Show all servers in this universe
         case .active:
             filtered = filtered.filter { $0.inConfigs[safe: activeIndex] ?? false }
         case .disabled:
@@ -86,6 +96,9 @@ class ServerViewModel: ObservableObject {
 
     func loadSettings() {
         settings = UserDefaults.standard.appSettings
+        // NO MIGRATION - Codex is a completely separate universe
+        // Existing servers belong to Claude/Gemini (sourceUniverse defaults to 0)
+        // Codex servers are brand new, created separately
     }
 
     func saveSettings() {
@@ -111,8 +124,9 @@ class ServerViewModel: ObservableObject {
             do {
                 let config1 = try configManager.readConfig(from: settings.config1Path)
                 let config2 = try configManager.readConfig(from: settings.config2Path)
+                let config3 = try configManager.readConfig(from: settings.config3Path)
 
-                let merged = mergeConfigs(config1: config1, config2: config2)
+                let merged = mergeConfigs(config1: config1, config2: config2, config3: config3)
                 servers = merged
 
                 // Cache to UserDefaults
@@ -142,16 +156,16 @@ class ServerViewModel: ObservableObject {
         }
     }
 
-    private func mergeConfigs(config1: [String: ServerConfig], config2: [String: ServerConfig]) -> [ServerModel] {
+    private func mergeConfigs(config1: [String: ServerConfig], config2: [String: ServerConfig], config3: [String: ServerConfig]) -> [ServerModel] {
         var merged: [String: ServerModel] = [:]
         let now = Date()
 
-        // Start with cached servers to preserve metadata
+        // Start with cached servers to preserve metadata (including sourceUniverse)
         for server in UserDefaults.standard.cachedServers {
             merged[server.name] = server
         }
 
-        // Process config1 servers
+        // Process config1 servers (Claude Code - Universe 0)
         for (name, config) in config1 {
             if var existing = merged[name] {
                 existing.config = config
@@ -162,12 +176,13 @@ class ServerViewModel: ObservableObject {
                     name: name,
                     config: config,
                     updatedAt: now,
-                    inConfigs: [true, false]
+                    inConfigs: [true, false, false],
+                    sourceUniverse: 0  // Claude universe
                 )
             }
         }
 
-        // Process config2 servers
+        // Process config2 servers (Gemini CLI - Universe 1)
         for (name, config) in config2 {
             if var existing = merged[name] {
                 if !existing.inConfigs[0] {
@@ -180,18 +195,40 @@ class ServerViewModel: ObservableObject {
                     name: name,
                     config: config,
                     updatedAt: now,
-                    inConfigs: [false, true]
+                    inConfigs: [false, true, false],
+                    sourceUniverse: 1  // Gemini universe (still Claude/Gemini group)
                 )
             }
         }
 
-        // Reset inConfigs for servers not in either config
+        // Process config3 servers (Codex - Universe 2 - COMPLETELY ISOLATED)
+        for (name, config) in config3 {
+            if var existing = merged[name] {
+                // Codex servers are isolated, update config regardless
+                existing.config = config
+                existing.inConfigs[2] = true
+                merged[name] = existing
+            } else {
+                merged[name] = ServerModel(
+                    name: name,
+                    config: config,
+                    updatedAt: now,
+                    inConfigs: [false, false, true],
+                    sourceUniverse: 2  // Codex universe - THE FORBIDDEN ZONE
+                )
+            }
+        }
+
+        // Reset inConfigs for servers not in their respective configs
         for (name, var server) in merged {
             if !config1.keys.contains(name) {
                 server.inConfigs[0] = false
             }
             if !config2.keys.contains(name) {
                 server.inConfigs[1] = false
+            }
+            if !config3.keys.contains(name) {
+                server.inConfigs[2] = false
             }
             merged[name] = server
         }
@@ -217,12 +254,17 @@ class ServerViewModel: ObservableObject {
                     .filter { $0.isInConfig2 }
                     .reduce(into: [String: ServerConfig]()) { $0[$1.name] = $1.config }
 
+                let config3Servers = servers
+                    .filter { $0.isInConfig3 }
+                    .reduce(into: [String: ServerConfig]()) { $0[$1.name] = $1.config }
+
                 #if DEBUG
-                print("DEBUG: Syncing - Config1: \(config1Servers.count) servers, Config2: \(config2Servers.count) servers")
+                print("DEBUG: Syncing - Config1: \(config1Servers.count), Config2: \(config2Servers.count), Config3 (CODEX): \(config3Servers.count)")
                 #endif
 
                 try configManager.writeConfig(servers: config1Servers, to: settings.config1Path)
                 try configManager.writeConfig(servers: config2Servers, to: settings.config2Path)
+                try configManager.writeConfig(servers: config3Servers, to: settings.config3Path)
 
                 // Update cache
                 await MainActor.run {
@@ -342,7 +384,8 @@ class ServerViewModel: ObservableObject {
                 print("DEBUG: Updated existing server '\(name)'")
                 #endif
             } else {
-                var inConfigs = [false, false]
+                // Brand new server - assign to current universe
+                var inConfigs = [false, false, false]
                 inConfigs[settings.activeConfigIndex] = true
 
                 let newServer = ServerModel(
@@ -350,11 +393,12 @@ class ServerViewModel: ObservableObject {
                     config: config,
                     updatedAt: Date(),
                     inConfigs: inConfigs,
-                    registryImageUrl: registryImageUrl
+                    registryImageUrl: registryImageUrl,
+                    sourceUniverse: settings.activeConfigIndex  // Lock to this universe FOREVER
                 )
                 self.servers.append(newServer)
                 #if DEBUG
-                print("DEBUG: Added new server '\(name)' with registry image: \(registryImageUrl != nil)")
+                print("DEBUG: Added new server '\(name)' to universe \(settings.activeConfigIndex)")
                 #endif
             }
             addedCount += 1
@@ -550,14 +594,15 @@ class ServerViewModel: ObservableObject {
                 updated.updatedAt = Date()
                 servers[index] = updated
             } else {
-                var inConfigs = [false, false]
+                var inConfigs = [false, false, false]
                 inConfigs[configIndex] = true
 
                 let newServer = ServerModel(
                     name: name,
                     config: config,
                     updatedAt: Date(),
-                    inConfigs: inConfigs
+                    inConfigs: inConfigs,
+                    sourceUniverse: configIndex  // Locked to this universe forever
                 )
                 servers.append(newServer)
             }
