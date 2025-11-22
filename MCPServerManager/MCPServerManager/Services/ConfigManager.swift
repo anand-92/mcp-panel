@@ -176,32 +176,92 @@ class ConfigManager {
     }
 
     func writeConfig(servers: [String: ServerConfig], to path: String) throws {
+        let format = ConfigFormat.detect(from: path)
+
         try withConfigAccess(path) { url in
-            // Read existing config to preserve other keys
-            var json: [String: Any] = [:]
-            if FileManager.default.fileExists(atPath: url.path) {
-                let data = try Data(contentsOf: url)
-                json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+            if format == .toml {
+                // Write TOML format
+                try self.writeTOMLConfig(servers: servers, to: url)
+            } else {
+                // Write JSON format
+                try self.writeJSONConfig(servers: servers, to: url)
             }
-
-            // Convert servers to dictionary
-            var mcpServers: [String: Any] = [:]
-            for (name, config) in servers {
-                let data = try JSONEncoder().encode(config)
-                let configDict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-                mcpServers[name] = configDict
-            }
-
-            // Update mcpServers section
-            json["mcpServers"] = mcpServers
-
-            // Write back to file
-            // IMPORTANT: Do NOT use .atomic option with security-scoped bookmarks!
-            // Atomic writes create temporary files that are outside the bookmark's scope,
-            // causing "permission denied" errors. Write directly to the file instead.
-            let data = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
-            try data.write(to: url)
         }
+    }
+
+    private func writeJSONConfig(servers: [String: ServerConfig], to url: URL) throws {
+        // Read existing config to preserve other keys
+        var json: [String: Any] = [:]
+        if FileManager.default.fileExists(atPath: url.path) {
+            let data = try Data(contentsOf: url)
+            json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        }
+
+        // Convert servers to dictionary
+        var mcpServers: [String: Any] = [:]
+        for (name, config) in servers {
+            let data = try JSONEncoder().encode(config)
+            let configDict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+            mcpServers[name] = configDict
+        }
+
+        // Update mcpServers section
+        json["mcpServers"] = mcpServers
+
+        // Write back to file
+        let data = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
+        try data.write(to: url)
+    }
+
+    private func writeTOMLConfig(servers: [String: ServerConfig], to url: URL) throws {
+        // Create TOML structure
+        var toml = TOMLTable()
+        var mcpServersTable = TOMLTable()
+
+        // Convert each server to TOML table
+        for (name, config) in servers {
+            // Encode ServerConfig to JSON dict first, then convert to TOML
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(config)
+            let jsonDict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+
+            // Convert JSON dict to TOML table
+            if let serverTable = self.jsonDictToTOMLTable(jsonDict) {
+                mcpServersTable[name] = serverTable
+            }
+        }
+
+        toml["mcpServers"] = mcpServersTable
+
+        // Write TOML to file
+        let tomlString = toml.toml()
+        try tomlString.write(to: url, atomically: false, encoding: .utf8)
+    }
+
+    private func jsonDictToTOMLTable(_ dict: [String: Any]) -> TOMLTable? {
+        var table = TOMLTable()
+
+        for (key, value) in dict {
+            if let dictValue = value as? [String: Any] {
+                // Nested object
+                if let nestedTable = jsonDictToTOMLTable(dictValue) {
+                    table[key] = nestedTable
+                }
+            } else if let arrayValue = value as? [Any] {
+                // Array
+                table[key] = arrayValue
+            } else if let stringValue = value as? String {
+                table[key] = stringValue
+            } else if let intValue = value as? Int {
+                table[key] = intValue
+            } else if let doubleValue = value as? Double {
+                table[key] = doubleValue
+            } else if let boolValue = value as? Bool {
+                table[key] = boolValue
+            }
+        }
+
+        return table
     }
 
     func testConnection(to path: String) throws -> Int {

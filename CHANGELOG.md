@@ -8,9 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 - **Codex Configuration Support** - Full support for third config file with complete universe isolation. Manage Codex servers separately with dedicated UI, TOML file format support, and zero cross-contamination with Claude Code or Gemini CLI configs. Servers remain locked to their creation universe forever
+- **TOML Display & Editing** - Codex servers now properly display and edit as TOML format (not JSON). Includes dedicated RawTOMLView component and TOML-aware ServerCardView previews
 
 ### Fixed
 - **TOML File Selection** - Config file picker now accepts both .json and .toml files, allowing selection of Codex config files
+- **Critical: Codex TOML Rendering** - Fixed major bug where Codex servers (stored as TOML) were incorrectly displayed and edited as JSON. All Codex UI components now use native TOML format with proper parsing and serialization
 
 ---
 

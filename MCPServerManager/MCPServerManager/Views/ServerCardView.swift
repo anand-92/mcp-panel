@@ -135,7 +135,7 @@ struct ServerCardView: View {
                 } else {
                     ZStack(alignment: .topTrailing) {
                         ScrollView {
-                            Text(server.configJSON)
+                            Text(server.isCodexUniverse ? server.configTOML : server.configJSON)
                                 .font(DesignTokens.Typography.code)
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -148,7 +148,7 @@ struct ServerCardView: View {
 
                         if isHovering {
                             Button(action: {
-                                editedJSON = server.configJSON
+                                editedJSON = server.isCodexUniverse ? server.configTOML : server.configJSON
                                 isEditing = true
                             }) {
                                 Image(systemName: "pencil")

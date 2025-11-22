@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import TOMLKit
 
 @MainActor
 class ServerViewModel: ObservableObject {
@@ -614,6 +615,103 @@ class ServerViewModel: ObservableObject {
 
         let message = skipValidation ? "Configuration force saved" : "Configuration updated"
         showToast(message: message, type: .success)
+    }
+
+    // MARK: - TOML Editing (for Codex)
+
+    func applyRawTOML(_ tomlText: String) -> (success: Bool, invalidServers: [String: String]?, serverDict: [String: ServerConfig]?) {
+        do {
+            guard let data = tomlText.data(using: .utf8) else {
+                throw NSError(domain: "Invalid TOML", code: -1)
+            }
+
+            // Parse TOML
+            let toml = try TOMLTable(data: data)
+            guard let mcpServers = toml["mcpServers"] as? TOMLTable else {
+                throw NSError(domain: "Missing mcpServers section", code: -1)
+            }
+
+            // Convert TOML to ServerConfig dictionary
+            var serverDict: [String: ServerConfig] = [:]
+            for (name, value) in mcpServers {
+                guard let serverTable = value as? TOMLTable,
+                      let jsonDict = tomlTableToJSONDict(serverTable) else {
+                    throw NSError(domain: "Invalid server config for \(name)", code: -1)
+                }
+
+                // Convert JSON dict to ServerConfig
+                let jsonData = try JSONSerialization.data(withJSONObject: jsonDict)
+                let config = try JSONDecoder().decode(ServerConfig.self, from: jsonData)
+                serverDict[name] = config
+            }
+
+            // Check for invalid servers
+            var invalidServers: [String: String] = [:]
+            for (name, config) in serverDict {
+                if !config.isValid {
+                    let reason = getInvalidReason(config)
+                    invalidServers[name] = reason
+                }
+            }
+
+            if !invalidServers.isEmpty {
+                return (success: false, invalidServers: invalidServers, serverDict: serverDict)
+            }
+
+            // Apply changes
+            applyRawJSONInternal(serverDict: serverDict, skipValidation: false)
+            return (success: true, invalidServers: nil, serverDict: nil)
+        } catch {
+            showToast(message: "Failed to parse TOML: \(error.localizedDescription)", type: .error)
+            return (success: false, invalidServers: nil, serverDict: nil)
+        }
+    }
+
+    func applyRawTOMLForced(_ tomlText: String) throws {
+        guard let data = tomlText.data(using: .utf8) else {
+            throw NSError(domain: "Invalid TOML", code: -1)
+        }
+
+        let toml = try TOMLTable(data: data)
+        guard let mcpServers = toml["mcpServers"] as? TOMLTable else {
+            throw NSError(domain: "Missing mcpServers section", code: -1)
+        }
+
+        var serverDict: [String: ServerConfig] = [:]
+        for (name, value) in mcpServers {
+            guard let serverTable = value as? TOMLTable,
+                  let jsonDict = tomlTableToJSONDict(serverTable) else {
+                throw NSError(domain: "Invalid server config for \(name)", code: -1)
+            }
+
+            let jsonData = try JSONSerialization.data(withJSONObject: jsonDict)
+            let config = try JSONDecoder().decode(ServerConfig.self, from: jsonData)
+            serverDict[name] = config
+        }
+
+        applyRawJSONInternal(serverDict: serverDict, skipValidation: true)
+    }
+
+    func applyRawTOMLForced(serverDict: [String: ServerConfig]) {
+        applyRawJSONInternal(serverDict: serverDict, skipValidation: true)
+    }
+
+    private func tomlTableToJSONDict(_ table: TOMLTable) -> [String: Any]? {
+        var dict: [String: Any] = [:]
+
+        for (key, value) in table {
+            if let nestedTable = value as? TOMLTable {
+                if let nestedDict = tomlTableToJSONDict(nestedTable) {
+                    dict[key] = nestedDict
+                }
+            } else if let array = value as? [Any] {
+                dict[key] = array
+            } else {
+                dict[key] = value
+            }
+        }
+
+        return dict
     }
 
     func deleteServer(_ server: ServerModel) {
