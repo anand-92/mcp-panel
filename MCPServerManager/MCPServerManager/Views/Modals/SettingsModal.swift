@@ -340,7 +340,7 @@ struct SettingsModal: View {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
-        panel.allowedContentTypes = [UTType.json]
+        panel.allowedContentTypes = [UTType.json, UTType.toml]
         panel.showsHiddenFiles = true
         panel.message = "Select a config file to manage MCP servers"
 

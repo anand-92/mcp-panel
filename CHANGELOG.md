@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Codex Configuration Support** - Full support for third config file with complete universe isolation. Manage Codex servers separately with dedicated UI, TOML file format support, and zero cross-contamination with Claude Code or Gemini CLI configs. Servers remain locked to their creation universe forever
+
+### Fixed
+- **TOML File Selection** - Config file picker now accepts both .json and .toml files, allowing selection of Codex config files
+
+---
+
+## [2.0.3] - 2025-11-22
+
+### Added
 - **Custom Icon Personalization** - Click any server icon to upload custom images (PNG, JPG, SVG). Icons persist across restarts with smart validation (10MB max, 2048×2048px)
 - **12 Professional Themes** - Choose from Nord, Dracula, Solarized Dark/Light, Monokai Pro, One Dark, GitHub Dark, Tokyo Night, Catppuccin Mocha, Gruvbox, Material Palenight, plus Auto mode
 - **JSON Preview Blur** - Toggle blur effect for privacy during screen sharing. Automatically disables when editing

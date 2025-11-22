@@ -211,6 +211,63 @@ This app uses an **automated release notes system** that flows from CHANGELOG.md
    - Your changelog in a beautiful HTML dialog
    - All the features, changes, and fixes you documented
 
+### Changelog Maintenance Best Practices
+
+**CRITICAL: Keep the changelog clean to avoid showing users duplicate release notes!**
+
+#### When Making Code Changes
+1. **ALWAYS add to `[Unreleased]`** - Every PR/commit with user-facing changes MUST update CHANGELOG.md
+2. **Update immediately** - Don't batch changelog updates, do them with each feature/fix
+3. **Pre-commit hook** - A git hook will remind you if you forgot to update the changelog
+
+#### Installing the Pre-Commit Hook (One-Time Setup)
+The repo includes a pre-commit hook that reminds you to update CHANGELOG.md. Install it:
+
+```bash
+# Install the hook (one-time setup)
+cp .githooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+The hook will:
+- Detect when you're committing code changes (Swift, YAML, JSON, TOML, etc.)
+- Check if CHANGELOG.md is also being committed
+- If not, prompt you to update it or confirm you want to proceed
+- Only runs for user-facing changes (you can skip for internal refactoring)
+
+#### After a Release
+1. **Move `[Unreleased]` to a versioned section** - Create new section like `[2.0.4] - 2025-11-22`
+2. **Start fresh** - Leave `[Unreleased]` empty or with only new unreleased features
+3. **Update the date** - Use today's date in `YYYY-MM-DD` format
+4. **Don't accumulate** - Old features stay in old sections, don't let them pile up in `[Unreleased]`
+
+#### Example Workflow
+```markdown
+## [Unreleased]
+### Added
+- **New Feature X** - Description
+
+---
+
+## [2.0.4] - 2025-11-22
+### Added
+- **Feature A** - Already shipped
+- **Feature B** - Already shipped
+
+### Fixed
+- **Bug C** - Already fixed
+
+---
+
+## [2.0.3] - 2025-11-15
+...
+```
+
+#### Why This Matters
+- Users see `[Unreleased]` in their next update
+- If `[Unreleased]` has 3 months of features, users see duplicates
+- Keep it clean = users only see NEW features in update dialogs
+
 ### CHANGELOG.md Format
 
 ```markdown
