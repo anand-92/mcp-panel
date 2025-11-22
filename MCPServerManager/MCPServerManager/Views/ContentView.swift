@@ -140,14 +140,19 @@ struct ContentView: View {
                 .transition(.opacity)
             }
 
-            // Add Server Modal with dark backdrop
+            // Add Server Modal with dark backdrop - Codex gets its own separate modal
             if showAddServer {
                 ZStack {
                     Color.black.opacity(0.5)
                         .ignoresSafeArea()
                         .transition(.opacity)
 
-                    AddServerModal(isPresented: $showAddServer, viewModel: viewModel)
+                    // UNIVERSE SEPARATION: Codex uses its own TOML-only modal
+                    if viewModel.settings.activeConfigIndex == 2 {
+                        AddCodexServerModal(isPresented: $showAddServer, viewModel: viewModel)
+                    } else {
+                        AddServerModal(isPresented: $showAddServer, viewModel: viewModel)
+                    }
                 }
                 .transition(.opacity)
             }

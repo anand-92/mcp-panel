@@ -1,4 +1,5 @@
 import Foundation
+import TOMLKit
 
 class ConfigManager {
     static let shared = ConfigManager()
@@ -44,6 +45,8 @@ class ConfigManager {
     }
 
     func readConfig(from path: String) throws -> [String: ServerConfig] {
+        let format = ConfigFormat.detect(from: path)
+
         return try withConfigAccess(path) { url in
             // If file doesn't exist, return empty dictionary instead of trying to create it
             // This prevents permission errors on app launch when bookmarks aren't established
@@ -52,25 +55,124 @@ class ConfigManager {
             }
 
             let data = try Data(contentsOf: url)
-            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
 
-            // Extract mcpServers section
-            guard let mcpServers = json["mcpServers"] as? [String: Any] else {
-                return [:]
+            // Parse based on format
+            if format == .toml {
+                return try self.parseTOML(data: data)
+            } else {
+                return try self.parseJSON(data: data)
+            }
+        }
+    }
+
+    // MARK: - JSON Parsing
+
+    private func parseJSON(data: Data) throws -> [String: ServerConfig] {
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+
+        // Extract mcpServers section
+        guard let mcpServers = json["mcpServers"] as? [String: Any] else {
+            return [:]
+        }
+
+        // Convert to ServerConfig dictionary
+        var servers: [String: ServerConfig] = [:]
+        for (name, value) in mcpServers {
+            guard let serverData = try? JSONSerialization.data(withJSONObject: value),
+                  let config = try? JSONDecoder().decode(ServerConfig.self, from: serverData) else {
+                continue
+            }
+            servers[name] = config
+        }
+
+        return servers
+    }
+
+    // MARK: - TOML Parsing
+
+    private func parseTOML(data: Data) throws -> [String: ServerConfig] {
+        guard let tomlString = String(data: data, encoding: .utf8) else {
+            throw NSError(
+                domain: "ConfigManager",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "Failed to decode TOML file as UTF-8"]
+            )
+        }
+
+        let toml: TOMLTable
+        do {
+            toml = try TOMLTable(string: tomlString)
+        } catch {
+            throw NSError(
+                domain: "ConfigManager",
+                code: 3,
+                userInfo: [NSLocalizedDescriptionKey: "Failed to parse TOML: \(error.localizedDescription)"]
+            )
+        }
+
+        // Extract [mcp_servers.<name>] section
+        guard let serversTable = toml["mcp_servers"]?.table else {
+            return [:]
+        }
+
+        // Convert each server config
+        var servers: [String: ServerConfig] = [:]
+        for (name, value) in serversTable {
+            guard let serverTable = value.table else {
+                continue
             }
 
-            // Convert to ServerConfig dictionary
-            var servers: [String: ServerConfig] = [:]
-            for (name, value) in mcpServers {
-                guard let serverData = try? JSONSerialization.data(withJSONObject: value),
-                      let config = try? JSONDecoder().decode(ServerConfig.self, from: serverData) else {
-                    continue
-                }
+            // Convert TOMLTable to dictionary, then to ServerConfig
+            if let serverDict = self.tomlTableToDictionary(serverTable),
+               let jsonData = try? JSONSerialization.data(withJSONObject: serverDict),
+               let config = try? JSONDecoder().decode(ServerConfig.self, from: jsonData) {
                 servers[name] = config
             }
-
-            return servers
         }
+
+        return servers
+    }
+
+    /// Converts a TOMLTable to a Swift Dictionary recursively
+    private func tomlTableToDictionary(_ table: TOMLTable) -> [String: Any]? {
+        var dict: [String: Any] = [:]
+
+        for (key, valueConvertible) in table {
+            // Convert TOMLValueConvertible to concrete type
+            if let string = valueConvertible as? String {
+                dict[key] = string
+            } else if let int = valueConvertible as? Int {
+                dict[key] = int
+            } else if let double = valueConvertible as? Double {
+                dict[key] = double
+            } else if let bool = valueConvertible as? Bool {
+                dict[key] = bool
+            } else if let array = valueConvertible as? TOMLArray {
+                dict[key] = array.compactMap { convertToAny($0) }
+            } else if let nestedTable = valueConvertible as? TOMLTable {
+                dict[key] = tomlTableToDictionary(nestedTable)
+            }
+        }
+
+        return dict.isEmpty ? nil : dict
+    }
+
+    /// Helper to convert TOMLValueConvertible to Any
+    private func convertToAny(_ value: any TOMLValueConvertible) -> Any? {
+        if let string = value as? String {
+            return string
+        } else if let int = value as? Int {
+            return int
+        } else if let double = value as? Double {
+            return double
+        } else if let bool = value as? Bool {
+            return bool
+        } else if let array = value as? TOMLArray {
+            return array.compactMap { convertToAny($0) }
+        } else if let table = value as? TOMLTable {
+            return tomlTableToDictionary(table)
+        }
+        return nil
     }
 
     func writeConfig(servers: [String: ServerConfig], to path: String) throws {
