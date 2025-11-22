@@ -1,4 +1,5 @@
 import Foundation
+import TOMLKit
 
 struct ServerModel: Identifiable, Codable, Equatable {
     let id: UUID
@@ -46,6 +47,18 @@ struct ServerModel: Identifiable, Codable, Equatable {
         }
 
         return string
+    }
+
+    var configTOML: String {
+        // Use centralized TOML utilities
+        guard let tomlString = try? TOMLUtils.serversToTOMLString([name: config]) else {
+            return ""
+        }
+
+        // Extract just the server section (remove [mcpServers] header and server name)
+        let lines = tomlString.split(separator: "\n")
+        let serverLines = lines.dropFirst(3) // Skip [mcpServers], blank line, and [mcpServers.name]
+        return serverLines.joined(separator: "\n")
     }
 
     var isInConfig1: Bool { inConfigs.count > 0 ? inConfigs[0] : false }

@@ -110,8 +110,8 @@ class ConfigManager {
             )
         }
 
-        // Extract [mcp_servers.<name>] section
-        guard let serversTable = toml["mcp_servers"]?.table else {
+        // Extract [mcpServers.<name>] section
+        guard let serversTable = toml["mcpServers"]?.table else {
             return [:]
         }
 
@@ -176,32 +176,47 @@ class ConfigManager {
     }
 
     func writeConfig(servers: [String: ServerConfig], to path: String) throws {
+        let format = ConfigFormat.detect(from: path)
+
         try withConfigAccess(path) { url in
-            // Read existing config to preserve other keys
-            var json: [String: Any] = [:]
-            if FileManager.default.fileExists(atPath: url.path) {
-                let data = try Data(contentsOf: url)
-                json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+            if format == .toml {
+                // Write TOML format
+                try self.writeTOMLConfig(servers: servers, to: url)
+            } else {
+                // Write JSON format
+                try self.writeJSONConfig(servers: servers, to: url)
             }
-
-            // Convert servers to dictionary
-            var mcpServers: [String: Any] = [:]
-            for (name, config) in servers {
-                let data = try JSONEncoder().encode(config)
-                let configDict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-                mcpServers[name] = configDict
-            }
-
-            // Update mcpServers section
-            json["mcpServers"] = mcpServers
-
-            // Write back to file
-            // IMPORTANT: Do NOT use .atomic option with security-scoped bookmarks!
-            // Atomic writes create temporary files that are outside the bookmark's scope,
-            // causing "permission denied" errors. Write directly to the file instead.
-            let data = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
-            try data.write(to: url)
         }
+    }
+
+    private func writeJSONConfig(servers: [String: ServerConfig], to url: URL) throws {
+        // Read existing config to preserve other keys
+        var json: [String: Any] = [:]
+        if FileManager.default.fileExists(atPath: url.path) {
+            let data = try Data(contentsOf: url)
+            json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        }
+
+        // Convert servers to dictionary
+        var mcpServers: [String: Any] = [:]
+        for (name, config) in servers {
+            let data = try JSONEncoder().encode(config)
+            let configDict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+            mcpServers[name] = configDict
+        }
+
+        // Update mcpServers section
+        json["mcpServers"] = mcpServers
+
+        // Write back to file
+        let data = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
+        try data.write(to: url)
+    }
+
+    private func writeTOMLConfig(servers: [String: ServerConfig], to url: URL) throws {
+        // Use centralized TOML utilities
+        let tomlString = try TOMLUtils.serversToTOMLString(servers)
+        try tomlString.write(to: url, atomically: false, encoding: .utf8)
     }
 
     func testConnection(to path: String) throws -> Int {

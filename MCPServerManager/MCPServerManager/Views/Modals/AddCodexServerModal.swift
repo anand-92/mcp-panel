@@ -12,7 +12,7 @@ struct AddCodexServerModal: View {
     # Codex MCP Server Configuration (TOML)
     # Add your servers below in TOML format
 
-    [mcp_servers.example]
+    [mcpServers.example]
     command = "npx"
     args = ["-y", "@modelcontextprotocol/server-example"]
     """
@@ -181,12 +181,12 @@ struct AddCodexServerModal: View {
     private func addServers() {
         errorMessage = ""
 
-        // Parse TOML and extract mcp_servers section
+        // Parse TOML and extract mcpServers section
         do {
             let table = try TOMLTable(string: tomlText)
 
-            guard let mcpServers = table["mcp_servers"]?.table else {
-                errorMessage = "Missing [mcp_servers] section in TOML"
+            guard let mcpServers = table["mcpServers"]?.table else {
+                errorMessage = "Missing [mcpServers] section in TOML"
                 return
             }
 
