@@ -6,9 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [3.0.0] - 2025-11-26
+
 ### Added
 - **Codex Configuration Support** - Full support for third config file with complete universe isolation. Manage Codex servers separately with dedicated UI, TOML file format support, and zero cross-contamination with Claude Code or Gemini CLI configs. Servers remain locked to their creation universe forever
 - **TOML Display & Editing** - Codex servers now properly display and edit as TOML format (not JSON). Includes dedicated RawTOMLView component and TOML-aware ServerCardView previews
+
+### Changed
+- **App Store Readiness** - Updated app icon with black background for better visibility and App Store compliance. Optimized build scripts for App Store submission.
 
 ### Fixed
 - **TOML File Selection** - Config file picker now accepts both .json and .toml files, allowing selection of Codex config files

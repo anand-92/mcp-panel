@@ -20,8 +20,8 @@ echo ""
 # Configuration
 APP_NAME="MCP Server Manager"
 BUNDLE_ID="com.mcpmanager.app"
-VERSION="2.0.2"
-BUILD_NUMBER="3"
+VERSION="3.0"
+BUILD_NUMBER="96"
 
 # Build directory
 BUILD_DIR="MCPServerManager/build-appstore"
@@ -78,7 +78,7 @@ echo "🧹 Removing quarantine attributes..."
 xattr -cr "$APP_PATH"
 
 # Create Info.plist
-cat > "$APP_PATH/Contents/Info.plist" << 'EOF'
+cat > "$APP_PATH/Contents/Info.plist" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -94,9 +94,9 @@ cat > "$APP_PATH/Contents/Info.plist" << 'EOF'
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>2.0.3</string>
+    <string>${VERSION}</string>
     <key>CFBundleVersion</key>
-    <string>4</string>
+    <string>${BUILD_NUMBER}</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>NSHighResolutionCapable</key>
