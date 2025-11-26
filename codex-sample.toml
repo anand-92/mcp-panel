@@ -1,0 +1,13 @@
+# Sample Codex TOML Configuration
+# This file demonstrates the structure for a Codex server.
+
+[mcp_servers.sample-codex-server]
+command = "/usr/local/bin/codex-server"
+args = ["--port", "8080", "--data-dir", "/var/lib/codex"]
+description = "A sample Codex server running on localhost:8080"
+tags = ["codex", "sample", "local"]
+autostart = true
+env = {
+    "CODEX_ENV" = "development",
+    "CODEX_LOG_LEVEL" = "info"
+}

@@ -352,7 +352,6 @@ class ServerViewModel: ObservableObject {
 
     private func addServersInternal(serverDict: [String: ServerConfig], registryImages: [String: String]?, skipValidation: Bool) {
         var addedCount = 0
-        var invalidCount = 0
 
         for (name, config) in serverDict {
             #if DEBUG
@@ -415,8 +414,6 @@ class ServerViewModel: ObservableObject {
 
         if skipValidation {
             showToast(message: "Force saved \(addedCount) server(s)", type: .success)
-        } else if invalidCount > 0 {
-            showToast(message: "Added \(addedCount) server(s), skipped \(invalidCount) invalid", type: .warning)
         } else {
             showToast(message: "Added \(addedCount) server(s)", type: .success)
         }
@@ -428,6 +425,7 @@ class ServerViewModel: ObservableObject {
         print("DEBUG: Filter mode: \(filterMode)")
         #endif
     }
+
 
     private func getInvalidReason(_ config: ServerConfig) -> String {
         if config.command == nil && config.httpUrl == nil && config.transport == nil && config.remotes == nil {
