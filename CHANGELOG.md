@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Codex TOML Parsing** - Switched to native `TOMLDecoder` for adding Codex servers, eliminating JSON conversion errors and supporting all valid TOML types natively.
 - **Flexible Configuration** - Updated `ServerConfig` to support unlimited custom fields (e.g., `enabled_tools`, `startup_timeout_sec`, `enabled`), preserving all data in the configuration file.
 - **Font Loading** - Enhanced font registration to robustly search for custom fonts in both development (SPM) and release (.app) environments, fixing missing font issues in local builds.
+- **TOML File Preservation** - Configured `writeTOMLConfig` to read and update existing TOML files rather than overwriting them completely, preserving other configuration sections.
 
 ## [3.0.0] - 2025-11-26
 

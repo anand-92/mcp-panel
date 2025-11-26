@@ -214,9 +214,38 @@ class ConfigManager {
     }
 
     private func writeTOMLConfig(servers: [String: ServerConfig], to url: URL) throws {
-        // Use centralized TOML utilities
-        let tomlString = try TOMLUtils.serversToTOMLString(servers)
-        try tomlString.write(to: url, atomically: false, encoding: .utf8)
+        var rootTable: TOMLTable
+        
+        // 1. Try to read existing file to preserve other sections
+        if FileManager.default.fileExists(atPath: url.path),
+           let data = try? Data(contentsOf: url),
+           let string = String(data: data, encoding: .utf8) {
+            do {
+                rootTable = try TOMLTable(string: string)
+            } catch {
+                print("⚠️ Failed to parse existing TOML, starting fresh: \(error)")
+                rootTable = TOMLTable()
+            }
+        } else {
+            rootTable = TOMLTable()
+        }
+
+        // 2. Generate new [mcp_servers] table
+        // We use TOMLEncoder to correctly serialize our complex ServerConfig (with AnyCodable)
+        // into a TOML string, then parse it back to a table to merge.
+        let encoder = TOMLEncoder()
+        let wrapper = ["mcp_servers": servers]
+        let serversTOML = try encoder.encode(wrapper)
+        let tempTable = try TOMLTable(string: serversTOML)
+        
+        // 3. Update the root table with the new servers
+        // This preserves all other top-level keys in rootTable
+        if let newServers = tempTable["mcp_servers"] {
+            rootTable["mcp_servers"] = newServers
+        }
+        
+        // 4. Write back to file
+        try String(describing: rootTable).write(to: url, atomically: false, encoding: .utf8)
     }
 
     func testConnection(to path: String) throws -> Int {
