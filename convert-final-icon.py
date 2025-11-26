@@ -14,7 +14,13 @@ def create_app_icon(input_image):
     os.makedirs(iconset_dir, exist_ok=True)
 
     # Open and process image
-    img = Image.open(input_image)
+    img = Image.open(input_image).convert("RGBA")
+
+    # Create a black background image
+    bg = Image.new('RGBA', img.size, (0, 0, 0, 255))
+    # Paste the original image onto the black background
+    bg.paste(img, (0, 0), img)
+    img = bg
 
     # macOS icon sizes
     sizes = [
@@ -46,5 +52,5 @@ def create_app_icon(input_image):
     print(f"\n✅ Final app icon created: {output_dir}/AppIcon.icns")
 
 if __name__ == "__main__":
-    input_path = os.path.expanduser("~/nanobanana-images/thisone.png")
+    input_path = 'app-icon.png'
     create_app_icon(input_path)
