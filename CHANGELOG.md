@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Critical: Codex Inline Editing** - Disabled inline editing for Codex servers to prevent JSON parser errors on TOML data. Users must use Raw TOML editor for Codex
 - **Critical: Codex Add Server Bug** - Fixed "Added 0 servers" issue. Changed TOML parsing to expect `[mcp_servers]` (snake_case) which is more idiomatic for TOML configs
 - **Swift 6 Concurrency** - Resolved main actor isolation issues in regex handling to prevent runtime warnings and potential crashes. Optimized concurrency model for better stability.
+- **App Store Build Resources** - Fixed build script to correctly embed the resource bundle (containing fonts and assets) into the App Store package, resolving issues with missing custom fonts.
 
 ---
 

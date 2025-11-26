@@ -21,7 +21,7 @@ echo ""
 APP_NAME="MCP Server Manager"
 BUNDLE_ID="com.mcpmanager.app"
 VERSION="3.0"
-BUILD_NUMBER="97"
+BUILD_NUMBER="98"
 
 # Build directory
 BUILD_DIR="MCPServerManager/build-appstore"
@@ -64,6 +64,10 @@ mkdir -p "$APP_PATH/Contents/Resources"
 
 # Copy binary
 cp MCPServerManager/.build/release/MCPServerManager "$APP_PATH/Contents/MacOS/"
+
+# Copy Swift Resource Bundle (Crucial for Fonts!)
+echo "📂 Copying resource bundle..."
+cp -r MCPServerManager/.build/release/MCPServerManager_MCPServerManager.bundle "$APP_PATH/Contents/Resources/"
 
 # Copy app icon
 echo "🎨 Adding app icon..."
