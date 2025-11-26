@@ -6,7 +6,7 @@ struct ServerCardView: View {
     @Binding var confirmDelete: Bool
     @Binding var blurJSONPreviews: Bool
     @State private var isEditing = false
-    @State private var editedJSON: String = ""
+    @State private var editedConfigText: String = ""  // Holds either JSON or TOML
     @State private var isHovering = false
     @State private var showingDeleteAlert = false
     @State private var showForceAlert = false
@@ -46,10 +46,11 @@ struct ServerCardView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
 
-                // JSON preview or editor
-                if isEditing {
+                // Config preview or editor
+                if isEditing && !server.isCodexUniverse {
+                    // Inline editing only for Claude/Gemini (JSON)
                     VStack(alignment: .trailing, spacing: 8) {
-                        TextEditor(text: $editedJSON)
+                        TextEditor(text: $editedConfigText)
                             .font(DesignTokens.Typography.code)
                             .frame(height: 200)
                             .scrollContentBackground(.hidden)
@@ -59,7 +60,7 @@ struct ServerCardView: View {
 
                         HStack(spacing: 8) {
                             Button(action: {
-                                editedJSON = formatJSON(editedJSON)
+                                editedConfigText = formatJSON(editedConfigText)
                             }) {
                                 HStack(spacing: 4) {
                                     Image(systemName: "text.alignleft")
@@ -103,13 +104,13 @@ struct ServerCardView: View {
                             .buttonStyle(.plain)
 
                             Button(action: {
-                                let result = onUpdate(editedJSON)
+                                let result = onUpdate(editedConfigText)
                                 if result.success {
                                     isEditing = false
                                 } else if let reason = result.invalidReason {
                                     // Show force save alert
                                     invalidReason = reason
-                                    pendingSaveJSON = editedJSON
+                                    pendingSaveJSON = editedConfigText
                                     pendingConfig = result.config  // Store parsed config to avoid re-parsing
                                     showForceAlert = true
                                 }
@@ -135,7 +136,7 @@ struct ServerCardView: View {
                 } else {
                     ZStack(alignment: .topTrailing) {
                         ScrollView {
-                            Text(server.configJSON)
+                            Text(server.isCodexUniverse ? server.configTOML : server.configJSON)
                                 .font(DesignTokens.Typography.code)
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -146,9 +147,11 @@ struct ServerCardView: View {
                         .background(Color.black.opacity(0.3))
                         .cornerRadius(8)
 
-                        if isHovering {
+                        if isHovering && !server.isCodexUniverse {
+                            // Only show edit button for Claude/Gemini (JSON)
+                            // Codex servers must use Raw TOML editor
                             Button(action: {
-                                editedJSON = server.configJSON
+                                editedConfigText = server.configJSON
                                 isEditing = true
                             }) {
                                 Image(systemName: "pencil")
@@ -160,6 +163,19 @@ struct ServerCardView: View {
                             }
                             .buttonStyle(.plain)
                             .padding(8)
+                        }
+
+                        if server.isCodexUniverse && isHovering {
+                            // Show info tooltip for Codex servers
+                            Text("Use Raw Editor")
+                                .font(DesignTokens.Typography.labelSmall)
+                                .foregroundColor(.secondary)
+                                .padding(8)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(Color.black.opacity(0.7))
+                                )
+                                .padding(8)
                         }
                     }
                     .onHover { hovering in

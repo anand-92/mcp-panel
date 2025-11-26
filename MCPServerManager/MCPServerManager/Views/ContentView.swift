@@ -39,7 +39,12 @@ struct ContentView: View {
                     if viewModel.viewMode == .grid {
                         ServerGridView(viewModel: viewModel, showAddServer: $showAddServer)
                     } else {
-                        RawJSONView(viewModel: viewModel)
+                        // Show TOML editor for Codex, JSON editor for Claude/Gemini
+                        if viewModel.settings.activeConfigIndex == 2 {
+                            RawTOMLView(viewModel: viewModel)
+                        } else {
+                            RawJSONView(viewModel: viewModel)
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
