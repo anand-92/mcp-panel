@@ -15,7 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Critical: Codex TOML Rendering** - Fixed major bug where Codex servers (stored as TOML) were incorrectly displayed and edited as JSON. All Codex UI components now use native TOML format with proper parsing and serialization
 - **Critical: TOML Conversion Logic** - Centralized TOML utilities to fix build errors and code duplication. Proper TOMLValueConvertible unwrapping and TOMLArray handling
 - **Critical: Codex Inline Editing** - Disabled inline editing for Codex servers to prevent JSON parser errors on TOML data. Users must use Raw TOML editor for Codex
-- **Critical: Codex Add Server Bug** - Fixed "Added 0 servers" issue caused by section name mismatch. Code was looking for `[mcp_servers]` but Codex uses `[mcpServers]`
+- **Critical: Codex Add Server Bug** - Fixed "Added 0 servers" issue. Changed TOML parsing to expect `[mcp_servers]` (snake_case) which is more idiomatic for TOML configs
 
 ---
 

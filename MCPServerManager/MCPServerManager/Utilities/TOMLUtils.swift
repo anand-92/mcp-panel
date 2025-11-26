@@ -6,7 +6,7 @@ enum TOMLUtils {
     /// Converts a ServerConfig dictionary to TOML string format
     static func serversToTOMLString(_ servers: [String: ServerConfig]) throws -> String {
         var lines: [String] = []
-        lines.append("[mcpServers]")
+        lines.append("[mcp_servers]")
         lines.append("")
 
         for (name, config) in servers.sorted(by: { $0.key < $1.key }) {
@@ -17,7 +17,7 @@ enum TOMLUtils {
             let jsonDict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
 
             // Convert to TOML section
-            lines.append("[\(quoteKeyIfNeeded("mcpServers.\(name)"))]")
+            lines.append("[\(quoteKeyIfNeeded("mcp_servers.\(name)"))]")
             lines.append(contentsOf: dictToTOMLLines(jsonDict, indent: ""))
             lines.append("")
         }

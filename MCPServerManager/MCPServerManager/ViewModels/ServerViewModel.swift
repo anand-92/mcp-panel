@@ -623,8 +623,8 @@ class ServerViewModel: ObservableObject {
         do {
             // Parse TOML
             let toml = try TOMLTable(string: tomlText)
-            guard let mcpServers = toml["mcpServers"] as? TOMLTable else {
-                throw NSError(domain: "Missing mcpServers section", code: -1)
+            guard let mcpServers = toml["mcp_servers"] as? TOMLTable else {
+                throw NSError(domain: "Missing mcp_servers section", code: -1)
             }
 
             // Convert TOML to ServerConfig dictionary
@@ -665,8 +665,8 @@ class ServerViewModel: ObservableObject {
 
     func applyRawTOMLForced(_ tomlText: String) throws {
         let toml = try TOMLTable(string: tomlText)
-        guard let mcpServers = toml["mcpServers"] as? TOMLTable else {
-            throw NSError(domain: "Missing mcpServers section", code: -1)
+        guard let mcpServers = toml["mcp_servers"] as? TOMLTable else {
+            throw NSError(domain: "Missing mcp_servers section", code: -1)
         }
 
         var serverDict: [String: ServerConfig] = [:]
