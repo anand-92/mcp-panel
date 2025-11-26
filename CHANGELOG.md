@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **TOML Parsing Key** - Updated all TOML parsing and generation logic to consistently use `[mcp_servers]` instead of `[mcpServers]`, ensuring compatibility with the expected format.
+- **Codex TOML Parsing** - Switched to native `TOMLDecoder` for adding Codex servers, eliminating JSON conversion errors and supporting all valid TOML types natively.
+- **Flexible Configuration** - Updated `ServerConfig` to support unlimited custom fields (e.g., `enabled_tools`, `startup_timeout_sec`, `enabled`), preserving all data in the configuration file.
+- **Font Loading** - Enhanced font registration to robustly search for custom fonts in both development (SPM) and release (.app) environments, fixing missing font issues in local builds.
+
 ## [3.0.0] - 2025-11-26
 
 ### Added

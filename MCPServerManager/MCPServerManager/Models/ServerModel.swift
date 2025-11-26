@@ -55,9 +55,9 @@ struct ServerModel: Identifiable, Codable, Equatable {
             return ""
         }
 
-        // Extract just the server section (remove [mcpServers] header and server name)
+        // Extract just the server section (remove [mcp_servers] header and server name)
         let lines = tomlString.split(separator: "\n")
-        let serverLines = lines.dropFirst(3) // Skip [mcpServers], blank line, and [mcpServers.name]
+        let serverLines = lines.dropFirst(3) // Skip [mcp_servers], blank line, and [mcp_servers.name]
         return serverLines.joined(separator: "\n")
     }
 

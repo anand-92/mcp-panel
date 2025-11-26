@@ -1,4 +1,5 @@
 // swift-tools-version: 5.9
+// Package.swift for App Store builds (NO Sparkle dependency)
 import PackageDescription
 
 let package = Package(
@@ -13,14 +14,14 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.5.0"),
+        // NO Sparkle for App Store builds - Apple provides update mechanism
         .package(url: "https://github.com/LebJe/TOMLKit", from: "0.6.0")
     ],
     targets: [
         .executableTarget(
             name: "MCPServerManager",
             dependencies: [
-                .product(name: "Sparkle", package: "Sparkle"),
+                // NO Sparkle dependency
                 .product(name: "TOMLKit", package: "TOMLKit")
             ],
             path: "MCPServerManager",

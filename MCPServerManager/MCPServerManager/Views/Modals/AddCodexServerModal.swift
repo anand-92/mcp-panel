@@ -12,7 +12,7 @@ struct AddCodexServerModal: View {
     # Codex MCP Server Configuration (TOML)
     # Add your servers below in TOML format
 
-    [mcpServers.example]
+    [mcp_servers.example]
     command = "npx"
     args = ["-y", "@modelcontextprotocol/server-example"]
     """
@@ -178,40 +178,34 @@ struct AddCodexServerModal: View {
         }
     }
 
+    private struct CodexConfigWrapper: Codable {
+        let mcp_servers: [String: ServerConfig]
+    }
+
     private func addServers() {
         errorMessage = ""
+        print("DEBUG: Starting addServers (Native TOML)")
 
-        // Parse TOML and extract mcpServers section
         do {
-            let table = try TOMLTable(string: tomlText)
+            // 1. Decode directly from TOML string using TOMLDecoder
+            // This bypasses the manual Dict -> JSON -> Struct conversion
+            let decoder = TOMLDecoder()
+            
+            // Handle potential key decoding strategies if needed, 
+            // but our struct uses [String: ServerConfig] so keys are dynamic strings
+            
+            let wrapper = try decoder.decode(CodexConfigWrapper.self, from: tomlText)
+            let serverDict = wrapper.mcp_servers
+            
+            print("DEBUG: Successfully decoded \(serverDict.count) servers via TOMLDecoder")
 
-            guard let mcpServers = table["mcpServers"]?.table else {
-                errorMessage = "Missing [mcpServers] section in TOML"
-                return
-            }
-
-            // Convert TOML to ServerConfig dictionary
-            var serverDict: [String: ServerConfig] = [:]
-            for (name, value) in mcpServers {
-                guard let serverTable = value.table else {
-                    errorMessage = "Server '\(name)' is not a valid table"
-                    return
-                }
-
-                // Convert TOMLTable to dictionary then to ServerConfig
-                if let serverDictRaw = tomlTableToDictionary(serverTable),
-                   let jsonData = try? JSONSerialization.data(withJSONObject: serverDictRaw),
-                   let config = try? JSONDecoder().decode(ServerConfig.self, from: jsonData) {
-                    serverDict[name] = config
-                }
-            }
-
-            // Check for invalid servers
+            // 2. Validate servers
             var invalidServers: [String: String] = [:]
             for (name, config) in serverDict {
                 if !config.isValid {
                     let reason = getInvalidReason(config)
                     invalidServers[name] = reason
+                    print("DEBUG: Server '\(name)' invalid: \(reason)")
                 }
             }
 
@@ -223,35 +217,65 @@ struct AddCodexServerModal: View {
                 showForceAlert = true
                 return
             }
-
-            // Add servers directly to viewModel
-            var addedCount = 0
-            for (name, config) in serverDict {
-                // Create new server with Codex universe
-                let newServer = ServerModel(
-                    name: name,
-                    config: config,
-                    updatedAt: Date(),
-                    inConfigs: [false, false, true],  // Only in config3 (Codex)
-                    sourceUniverse: 2  // Codex universe
-                )
-
-                if let existingIndex = viewModel.servers.firstIndex(where: { $0.name == name }) {
-                    viewModel.servers[existingIndex] = newServer
-                } else {
-                    viewModel.servers.append(newServer)
-                }
-                addedCount += 1
-            }
-
-            viewModel.servers.sort { $0.name < $1.name }
-            viewModel.syncToConfigs()
-            viewModel.showToast(message: "Added \(addedCount) server(s) to Codex", type: .success)
+            
+            // 3. Add to ViewModel
+            addServersToViewModel(serverDict)
             isPresented = false
 
         } catch {
             errorMessage = "TOML parsing failed: \(error.localizedDescription)"
+            print("DEBUG: TOML Decoder Error: \(error)")
         }
+    }
+
+    private func forceAddServers() {
+        errorMessage = ""
+        print("DEBUG: Starting forceAddServers (Native TOML)")
+
+        do {
+            let textToParse = pendingSaveTOML.isEmpty ? tomlText : pendingSaveTOML
+            let decoder = TOMLDecoder()
+            let wrapper = try decoder.decode(CodexConfigWrapper.self, from: textToParse)
+            let serverDict = wrapper.mcp_servers
+            
+            print("DEBUG: Force adding \(serverDict.count) servers")
+            
+            addServersToViewModel(serverDict)
+            
+            // Cleanup
+            pendingSaveTOML = ""
+            invalidServerDetails = ""
+            isPresented = false
+
+        } catch {
+            errorMessage = "TOML parsing failed: \(error.localizedDescription)"
+            print("DEBUG: Force TOML Decoder Error: \(error)")
+        }
+    }
+
+    private func addServersToViewModel(_ serverDict: [String: ServerConfig]) {
+        var addedCount = 0
+        for (name, config) in serverDict {
+            // Create new server with Codex universe
+            let newServer = ServerModel(
+                name: name,
+                config: config,
+                updatedAt: Date(),
+                inConfigs: [false, false, true],  // Only in config3 (Codex)
+                sourceUniverse: 2  // Codex universe
+            )
+
+            if let existingIndex = viewModel.servers.firstIndex(where: { $0.name == name }) {
+                viewModel.servers[existingIndex] = newServer
+            } else {
+                viewModel.servers.append(newServer)
+            }
+            addedCount += 1
+        }
+
+        viewModel.servers.sort { $0.name < $1.name }
+        viewModel.syncToConfigs()
+        viewModel.showToast(message: "Added \(addedCount) server(s) to Codex", type: .success)
     }
 
     private func tomlTableToDictionary(_ table: TOMLTable) -> [String: Any]? {
@@ -289,18 +313,20 @@ struct AddCodexServerModal: View {
     }
 
     private func getInvalidReason(_ config: ServerConfig) -> String {
-        if config.command == nil {
-            return "missing command"
+        if config.command == nil && config.url == nil && config.httpUrl == nil && config.transport == nil && config.remotes == nil {
+            return "missing command, url, httpUrl, transport, or remotes"
         }
+        
         if let cmd = config.command, cmd.trimmingCharacters(in: .whitespaces).isEmpty {
             return "empty command"
         }
-        return "unknown issue"
+        
+        if config.url != nil && config.type == nil {
+            return "url provided but 'type' is missing (try adding type = \"sse\" or type = \"http\")"
+        }
+        
+        return "incomplete configuration"
     }
 
-    private func forceAddServers() {
-        // Force save the TOML configuration
-        // TODO: Implement force save for TOML
-        isPresented = false
-    }
+
 }

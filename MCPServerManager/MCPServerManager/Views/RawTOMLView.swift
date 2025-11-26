@@ -161,7 +161,7 @@ struct RawTOMLView: View {
 
         // Use centralized TOML utilities
         guard let tomlString = try? TOMLUtils.serversToTOMLString(filteredServers) else {
-            return "[mcpServers]\n"
+            return "[mcp_servers]\n"
         }
 
         return tomlString

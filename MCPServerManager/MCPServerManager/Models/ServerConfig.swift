@@ -1,5 +1,91 @@
 import Foundation
 
+// MARK: - AnyCodable
+
+/// A type-erased Codable value to handle arbitrary JSON/TOML data
+enum AnyCodable: Codable, Equatable {
+    case string(String)
+    case int(Int)
+    case double(Double)
+    case bool(Bool)
+    case array([AnyCodable])
+    case dictionary([String: AnyCodable])
+    case null
+
+    init(_ value: Any?) {
+        guard let value = value else {
+            self = .null
+            return
+        }
+        
+        if let string = value as? String {
+            self = .string(string)
+        } else if let int = value as? Int {
+            self = .int(int)
+        } else if let double = value as? Double {
+            self = .double(double)
+        } else if let bool = value as? Bool {
+            self = .bool(bool)
+        } else if let array = value as? [Any] {
+            self = .array(array.map { AnyCodable($0) })
+        } else if let dict = value as? [String: Any] {
+            self = .dictionary(dict.mapValues { AnyCodable($0) })
+        } else if let codable = value as? AnyCodable {
+            self = codable
+        } else {
+            self = .string(String(describing: value))
+        }
+    }
+
+    var value: Any? {
+        switch self {
+        case .string(let s): return s
+        case .int(let i): return i
+        case .double(let d): return d
+        case .bool(let b): return b
+        case .array(let a): return a.map { $0.value }
+        case .dictionary(let d): return d.mapValues { $0.value }
+        case .null: return nil
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            self = .null
+            return
+        }
+        if let int = try? container.decode(Int.self) {
+            self = .int(int)
+        } else if let double = try? container.decode(Double.self) {
+            self = .double(double)
+        } else if let bool = try? container.decode(Bool.self) {
+            self = .bool(bool)
+        } else if let string = try? container.decode(String.self) {
+            self = .string(string)
+        } else if let array = try? container.decode([AnyCodable].self) {
+            self = .array(array)
+        } else if let dict = try? container.decode([String: AnyCodable].self) {
+            self = .dictionary(dict)
+        } else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "AnyCodable value cannot be decoded")
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .string(let s): try container.encode(s)
+        case .int(let i): try container.encode(i)
+        case .double(let d): try container.encode(d)
+        case .bool(let b): try container.encode(b)
+        case .array(let a): try container.encode(a)
+        case .dictionary(let d): try container.encode(d)
+        case .null: try container.encodeNil()
+        }
+    }
+}
+
 // MARK: - String Extension for Validation
 
 private extension String? {
@@ -16,22 +102,58 @@ struct ServerTransportConfig: Codable, Equatable {
     var type: String
     var url: String?
     var headers: [String: String]?
+    // Support extra fields in transport too
+    var extra: [String: AnyCodable] = [:]
 
-    private enum CodingKeys: String, CodingKey {
-        case type, url, headers
+    struct DynamicCodingKeys: CodingKey {
+        var stringValue: String
+        init?(stringValue: String) { self.stringValue = stringValue }
+        var intValue: Int?
+        init?(intValue: Int) { return nil }
     }
 
-    init(type: String, url: String? = nil, headers: [String: String]? = nil) {
+    init(type: String, url: String? = nil, headers: [String: String]? = nil, extra: [String: AnyCodable] = [:]) {
         self.type = type
         self.url = url
         self.headers = headers
+        self.extra = extra
     }
 
     init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        type = try container.decode(String.self, forKey: .type)
-        url = try container.decodeIfPresent(String.self, forKey: .url)
-        headers = try container.decodeIfPresent([String: String].self, forKey: .headers)
+        let container = try decoder.container(keyedBy: DynamicCodingKeys.self)
+        
+        // Mandatory/Known fields
+        guard let typeKey = DynamicCodingKeys(stringValue: "type") else { throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: [], debugDescription: "Key init failed")) }
+        type = try container.decode(String.self, forKey: typeKey)
+        
+        if let urlKey = DynamicCodingKeys(stringValue: "url") {
+            url = try container.decodeIfPresent(String.self, forKey: urlKey)
+        }
+        if let headersKey = DynamicCodingKeys(stringValue: "headers") {
+            headers = try container.decodeIfPresent([String: String].self, forKey: headersKey)
+        }
+        
+        // Decode everything else into extra
+        for key in container.allKeys {
+            let name = key.stringValue
+            if name != "type" && name != "url" && name != "headers" {
+                extra[name] = try container.decode(AnyCodable.self, forKey: key)
+            }
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: DynamicCodingKeys.self)
+        
+        try container.encode(type, forKey: DynamicCodingKeys(stringValue: "type")!)
+        try container.encodeIfPresent(url, forKey: DynamicCodingKeys(stringValue: "url")!)
+        try container.encodeIfPresent(headers, forKey: DynamicCodingKeys(stringValue: "headers")!)
+        
+        for (key, value) in extra {
+            if let dynamicKey = DynamicCodingKeys(stringValue: key) {
+                try container.encode(value, forKey: dynamicKey)
+            }
+        }
     }
 }
 
@@ -48,24 +170,37 @@ struct ServerRemoteConfig: Codable, Equatable {
 }
 
 struct ServerConfig: Codable, Equatable {
+    // Standard MCP fields
     var command: String?
     var args: [String]?
     var cwd: String?
     var env: [String: String]?
     var transport: ServerTransportConfig?
     var remotes: [ServerRemoteConfig]?
-
-    // Support for new format with type field
+    
+    // Implicit/Remote fields
     var type: String?
     var url: String?
-
-    // Support for httpUrl format (GitHub Copilot MCP)
+    
+    // GitHub Copilot MCP fields
     var httpUrl: String?
     var headers: [String: String]?
 
-    private enum CodingKeys: String, CodingKey {
-        case command, args, cwd, env, transport, remotes, type, url, httpUrl, headers
+    // Everything else (unlimited versioning)
+    var extra: [String: AnyCodable] = [:]
+
+    struct DynamicCodingKeys: CodingKey {
+        var stringValue: String
+        init?(stringValue: String) { self.stringValue = stringValue }
+        var intValue: Int?
+        init?(intValue: Int) { return nil }
     }
+
+    // List of known keys to exclude from 'extra'
+    private static let knownKeys: Set<String> = [
+        "command", "args", "cwd", "env", "transport", "remotes", 
+        "type", "url", "httpUrl", "headers"
+    ]
 
     init(command: String? = nil,
          args: [String]? = nil,
@@ -76,7 +211,8 @@ struct ServerConfig: Codable, Equatable {
          type: String? = nil,
          url: String? = nil,
          httpUrl: String? = nil,
-         headers: [String: String]? = nil) {
+         headers: [String: String]? = nil,
+         extra: [String: AnyCodable] = [:]) {
         self.command = command
         self.args = args
         self.cwd = cwd
@@ -87,52 +223,52 @@ struct ServerConfig: Codable, Equatable {
         self.url = url
         self.httpUrl = httpUrl
         self.headers = headers
+        self.extra = extra
     }
 
     init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        command = try container.decodeIfPresent(String.self, forKey: .command)
-        args = try container.decodeIfPresent([String].self, forKey: .args)
-        cwd = try container.decodeIfPresent(String.self, forKey: .cwd)
-        env = try container.decodeIfPresent([String: String].self, forKey: .env)
-        transport = try container.decodeIfPresent(ServerTransportConfig.self, forKey: .transport)
-        remotes = try container.decodeIfPresent([ServerRemoteConfig].self, forKey: .remotes)
-        type = try container.decodeIfPresent(String.self, forKey: .type)
-        url = try container.decodeIfPresent(String.self, forKey: .url)
-        httpUrl = try container.decodeIfPresent(String.self, forKey: .httpUrl)
-        headers = try container.decodeIfPresent([String: String].self, forKey: .headers)
+        let container = try decoder.container(keyedBy: DynamicCodingKeys.self)
+        
+        // Decode known fields explicitly
+        if let k = DynamicCodingKeys(stringValue: "command") { command = try container.decodeIfPresent(String.self, forKey: k) }
+        if let k = DynamicCodingKeys(stringValue: "args") { args = try container.decodeIfPresent([String].self, forKey: k) }
+        if let k = DynamicCodingKeys(stringValue: "cwd") { cwd = try container.decodeIfPresent(String.self, forKey: k) }
+        if let k = DynamicCodingKeys(stringValue: "env") { env = try container.decodeIfPresent([String: String].self, forKey: k) }
+        if let k = DynamicCodingKeys(stringValue: "transport") { transport = try container.decodeIfPresent(ServerTransportConfig.self, forKey: k) }
+        if let k = DynamicCodingKeys(stringValue: "remotes") { remotes = try container.decodeIfPresent([ServerRemoteConfig].self, forKey: k) }
+        if let k = DynamicCodingKeys(stringValue: "type") { type = try container.decodeIfPresent(String.self, forKey: k) }
+        if let k = DynamicCodingKeys(stringValue: "url") { url = try container.decodeIfPresent(String.self, forKey: k) }
+        if let k = DynamicCodingKeys(stringValue: "httpUrl") { httpUrl = try container.decodeIfPresent(String.self, forKey: k) }
+        if let k = DynamicCodingKeys(stringValue: "headers") { headers = try container.decodeIfPresent([String: String].self, forKey: k) }
+
+        // Decode everything else
+        for key in container.allKeys {
+            if !ServerConfig.knownKeys.contains(key.stringValue) {
+                extra[key.stringValue] = try container.decode(AnyCodable.self, forKey: key)
+            }
+        }
     }
 
     func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(command, forKey: .command)
+        var container = encoder.container(keyedBy: DynamicCodingKeys.self)
+        
+        // Encode known fields
+        if let v = command, let k = DynamicCodingKeys(stringValue: "command") { try container.encode(v, forKey: k) }
+        if let v = args, !v.isEmpty, let k = DynamicCodingKeys(stringValue: "args") { try container.encode(v, forKey: k) }
+        if let v = cwd, let k = DynamicCodingKeys(stringValue: "cwd") { try container.encode(v, forKey: k) }
+        if let v = env, !v.isEmpty, let k = DynamicCodingKeys(stringValue: "env") { try container.encode(v, forKey: k) }
+        if let v = transport, let k = DynamicCodingKeys(stringValue: "transport") { try container.encode(v, forKey: k) }
+        if let v = remotes, !v.isEmpty, let k = DynamicCodingKeys(stringValue: "remotes") { try container.encode(v, forKey: k) }
+        if let v = type, let k = DynamicCodingKeys(stringValue: "type") { try container.encode(v, forKey: k) }
+        if let v = url, let k = DynamicCodingKeys(stringValue: "url") { try container.encode(v, forKey: k) }
+        if let v = httpUrl, let k = DynamicCodingKeys(stringValue: "httpUrl") { try container.encode(v, forKey: k) }
+        if let v = headers, !v.isEmpty, let k = DynamicCodingKeys(stringValue: "headers") { try container.encode(v, forKey: k) }
 
-        // Only encode arrays if not empty
-        if let args = args, !args.isEmpty {
-            try container.encode(args, forKey: .args)
-        }
-
-        try container.encodeIfPresent(cwd, forKey: .cwd)
-
-        // Only encode env if not empty
-        if let env = env, !env.isEmpty {
-            try container.encode(env, forKey: .env)
-        }
-
-        try container.encodeIfPresent(transport, forKey: .transport)
-
-        // Only encode remotes if not empty
-        if let remotes = remotes, !remotes.isEmpty {
-            try container.encode(remotes, forKey: .remotes)
-        }
-
-        try container.encodeIfPresent(type, forKey: .type)
-        try container.encodeIfPresent(url, forKey: .url)
-        try container.encodeIfPresent(httpUrl, forKey: .httpUrl)
-
-        // Only encode headers if not empty
-        if let headers = headers, !headers.isEmpty {
-            try container.encode(headers, forKey: .headers)
+        // Encode extra fields
+        for (key, value) in extra {
+            if let dynamicKey = DynamicCodingKeys(stringValue: key) {
+                try container.encode(value, forKey: dynamicKey)
+            }
         }
     }
 
@@ -156,6 +292,11 @@ struct ServerConfig: Codable, Equatable {
 
         // Check for SSE-type servers (Server-Sent Events)
         if type == "sse", url.isNonEmptyString {
+            return true
+        }
+        
+        // Relaxed validation: If URL is present, it's likely a valid remote server (implicit type)
+        if url.isNonEmptyString {
             return true
         }
 
@@ -196,6 +337,11 @@ struct ServerConfig: Codable, Equatable {
             let remoteType = firstRemote.type
             let urlHost = formatURLHost(firstRemote.url)
             return "Remote \(remoteType) → \(urlHost)"
+        }
+        
+        // Fallback for implicit URL servers
+        if let urlString = url {
+             return "Remote → \(formatURLHost(urlString))"
         }
 
         return "Custom server configuration"

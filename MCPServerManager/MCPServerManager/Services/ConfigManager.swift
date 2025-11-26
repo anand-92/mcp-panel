@@ -110,8 +110,8 @@ class ConfigManager {
             )
         }
 
-        // Extract [mcpServers.<name>] section
-        guard let serversTable = toml["mcpServers"]?.table else {
+        // Extract [mcp_servers.<name>] section
+        guard let serversTable = toml["mcp_servers"]?.table else {
             return [:]
         }
 

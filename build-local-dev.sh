@@ -56,6 +56,15 @@ if [ -f ../icons/AppIcon.icns ]; then
     cp ../icons/AppIcon.icns build/MCP-Server-Manager.app/Contents/Resources/AppIcon.icns
 fi
 
+# Copy Swift Resource Bundle (Crucial for Fonts!)
+echo "📂 Copying resource bundle..."
+if [ -d ".build/release/MCPServerManager_MCPServerManager.bundle" ]; then
+    cp -r .build/release/MCPServerManager_MCPServerManager.bundle build/MCP-Server-Manager.app/Contents/Resources/
+    echo "✅ Copied resource bundle"
+else
+    echo "⚠️ Resource bundle not found! Fonts may be missing."
+fi
+
 echo "✍️  Code signing..."
 cd build
 
