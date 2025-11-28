@@ -50,6 +50,15 @@ jobs:
         # Copy app icon
         cp icons/AppIcon.icns build/MCP-Server-Manager.app/Contents/Resources/AppIcon.icns
 
+        # Copy SPM resource bundle (contains fonts)
+        if [ -d ".build/release/MCPServerManager_MCPServerManager.bundle" ]; then
+          cp -R .build/release/MCPServerManager_MCPServerManager.bundle build/MCP-Server-Manager.app/Contents/Resources/
+          echo "✅ Resource bundle copied"
+        else
+          echo "⚠️ Resource bundle not found at .build/release/MCPServerManager_MCPServerManager.bundle"
+          ls -la .build/release/ | grep -i bundle || echo "No bundles found"
+        fi
+
         # Create Info.plist
         cat > build/MCP-Server-Manager.app/Contents/Info.plist << 'EOF'
         <?xml version="1.0" encoding="UTF-8"?>

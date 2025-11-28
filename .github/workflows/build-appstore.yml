@@ -109,6 +109,15 @@ jobs:
         # Copy app icon
         cp MCPServerManager/icons/AppIcon.icns "$APP_PATH/Contents/Resources/AppIcon.icns"
 
+        # Copy SPM resource bundle (contains fonts)
+        if [ -d "MCPServerManager/.build/release/MCPServerManager_MCPServerManager.bundle" ]; then
+          cp -R MCPServerManager/.build/release/MCPServerManager_MCPServerManager.bundle "$APP_PATH/Contents/Resources/"
+          echo "✅ Resource bundle copied"
+        else
+          echo "⚠️ Resource bundle not found"
+          ls -la MCPServerManager/.build/release/ | grep -i bundle || echo "No bundles found"
+        fi
+
         # Copy provisioning profile
         cp embedded.provisionprofile "$APP_PATH/Contents/embedded.provisionprofile"
 

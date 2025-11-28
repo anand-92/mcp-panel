@@ -27,33 +27,71 @@ enum FontManager {
         #endif
     }
 
+    /// Cached resource bundle to avoid repeated lookups
+    private static let resourceBundle: Bundle? = {
+        // Try to find the SPM resource bundle safely (without using Bundle.module which crashes)
+        let bundleName = "MCPServerManager_MCPServerManager"
+
+        // 1. Look in main bundle's Resources directory
+        if let resourceURL = Bundle.main.resourceURL {
+            let bundleURL = resourceURL.appendingPathComponent("\(bundleName).bundle")
+            if let bundle = Bundle(url: bundleURL) {
+                return bundle
+            }
+
+            // 2. Search Resources directory for any matching bundle
+            if let contents = try? FileManager.default.contentsOfDirectory(at: resourceURL, includingPropertiesForKeys: nil) {
+                for url in contents where url.lastPathComponent.contains(bundleName) {
+                    if let bundle = Bundle(url: url) {
+                        return bundle
+                    }
+                }
+            }
+        }
+
+        // 3. Look relative to executable (for development/debug builds)
+        let executableURL = Bundle.main.bundleURL
+        let possiblePaths = [
+            executableURL.appendingPathComponent("Contents/Resources/\(bundleName).bundle"),
+            executableURL.appendingPathComponent("Resources/\(bundleName).bundle"),
+            executableURL.appendingPathComponent("\(bundleName).bundle")
+        ]
+
+        for path in possiblePaths {
+            if let bundle = Bundle(url: path) {
+                return bundle
+            }
+        }
+
+        return nil
+    }()
+
     /// Register a single font file
     private static func registerFont(filename: String) {
         let fontName = filename.replacingOccurrences(of: ".ttf", with: "")
         var fontURL: URL?
 
-        // 1. Try Bundle.module (Standard SPM)
-        if let url = Bundle.module.url(forResource: fontName, withExtension: "ttf") {
+        // 1. Try cached resource bundle (safe - won't crash if not found)
+        if let url = resourceBundle?.url(forResource: fontName, withExtension: "ttf") {
             fontURL = url
         }
         // 2. Try Bundle.main (App Bundle root resources)
         else if let url = Bundle.main.url(forResource: fontName, withExtension: "ttf") {
             fontURL = url
         }
-        // 3. Try explicit path to bundle inside Resources (App Store build structure)
-        else if let resourcePath = Bundle.main.resourceURL,
-                let bundleURL = try? FileManager.default.contentsOfDirectory(at: resourcePath, includingPropertiesForKeys: nil)
-                    .first(where: { $0.lastPathComponent.contains("MCPServerManager_MCPServerManager.bundle") }) {
-            
-            let specificBundle = Bundle(url: bundleURL)
-            if let url = specificBundle?.url(forResource: fontName, withExtension: "ttf") {
-                fontURL = url
-            }
+        // 3. Try fonts subdirectory in main bundle
+        else if let url = Bundle.main.url(forResource: fontName, withExtension: "ttf", subdirectory: "Fonts") {
+            fontURL = url
         }
 
         guard let foundURL = fontURL else {
+            #if DEBUG
             print("⚠️ Could not find font file: \(filename)")
             print("   Bundle path: \(Bundle.main.bundlePath)")
+            if let resourceURL = Bundle.main.resourceURL {
+                print("   Resource URL: \(resourceURL.path)")
+            }
+            #endif
             return
         }
 
