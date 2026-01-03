@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "claude": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-claude", "--model", "claude-3-opus-20240229"],
+      "env": {
+        "ANTHROPIC_API_KEY": "sk-ant-example-api-key"
+      },
+      "description": "A sample Claude server configuration"
+    },
+    "web-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-web-search"],
+      "description": "A sample web search server"
+    }
+  }
+}

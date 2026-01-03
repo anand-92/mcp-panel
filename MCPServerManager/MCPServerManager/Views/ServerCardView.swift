@@ -47,8 +47,8 @@ struct ServerCardView: View {
                     .lineLimit(1)
 
                 // Config preview or editor
-                if isEditing && !server.isCodexUniverse {
-                    // Inline editing only for Claude/Gemini (JSON)
+                if isEditing {
+                    // Inline editing (JSON)
                     VStack(alignment: .trailing, spacing: 8) {
                         TextEditor(text: $editedConfigText)
                             .font(DesignTokens.Typography.code)
@@ -136,7 +136,7 @@ struct ServerCardView: View {
                 } else {
                     ZStack(alignment: .topTrailing) {
                         ScrollView {
-                            Text(server.isCodexUniverse ? server.configTOML : server.configJSON)
+                            Text(server.configJSON)
                                 .font(DesignTokens.Typography.code)
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -147,9 +147,7 @@ struct ServerCardView: View {
                         .background(Color.black.opacity(0.3))
                         .cornerRadius(8)
 
-                        if isHovering && !server.isCodexUniverse {
-                            // Only show edit button for Claude/Gemini (JSON)
-                            // Codex servers must use Raw TOML editor
+                        if isHovering {
                             Button(action: {
                                 editedConfigText = server.configJSON
                                 isEditing = true
@@ -163,19 +161,6 @@ struct ServerCardView: View {
                             }
                             .buttonStyle(.plain)
                             .padding(8)
-                        }
-
-                        if server.isCodexUniverse && isHovering {
-                            // Show info tooltip for Codex servers
-                            Text("Use Raw Editor")
-                                .font(DesignTokens.Typography.labelSmall)
-                                .foregroundColor(.secondary)
-                                .padding(8)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(Color.black.opacity(0.7))
-                                )
-                                .padding(8)
                         }
                     }
                     .onHover { hovering in
