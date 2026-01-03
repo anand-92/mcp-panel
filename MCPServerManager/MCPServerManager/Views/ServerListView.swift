@@ -56,7 +56,7 @@ struct ServerListRow: View {
             
             // Name
             Text(server.name)
-                .font(DesignTokens.Typography.bodyBold)
+                .font(DesignTokens.Typography.bodyLarge)
                 .foregroundColor(isEnabled ? themeColors.primaryText : themeColors.mutedText)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
