@@ -11,8 +11,7 @@ struct AppSettings: Codable, Equatable {
         confirmDelete: true,
         configPaths: [
             "~/.claude.json",
-            "~/.settings.json",
-            "~/.codex.json"
+            "~/.settings.json"
         ],
         activeConfigIndex: 0,
         blurJSONPreviews: false,
@@ -20,13 +19,13 @@ struct AppSettings: Codable, Equatable {
     )
 
     init(confirmDelete: Bool = true,
-         configPaths: [String] = ["~/.claude.json", "~/.settings.json", "~/.codex.json"],
+         configPaths: [String] = ["~/.claude.json", "~/.settings.json"],
          activeConfigIndex: Int = 0,
          blurJSONPreviews: Bool = false,
          overrideTheme: String? = nil) {
         self.confirmDelete = confirmDelete
         self.configPaths = configPaths
-        self.activeConfigIndex = max(0, min(activeConfigIndex, 2)) // Ensure 0, 1, or 2
+        self.activeConfigIndex = max(0, min(activeConfigIndex, 1)) // Ensure 0 or 1
         self.blurJSONPreviews = blurJSONPreviews
         self.overrideTheme = overrideTheme
     }
@@ -42,19 +41,17 @@ struct AppSettings: Codable, Equatable {
     var config2Path: String {
         configPaths[safe: 1] ?? "~/.settings.json"
     }
-
-    var config3Path: String {
-        configPaths[safe: 2] ?? "~/.codex.json"
-    }
 }
 
 enum ViewMode: String, Codable, CaseIterable {
     case grid = "grid"
-    case rawJSON = "list"
+    case list = "list"
+    case rawJSON = "json"
 
     var displayName: String {
         switch self {
         case .grid: return "Grid"
+        case .list: return "List"
         case .rawJSON: return "Raw JSON"
         }
     }

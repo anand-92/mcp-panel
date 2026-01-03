@@ -6,7 +6,7 @@ struct ServerCardView: View {
     @Binding var confirmDelete: Bool
     @Binding var blurJSONPreviews: Bool
     @State private var isEditing = false
-    @State private var editedConfigText: String = ""  // Holds either JSON or TOML
+    @State private var editedConfigText: String = ""
     @State private var isHovering = false
     @State private var showingDeleteAlert = false
     @State private var showForceAlert = false
@@ -16,6 +16,7 @@ struct ServerCardView: View {
     @Environment(\.themeColors) private var themeColors
 
     let onToggle: () -> Void
+    let onTagToggle: (ServerTag) -> Void
     let onDelete: () -> Void
     let onUpdate: (String) -> (success: Bool, invalidReason: String?, config: ServerConfig?)
     let onUpdateForced: (ServerConfig) -> Bool
@@ -46,9 +47,48 @@ struct ServerCardView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
 
+                // Tags section
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        if !server.tags.isEmpty {
+                            ForEach(server.tags) { tag in
+                                TagChip(tag: tag) {
+                                    onTagToggle(tag)
+                                }
+                            }
+                        }
+                        
+                        Menu {
+                            ForEach(ServerTag.allCases) { tag in
+                                Button(action: { onTagToggle(tag) }) {
+                                    HStack {
+                                        Text(tag.rawValue)
+                                        if server.tags.contains(tag) {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "tag")
+                                Text(server.tags.isEmpty ? "Add Tags" : "Edit")
+                            }
+                            .font(DesignTokens.Typography.captionSmall)
+                            .foregroundColor(themeColors.secondaryText)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .stroke(themeColors.borderColor, lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
                 // Config preview or editor
-                if isEditing && !server.isCodexUniverse {
-                    // Inline editing only for Claude/Gemini (JSON)
+                if isEditing {
                     VStack(alignment: .trailing, spacing: 8) {
                         TextEditor(text: $editedConfigText)
                             .font(DesignTokens.Typography.code)
@@ -136,7 +176,7 @@ struct ServerCardView: View {
                 } else {
                     ZStack(alignment: .topTrailing) {
                         ScrollView {
-                            Text(server.isCodexUniverse ? server.configTOML : server.configJSON)
+                            Text(server.configJSON)
                                 .font(DesignTokens.Typography.code)
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -147,9 +187,7 @@ struct ServerCardView: View {
                         .background(Color.black.opacity(0.3))
                         .cornerRadius(8)
 
-                        if isHovering && !server.isCodexUniverse {
-                            // Only show edit button for Claude/Gemini (JSON)
-                            // Codex servers must use Raw TOML editor
+                        if isHovering {
                             Button(action: {
                                 editedConfigText = server.configJSON
                                 isEditing = true
@@ -163,19 +201,6 @@ struct ServerCardView: View {
                             }
                             .buttonStyle(.plain)
                             .padding(8)
-                        }
-
-                        if server.isCodexUniverse && isHovering {
-                            // Show info tooltip for Codex servers
-                            Text("Use Raw Editor")
-                                .font(DesignTokens.Typography.labelSmall)
-                                .foregroundColor(.secondary)
-                                .padding(8)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(Color.black.opacity(0.7))
-                                )
-                                .padding(8)
                         }
                     }
                     .onHover { hovering in
@@ -280,5 +305,30 @@ struct ConfigBadge: View {
         } else {
             return .gray.opacity(0.3)
         }
+    }
+}
+
+struct TagChip: View {
+    let tag: ServerTag
+    let action: () -> Void
+    @Environment(\.themeColors) private var themeColors
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Text(tag.rawValue)
+                Image(systemName: "xmark")
+                    .font(.system(size: 8, weight: .bold))
+            }
+            .font(DesignTokens.Typography.caption)
+            .foregroundColor(themeColors.textOnAccent)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule()
+                    .fill(AnyShapeStyle(themeColors.accentGradient))
+            )
+        }
+        .buttonStyle(.plain)
     }
 }

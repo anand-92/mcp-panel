@@ -1,0 +1,90 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/reviewers/Documents"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_example_token_12345"
+      }
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "BSA_example_key_67890"
+      }
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost/testdb"],
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "postgresql://user:pass@localhost:5432/reviewdb"
+      }
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "sqlite": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sqlite", "--db-path", "/tmp/test.db"]
+    },
+    "google-drive": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-gdrive"],
+      "env": {
+        "GDRIVE_CLIENT_ID": "example_client_id",
+        "GDRIVE_CLIENT_SECRET": "example_client_secret"
+      }
+    },
+    "slack": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-slack"],
+      "env": {
+        "SLACK_BOT_TOKEN": "xoxb-example-token",
+        "SLACK_TEAM_ID": "T12345678"
+      }
+    },
+    "git": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-git"]
+    },
+    "everything": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-everything"]
+    },
+    "time": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-time"]
+    },
+    "fetch": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"]
+    },
+    "axios": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-axios"]
+    },
+    "honeycomb": {
+      "type": "sse",
+      "url": "https://mcp.honeycomb.io/sse"
+    }
+  },
+  "globalShortcut": "CommandOrControl+Shift+;",
+  "mcpServers._comment": "This is a sample configuration demonstrating various MCP server types for App Store review purposes. It includes filesystem access, API integrations, database connections, and utility servers to showcase the full functionality of MCP Server Manager."
+}

@@ -16,7 +16,7 @@ struct ToolbarView: View {
                         }
                     }) {
                         HStack(spacing: 6) {
-                            Image(systemName: mode == .grid ? "square.grid.2x2" : "curlybraces")
+                            Image(systemName: iconForViewMode(mode))
                                 .font(.system(size: 14, weight: .semibold))
                             Text(mode.displayName)
                                 .font(DesignTokens.Typography.label)
@@ -103,6 +103,35 @@ struct ToolbarView: View {
 
             Spacer()
 
+            // Enable servers by tag
+            Menu {
+                ForEach(ServerTag.allCases) { tag in
+                    let count = viewModel.taggedServersCount(for: tag)
+                    Button(action: { viewModel.enableServers(with: tag) }) {
+                        Text(count > 0 ? "\(tag.rawValue) (\(count))" : tag.rawValue)
+                    }
+                    .disabled(count == 0)
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "tag")
+                    Text("Enable Tag")
+                }
+                .font(DesignTokens.Typography.label)
+                .foregroundColor(themeColors.primaryText)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(themeColors.glassBackground)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(themeColors.borderColor, lineWidth: 1)
+                        )
+                )
+            }
+            .buttonStyle(.plain)
+
             // Toggle all servers
             Button(action: {
                 let allEnabled = viewModel.servers.allSatisfy {
@@ -172,6 +201,15 @@ struct ToolbarView: View {
             return "circle.slash"
         case .recent:
             return "clock.arrow.circlepath"
+        }
+    }
+
+    // Helper function to get icon for view mode
+    private func iconForViewMode(_ mode: ViewMode) -> String {
+        switch mode {
+        case .grid: return "square.grid.2x2"
+        case .list: return "list.bullet"
+        case .rawJSON: return "curlybraces"
         }
     }
 

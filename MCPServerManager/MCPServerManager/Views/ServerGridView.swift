@@ -21,6 +21,9 @@ struct ServerGridView: View {
                             onToggle: {
                                 viewModel.toggleServer(server)
                             },
+                            onTagToggle: { tag in
+                                viewModel.toggleTag(tag, for: server)
+                            },
                             onDelete: {
                                 viewModel.deleteServer(server)
                             },
