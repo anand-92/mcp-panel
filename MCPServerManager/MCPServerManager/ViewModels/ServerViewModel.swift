@@ -1,6 +1,5 @@
 import Foundation
 import SwiftUI
-import TOMLKit
 
 @MainActor
 class ServerViewModel: ObservableObject {
@@ -58,18 +57,7 @@ class ServerViewModel: ObservableObject {
         let activeIndex = settings.activeConfigIndex
         var filtered = servers
 
-        // 🚨 NUCLEAR UNIVERSE ISOLATION 🚨
-        // Codex servers NEVER appear in Claude/Gemini, and vice versa
-        // This is NOT a suggestion, it's the LAW
-        if activeIndex == 2 {
-            // Codex universe: ONLY show Codex servers
-            filtered = filtered.filter { $0.isCodexUniverse }
-        } else {
-            // Claude/Gemini universe: ONLY show Claude/Gemini servers
-            filtered = filtered.filter { $0.isClaudeGeminiUniverse }
-        }
-
-        // Apply filter mode (within the universe)
+        // Apply filter mode
         switch filterMode {
         case .all:
             break  // Show all servers in this universe
@@ -97,9 +85,6 @@ class ServerViewModel: ObservableObject {
 
     func loadSettings() {
         settings = UserDefaults.standard.appSettings
-        // NO MIGRATION - Codex is a completely separate universe
-        // Existing servers belong to Claude/Gemini (sourceUniverse defaults to 0)
-        // Codex servers are brand new, created separately
     }
 
     func saveSettings() {
@@ -125,9 +110,8 @@ class ServerViewModel: ObservableObject {
             do {
                 let config1 = try configManager.readConfig(from: settings.config1Path)
                 let config2 = try configManager.readConfig(from: settings.config2Path)
-                let config3 = try configManager.readConfig(from: settings.config3Path)
 
-                let merged = mergeConfigs(config1: config1, config2: config2, config3: config3)
+                let merged = mergeConfigs(config1: config1, config2: config2)
                 servers = merged
 
                 // Cache to UserDefaults
@@ -157,16 +141,16 @@ class ServerViewModel: ObservableObject {
         }
     }
 
-    private func mergeConfigs(config1: [String: ServerConfig], config2: [String: ServerConfig], config3: [String: ServerConfig]) -> [ServerModel] {
+    private func mergeConfigs(config1: [String: ServerConfig], config2: [String: ServerConfig]) -> [ServerModel] {
         var merged: [String: ServerModel] = [:]
         let now = Date()
 
-        // Start with cached servers to preserve metadata (including sourceUniverse)
+        // Start with cached servers to preserve metadata
         for server in UserDefaults.standard.cachedServers {
             merged[server.name] = server
         }
 
-        // Process config1 servers (Claude Code - Universe 0)
+        // Process config1 servers (Claude Code)
         for (name, config) in config1 {
             if var existing = merged[name] {
                 existing.config = config
@@ -177,13 +161,12 @@ class ServerViewModel: ObservableObject {
                     name: name,
                     config: config,
                     updatedAt: now,
-                    inConfigs: [true, false, false],
-                    sourceUniverse: 0  // Claude universe
+                    inConfigs: [true, false]
                 )
             }
         }
 
-        // Process config2 servers (Gemini CLI - Universe 1)
+        // Process config2 servers (Gemini CLI)
         for (name, config) in config2 {
             if var existing = merged[name] {
                 if !existing.inConfigs[0] {
@@ -196,26 +179,7 @@ class ServerViewModel: ObservableObject {
                     name: name,
                     config: config,
                     updatedAt: now,
-                    inConfigs: [false, true, false],
-                    sourceUniverse: 1  // Gemini universe (still Claude/Gemini group)
-                )
-            }
-        }
-
-        // Process config3 servers (Codex - Universe 2 - COMPLETELY ISOLATED)
-        for (name, config) in config3 {
-            if var existing = merged[name] {
-                // Codex servers are isolated, update config regardless
-                existing.config = config
-                existing.inConfigs[2] = true
-                merged[name] = existing
-            } else {
-                merged[name] = ServerModel(
-                    name: name,
-                    config: config,
-                    updatedAt: now,
-                    inConfigs: [false, false, true],
-                    sourceUniverse: 2  // Codex universe - THE FORBIDDEN ZONE
+                    inConfigs: [false, true]
                 )
             }
         }
@@ -227,9 +191,6 @@ class ServerViewModel: ObservableObject {
             }
             if !config2.keys.contains(name) {
                 server.inConfigs[1] = false
-            }
-            if !config3.keys.contains(name) {
-                server.inConfigs[2] = false
             }
             merged[name] = server
         }
@@ -255,17 +216,12 @@ class ServerViewModel: ObservableObject {
                     .filter { $0.isInConfig2 }
                     .reduce(into: [String: ServerConfig]()) { $0[$1.name] = $1.config }
 
-                let config3Servers = servers
-                    .filter { $0.isInConfig3 }
-                    .reduce(into: [String: ServerConfig]()) { $0[$1.name] = $1.config }
-
                 #if DEBUG
-                print("DEBUG: Syncing - Config1: \(config1Servers.count), Config2: \(config2Servers.count), Config3 (CODEX): \(config3Servers.count)")
+                print("DEBUG: Syncing - Config1: \(config1Servers.count), Config2: \(config2Servers.count)")
                 #endif
 
                 try configManager.writeConfig(servers: config1Servers, to: settings.config1Path)
                 try configManager.writeConfig(servers: config2Servers, to: settings.config2Path)
-                try configManager.writeConfig(servers: config3Servers, to: settings.config3Path)
 
                 // Update cache
                 await MainActor.run {
@@ -384,8 +340,8 @@ class ServerViewModel: ObservableObject {
                 print("DEBUG: Updated existing server '\(name)'")
                 #endif
             } else {
-                // Brand new server - assign to current universe
-                var inConfigs = [false, false, false]
+                // Brand new server
+                var inConfigs = [false, false]
                 inConfigs[settings.activeConfigIndex] = true
 
                 let newServer = ServerModel(
@@ -393,12 +349,11 @@ class ServerViewModel: ObservableObject {
                     config: config,
                     updatedAt: Date(),
                     inConfigs: inConfigs,
-                    registryImageUrl: registryImageUrl,
-                    sourceUniverse: settings.activeConfigIndex  // Lock to this universe FOREVER
+                    registryImageUrl: registryImageUrl
                 )
                 self.servers.append(newServer)
                 #if DEBUG
-                print("DEBUG: Added new server '\(name)' to universe \(settings.activeConfigIndex)")
+                print("DEBUG: Added new server '\(name)' to config \(settings.activeConfigIndex)")
                 #endif
             }
             addedCount += 1
@@ -593,15 +548,14 @@ class ServerViewModel: ObservableObject {
                 updated.updatedAt = Date()
                 servers[index] = updated
             } else {
-                var inConfigs = [false, false, false]
+                var inConfigs = [false, false]
                 inConfigs[configIndex] = true
 
                 let newServer = ServerModel(
                     name: name,
                     config: config,
                     updatedAt: Date(),
-                    inConfigs: inConfigs,
-                    sourceUniverse: configIndex  // Locked to this universe forever
+                    inConfigs: inConfigs
                 )
                 servers.append(newServer)
             }
@@ -615,77 +569,6 @@ class ServerViewModel: ObservableObject {
         showToast(message: message, type: .success)
     }
 
-    // MARK: - TOML Editing (for Codex)
-
-    func applyRawTOML(_ tomlText: String) -> (success: Bool, invalidServers: [String: String]?, serverDict: [String: ServerConfig]?) {
-        do {
-            // Parse TOML
-            let toml = try TOMLTable(string: tomlText)
-            guard let mcpServers = toml["mcp_servers"] as? TOMLTable else {
-                throw NSError(domain: "Missing mcp_servers section", code: -1)
-            }
-
-            // Convert TOML to ServerConfig dictionary
-            var serverDict: [String: ServerConfig] = [:]
-            for (name, value) in mcpServers {
-                guard let serverTable = value as? TOMLTable,
-                      let jsonDict = TOMLUtils.tomlTableToDictionary(serverTable) else {
-                    throw NSError(domain: "Invalid server config for \(name)", code: -1)
-                }
-
-                // Convert JSON dict to ServerConfig
-                let jsonData = try JSONSerialization.data(withJSONObject: jsonDict)
-                let config = try JSONDecoder().decode(ServerConfig.self, from: jsonData)
-                serverDict[name] = config
-            }
-
-            // Check for invalid servers
-            var invalidServers: [String: String] = [:]
-            for (name, config) in serverDict {
-                if !config.isValid {
-                    let reason = getInvalidReason(config)
-                    invalidServers[name] = reason
-                }
-            }
-
-            if !invalidServers.isEmpty {
-                return (success: false, invalidServers: invalidServers, serverDict: serverDict)
-            }
-
-            // Apply changes
-            applyRawJSONInternal(serverDict: serverDict, skipValidation: false)
-            return (success: true, invalidServers: nil, serverDict: nil)
-        } catch {
-            showToast(message: "Failed to parse TOML: \(error.localizedDescription)", type: .error)
-            return (success: false, invalidServers: nil, serverDict: nil)
-        }
-    }
-
-    func applyRawTOMLForced(_ tomlText: String) throws {
-        let toml = try TOMLTable(string: tomlText)
-        guard let mcpServers = toml["mcp_servers"] as? TOMLTable else {
-            throw NSError(domain: "Missing mcp_servers section", code: -1)
-        }
-
-        var serverDict: [String: ServerConfig] = [:]
-        for (name, value) in mcpServers {
-            guard let serverTable = value as? TOMLTable,
-                  let jsonDict = TOMLUtils.tomlTableToDictionary(serverTable) else {
-                throw NSError(domain: "Invalid server config for \(name)", code: -1)
-            }
-
-            let jsonData = try JSONSerialization.data(withJSONObject: jsonDict)
-            let config = try JSONDecoder().decode(ServerConfig.self, from: jsonData)
-            serverDict[name] = config
-        }
-
-        applyRawJSONInternal(serverDict: serverDict, skipValidation: true)
-    }
-
-    func applyRawTOMLForced(serverDict: [String: ServerConfig]) {
-        applyRawJSONInternal(serverDict: serverDict, skipValidation: true)
-    }
-
     func deleteServer(_ server: ServerModel) {
         servers.removeAll { $0.id == server.id }
         syncToConfigs()
@@ -694,21 +577,13 @@ class ServerViewModel: ObservableObject {
 
     // MARK: - Tags
 
-    private func isServerInActiveUniverse(_ server: ServerModel) -> Bool {
-        let activeIndex = settings.activeConfigIndex
-        if activeIndex == 2 {
-            return server.isCodexUniverse
-        }
-        return server.isClaudeGeminiUniverse
-    }
-
     func taggedServersCount(for tag: ServerTag) -> Int {
-        servers.filter { isServerInActiveUniverse($0) && $0.tags.contains(tag) }.count
+        servers.filter { $0.tags.contains(tag) }.count
     }
 
     func enableServers(with tag: ServerTag) {
         let configIndex = settings.activeConfigIndex
-        guard configIndex >= 0 && configIndex < 3 else {
+        guard configIndex >= 0 && configIndex < 2 else {
              showToast(message: "Invalid config index", type: .error)
              return
         }
@@ -719,7 +594,7 @@ class ServerViewModel: ObservableObject {
         // 1. Identify servers to update
         for i in 0..<servers.count {
             let server = servers[i]
-            guard isServerInActiveUniverse(server), server.tags.contains(tag) else { continue }
+            guard server.tags.contains(tag) else { continue }
             taggedCount += 1
 
             if !(servers[i].inConfigs[safe: configIndex] ?? false) {

@@ -63,16 +63,6 @@ struct HeaderView: View {
                         viewModel.loadServers()
                     }
                 )
-
-                // The forbidden zone
-                ConfigButton(
-                    path: viewModel.settings.config3Path,
-                    isActive: viewModel.settings.activeConfigIndex == 2,
-                    action: {
-                        viewModel.settings.activeConfigIndex = 2
-                        viewModel.loadServers()
-                    }
-                )
             }
 
             // Settings button

@@ -7,17 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
-- **Server List View** - New compact list view mode for better density when managing many servers. Toggle between Grid, List, and Raw JSON/TOML modes.
+- **Server List View** - New compact list view mode for better density when managing many servers. Toggle between Grid, List, and Raw JSON modes.
 - Server tags (UI, Backend, Creativity, Dev Ops, Advanced) with per-server tagging and bulk enable by tag.
+
+### Removed
+- **Codex Support** - Completely removed Codex configuration support. The app now focuses on Claude Code and Gemini CLI only (both use JSON format). Removed TOMLKit dependency, TOML parsing/writing, third config path, and all Codex-specific UI components.
 
 ### Fixed
 - **Critical: macOS 26 Launch Crash** - Fixed fatal crash on app startup caused by `Bundle.module` assertion failure when SPM resource bundle is missing. Replaced direct `Bundle.module` access with safe bundle lookup that gracefully handles missing resources without crashing.
 - **Critical: Missing Resource Bundle in Builds** - Fixed GitHub Actions workflows (build-dmg.yml and build-appstore.yml) to copy the SPM resource bundle (`MCPServerManager_MCPServerManager.bundle`) containing fonts to the app's Resources folder. This was the root cause of the crash - the bundle was never being included in distributed builds.
-- **TOML Parsing Key** - Updated all TOML parsing and generation logic to consistently use `[mcp_servers]` instead of `[mcpServers]`, ensuring compatibility with the expected format.
-- **Codex TOML Parsing** - Switched to native `TOMLDecoder` for adding Codex servers, eliminating JSON conversion errors and supporting all valid TOML types natively.
 - **Flexible Configuration** - Updated `ServerConfig` to support unlimited custom fields (e.g., `enabled_tools`, `startup_timeout_sec`, `enabled`), preserving all data in the configuration file.
 - **Font Loading** - Enhanced font registration to robustly search for custom fonts in both development (SPM) and release (.app) environments, fixing missing font issues in local builds.
-- **TOML File Preservation** - Configured `writeTOMLConfig` to read and update existing TOML files rather than overwriting them completely, preserving other configuration sections.
 
 ## [3.0.0] - 2025-11-26
 

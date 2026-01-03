@@ -1,5 +1,4 @@
 import Foundation
-import TOMLKit
 
 struct ServerModel: Identifiable, Codable, Equatable {
     let id: UUID
@@ -7,25 +6,20 @@ struct ServerModel: Identifiable, Codable, Equatable {
     var config: ServerConfig
     var enabled: Bool
     var updatedAt: Date
-    var inConfigs: [Bool] // [inConfig1, inConfig2, inConfig3]
+    var inConfigs: [Bool] // [inConfig1, inConfig2]
     var registryImageUrl: String? // Image URL from MCP registry (takes precedence over fetched icons)
     var customIconPath: String? // User-selected custom icon path (takes highest precedence)
     var tags: [ServerTag]
-
-    // UNIVERSE ISOLATION: Which universe this server belongs to (0/1 = Claude/Gemini, 2 = Codex)
-    // Once set, this NEVER changes. Servers stay in their universe forever.
-    let sourceUniverse: Int
 
     init(id: UUID = UUID(),
          name: String,
          config: ServerConfig,
          enabled: Bool = false,
          updatedAt: Date = Date(),
-         inConfigs: [Bool] = [false, false, false],
+         inConfigs: [Bool] = [false, false],
          registryImageUrl: String? = nil,
          customIconPath: String? = nil,
-         tags: [ServerTag] = [],
-         sourceUniverse: Int = 0) {
+         tags: [ServerTag] = []) {
         self.id = id
         self.name = name
         self.config = config
@@ -35,7 +29,6 @@ struct ServerModel: Identifiable, Codable, Equatable {
         self.registryImageUrl = registryImageUrl
         self.customIconPath = customIconPath
         self.tags = tags
-        self.sourceUniverse = sourceUniverse
     }
 
     enum CodingKeys: String, CodingKey {
@@ -48,7 +41,6 @@ struct ServerModel: Identifiable, Codable, Equatable {
         case registryImageUrl
         case customIconPath
         case tags
-        case sourceUniverse
     }
 
     init(from decoder: Decoder) throws {
@@ -62,7 +54,6 @@ struct ServerModel: Identifiable, Codable, Equatable {
         registryImageUrl = try container.decodeIfPresent(String.self, forKey: .registryImageUrl)
         customIconPath = try container.decodeIfPresent(String.self, forKey: .customIconPath)
         tags = try container.decodeIfPresent([ServerTag].self, forKey: .tags) ?? []
-        sourceUniverse = try container.decode(Int.self, forKey: .sourceUniverse)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -76,7 +67,6 @@ struct ServerModel: Identifiable, Codable, Equatable {
         try container.encodeIfPresent(registryImageUrl, forKey: .registryImageUrl)
         try container.encodeIfPresent(customIconPath, forKey: .customIconPath)
         try container.encode(tags, forKey: .tags)
-        try container.encode(sourceUniverse, forKey: .sourceUniverse)
     }
 
     // MARK: - Computed Properties
@@ -93,25 +83,8 @@ struct ServerModel: Identifiable, Codable, Equatable {
         return string
     }
 
-    var configTOML: String {
-        // Use centralized TOML utilities
-        guard let tomlString = try? TOMLUtils.serversToTOMLString([name: config]) else {
-            return ""
-        }
-
-        // Extract just the server section (remove [mcp_servers] header and server name)
-        let lines = tomlString.split(separator: "\n")
-        let serverLines = lines.dropFirst(3) // Skip [mcp_servers], blank line, and [mcp_servers.name]
-        return serverLines.joined(separator: "\n")
-    }
-
     var isInConfig1: Bool { inConfigs.count > 0 ? inConfigs[0] : false }
     var isInConfig2: Bool { inConfigs.count > 1 ? inConfigs[1] : false }
-    var isInConfig3: Bool { inConfigs.count > 2 ? inConfigs[2] : false }
-
-    // UNIVERSE CHECKS: Strict separation between Claude/Gemini and Codex
-    var isClaudeGeminiUniverse: Bool { sourceUniverse == 0 || sourceUniverse == 1 }
-    var isCodexUniverse: Bool { sourceUniverse == 2 }
 
     /// Extract domain for icon fetching
     var iconDomain: String? {

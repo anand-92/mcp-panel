@@ -42,12 +42,7 @@ struct ContentView: View {
                     case .list:
                         ServerListView(viewModel: viewModel, showAddServer: $showAddServer)
                     case .rawJSON:
-                        // Show TOML editor for Codex, JSON editor for Claude/Gemini
-                        if viewModel.settings.activeConfigIndex == 2 {
-                            RawTOMLView(viewModel: viewModel)
-                        } else {
-                            RawJSONView(viewModel: viewModel)
-                        }
+                        RawJSONView(viewModel: viewModel)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -148,19 +143,14 @@ struct ContentView: View {
                 .transition(.opacity)
             }
 
-            // Add Server Modal with dark backdrop - Codex gets its own separate modal
+            // Add Server Modal with dark backdrop
             if showAddServer {
                 ZStack {
                     Color.black.opacity(0.5)
                         .ignoresSafeArea()
                         .transition(.opacity)
 
-                    // UNIVERSE SEPARATION: Codex uses its own TOML-only modal
-                    if viewModel.settings.activeConfigIndex == 2 {
-                        AddCodexServerModal(isPresented: $showAddServer, viewModel: viewModel)
-                    } else {
-                        AddServerModal(isPresented: $showAddServer, viewModel: viewModel)
-                    }
+                    AddServerModal(isPresented: $showAddServer, viewModel: viewModel)
                 }
                 .transition(.opacity)
             }

@@ -8,7 +8,6 @@ struct SettingsModal: View {
 
     @State private var config1Path: String = ""
     @State private var config2Path: String = ""
-    @State private var config3Path: String = ""
     @State private var confirmDelete: Bool = true
     @State private var fetchServerLogos: Bool = true
     @State private var blurJSONPreviews: Bool = false
@@ -110,44 +109,6 @@ struct SettingsModal: View {
                                     Button(action: {
                                         selectConfigFile { path in
                                             config2Path = path
-                                        }
-                                    }) {
-                                        HStack(spacing: 6) {
-                                            Image(systemName: "folder")
-                                            Text("Browse")
-                                        }
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 8)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .fill(Color.white.opacity(0.1))
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 8)
-                                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                                                )
-                                        )
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-
-                            // Config Path 3 (Codex - The Forbidden Zone)
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Image(systemName: "3.circle.fill")
-                                        .foregroundColor(themeColors.primaryAccent)
-                                    Text("Config Path 3 (Codex)")
-                                        .font(DesignTokens.Typography.label)
-                                }
-
-                                HStack {
-                                    TextField("~/.codex.json", text: $config3Path)
-                                        .textFieldStyle(.roundedBorder)
-                                        .focusable(true)
-
-                                    Button(action: {
-                                        selectConfigFile { path in
-                                            config3Path = path
                                         }
                                     }) {
                                         HStack(spacing: 6) {
@@ -315,7 +276,6 @@ struct SettingsModal: View {
         .onAppear {
             config1Path = viewModel.settings.config1Path
             config2Path = viewModel.settings.config2Path
-            config3Path = viewModel.settings.config3Path
             confirmDelete = viewModel.settings.confirmDelete
             fetchServerLogos = UserDefaults.standard.object(forKey: "fetchServerLogos") as? Bool ?? true
             blurJSONPreviews = viewModel.settings.blurJSONPreviews
@@ -340,7 +300,7 @@ struct SettingsModal: View {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
-        panel.allowedContentTypes = [UTType.json, UTType(filenameExtension: "toml")!]
+        panel.allowedContentTypes = [UTType.json]
         panel.showsHiddenFiles = true
         panel.message = "Select a config file to manage MCP servers"
 
@@ -381,7 +341,7 @@ struct SettingsModal: View {
     }
 
     private func saveSettings() {
-        viewModel.settings.configPaths = [config1Path, config2Path, config3Path]
+        viewModel.settings.configPaths = [config1Path, config2Path]
         viewModel.settings.confirmDelete = confirmDelete
         viewModel.settings.blurJSONPreviews = blurJSONPreviews
         UserDefaults.standard.set(fetchServerLogos, forKey: "fetchServerLogos")
