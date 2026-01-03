@@ -50,11 +50,13 @@ struct AppSettings: Codable, Equatable {
 
 enum ViewMode: String, Codable, CaseIterable {
     case grid = "grid"
-    case rawJSON = "list"
+    case list = "list"
+    case rawJSON = "json"
 
     var displayName: String {
         switch self {
         case .grid: return "Grid"
+        case .list: return "List"
         case .rawJSON: return "Raw JSON"
         }
     }

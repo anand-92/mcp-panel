@@ -16,7 +16,7 @@ struct ToolbarView: View {
                         }
                     }) {
                         HStack(spacing: 6) {
-                            Image(systemName: mode == .grid ? "square.grid.2x2" : "curlybraces")
+                            Image(systemName: iconForViewMode(mode))
                                 .font(.system(size: 14, weight: .semibold))
                             Text(mode.displayName)
                                 .font(DesignTokens.Typography.label)
@@ -201,6 +201,15 @@ struct ToolbarView: View {
             return "circle.slash"
         case .recent:
             return "clock.arrow.circlepath"
+        }
+    }
+
+    // Helper function to get icon for view mode
+    private func iconForViewMode(_ mode: ViewMode) -> String {
+        switch mode {
+        case .grid: return "square.grid.2x2"
+        case .list: return "list.bullet"
+        case .rawJSON: return "curlybraces"
         }
     }
 

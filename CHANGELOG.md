@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Server List View** - New compact list view mode for better density when managing many servers. Toggle between Grid, List, and Raw JSON/TOML modes.
 - Server tags (UI, Backend, Creativity, Dev Ops, Advanced) with per-server tagging and bulk enable by tag.
 
 ### Fixed

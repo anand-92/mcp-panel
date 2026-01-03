@@ -36,9 +36,12 @@ struct ContentView: View {
 
                 // Main content area - switches based on view mode
                 Group {
-                    if viewModel.viewMode == .grid {
+                    switch viewModel.viewMode {
+                    case .grid:
                         ServerGridView(viewModel: viewModel, showAddServer: $showAddServer)
-                    } else {
+                    case .list:
+                        ServerListView(viewModel: viewModel, showAddServer: $showAddServer)
+                    case .rawJSON:
                         // Show TOML editor for Codex, JSON editor for Claude/Gemini
                         if viewModel.settings.activeConfigIndex == 2 {
                             RawTOMLView(viewModel: viewModel)
