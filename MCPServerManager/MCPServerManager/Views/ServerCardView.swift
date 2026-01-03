@@ -47,23 +47,43 @@ struct ServerCardView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
 
+                // Tags section
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Tags")
-                        .font(DesignTokens.Typography.caption)
-                        .foregroundColor(themeColors.mutedText)
-
-                    LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 70), spacing: 6)],
-                        alignment: .leading,
-                        spacing: 6
-                    ) {
-                        ForEach(ServerTag.allCases) { tag in
-                            TagToggleChip(
-                                tag: tag,
-                                isSelected: server.tags.contains(tag),
-                                action: { onTagToggle(tag) }
+                    HStack {
+                        if !server.tags.isEmpty {
+                            ForEach(server.tags) { tag in
+                                TagChip(tag: tag) {
+                                    onTagToggle(tag)
+                                }
+                            }
+                        }
+                        
+                        Menu {
+                            ForEach(ServerTag.allCases) { tag in
+                                Button(action: { onTagToggle(tag) }) {
+                                    HStack {
+                                        Text(tag.rawValue)
+                                        if server.tags.contains(tag) {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "tag")
+                                Text(server.tags.isEmpty ? "Add Tags" : "Edit")
+                            }
+                            .font(DesignTokens.Typography.captionSmall)
+                            .foregroundColor(themeColors.secondaryText)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .stroke(themeColors.borderColor, lineWidth: 1)
                             )
                         }
+                        .buttonStyle(.plain)
                     }
                 }
 
@@ -304,27 +324,26 @@ struct ConfigBadge: View {
     }
 }
 
-struct TagToggleChip: View {
+struct TagChip: View {
     let tag: ServerTag
-    let isSelected: Bool
     let action: () -> Void
     @Environment(\.themeColors) private var themeColors
 
     var body: some View {
         Button(action: action) {
-            Text(tag.rawValue)
-                .font(DesignTokens.Typography.caption)
-                .foregroundColor(isSelected ? themeColors.textOnAccent : themeColors.secondaryText)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(
-                    Capsule()
-                        .fill(isSelected ? AnyShapeStyle(themeColors.accentGradient) : AnyShapeStyle(themeColors.glassBackground))
-                        .overlay(
-                            Capsule()
-                                .stroke(isSelected ? themeColors.primaryAccent.opacity(0.6) : themeColors.borderColor, lineWidth: 1)
-                        )
-                )
+            HStack(spacing: 4) {
+                Text(tag.rawValue)
+                Image(systemName: "xmark")
+                    .font(.system(size: 8, weight: .bold))
+            }
+            .font(DesignTokens.Typography.caption)
+            .foregroundColor(themeColors.textOnAccent)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule()
+                    .fill(AnyShapeStyle(themeColors.accentGradient))
+            )
         }
         .buttonStyle(.plain)
     }

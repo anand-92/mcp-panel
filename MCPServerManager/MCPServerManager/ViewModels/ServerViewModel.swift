@@ -706,6 +706,49 @@ class ServerViewModel: ObservableObject {
         servers.filter { isServerInActiveUniverse($0) && $0.tags.contains(tag) }.count
     }
 
+    func enableServers(with tag: ServerTag) {
+        let configIndex = settings.activeConfigIndex
+        guard configIndex >= 0 && configIndex < 3 else {
+             showToast(message: "Invalid config index", type: .error)
+             return
+        }
+
+        var indicesToUpdate: [Int] = []
+        var taggedCount = 0
+
+        // 1. Identify servers to update
+        for i in 0..<servers.count {
+            let server = servers[i]
+            guard isServerInActiveUniverse(server), server.tags.contains(tag) else { continue }
+            taggedCount += 1
+
+            if !(servers[i].inConfigs[safe: configIndex] ?? false) {
+                indicesToUpdate.append(i)
+            }
+        }
+
+        guard taggedCount > 0 else {
+            showToast(message: "No servers tagged \(tag.rawValue)", type: .warning)
+            return
+        }
+
+        guard !indicesToUpdate.isEmpty else {
+            showToast(message: "All \(tag.rawValue) servers already enabled", type: .warning)
+            return
+        }
+
+        // 2. Batch update
+        for index in indicesToUpdate {
+            servers[index].inConfigs[configIndex] = true
+            servers[index].updatedAt = Date()
+        }
+
+        // 3. Single notification and sync
+        objectWillChange.send()
+        syncToConfigs()
+        showToast(message: "Enabled \(indicesToUpdate.count) \(tag.rawValue) server(s)", type: .success)
+    }
+
     func toggleTag(_ tag: ServerTag, for server: ServerModel) {
         guard let index = servers.firstIndex(where: { $0.id == server.id }) else { return }
 
@@ -718,40 +761,10 @@ class ServerViewModel: ObservableObject {
         updated.updatedAt = Date()
         servers[index] = updated
 
-        // Tags are app metadata, so only update cache
+        // Tags are app metadata (local-only), so we only update the cache.
+        // NOTE: If the user clears app data, tags will be lost.
+        // Future improvement: Persist tags to a sidecar file or config metadata.
         UserDefaults.standard.cachedServers = servers
-    }
-
-    func enableServers(with tag: ServerTag) {
-        let configIndex = settings.activeConfigIndex
-        var taggedCount = 0
-        var enabledCount = 0
-
-        for i in 0..<servers.count {
-            let server = servers[i]
-            guard isServerInActiveUniverse(server), server.tags.contains(tag) else { continue }
-            taggedCount += 1
-
-            if !(servers[i].inConfigs[safe: configIndex] ?? false) {
-                servers[i].inConfigs[configIndex] = true
-                servers[i].updatedAt = Date()
-                enabledCount += 1
-            }
-        }
-
-        guard taggedCount > 0 else {
-            showToast(message: "No servers tagged \(tag.rawValue)", type: .warning)
-            return
-        }
-
-        guard enabledCount > 0 else {
-            showToast(message: "All \(tag.rawValue) servers already enabled", type: .warning)
-            return
-        }
-
-        objectWillChange.send()
-        syncToConfigs()
-        showToast(message: "Enabled \(enabledCount) \(tag.rawValue) server(s)", type: .success)
     }
 
     func toggleServer(_ server: ServerModel) {
