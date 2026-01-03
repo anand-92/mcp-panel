@@ -103,6 +103,35 @@ struct ToolbarView: View {
 
             Spacer()
 
+            // Enable servers by tag
+            Menu {
+                ForEach(ServerTag.allCases) { tag in
+                    let count = viewModel.taggedServersCount(for: tag)
+                    Button(action: { viewModel.enableServers(with: tag) }) {
+                        Text(count > 0 ? "\(tag.rawValue) (\(count))" : tag.rawValue)
+                    }
+                    .disabled(count == 0)
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "tag")
+                    Text("Enable Tag")
+                }
+                .font(DesignTokens.Typography.label)
+                .foregroundColor(themeColors.primaryText)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(themeColors.glassBackground)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(themeColors.borderColor, lineWidth: 1)
+                        )
+                )
+            }
+            .buttonStyle(.plain)
+
             // Toggle all servers
             Button(action: {
                 let allEnabled = viewModel.servers.allSatisfy {

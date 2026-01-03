@@ -692,6 +692,68 @@ class ServerViewModel: ObservableObject {
         showToast(message: "Server deleted", type: .success)
     }
 
+    // MARK: - Tags
+
+    private func isServerInActiveUniverse(_ server: ServerModel) -> Bool {
+        let activeIndex = settings.activeConfigIndex
+        if activeIndex == 2 {
+            return server.isCodexUniverse
+        }
+        return server.isClaudeGeminiUniverse
+    }
+
+    func taggedServersCount(for tag: ServerTag) -> Int {
+        servers.filter { isServerInActiveUniverse($0) && $0.tags.contains(tag) }.count
+    }
+
+    func toggleTag(_ tag: ServerTag, for server: ServerModel) {
+        guard let index = servers.firstIndex(where: { $0.id == server.id }) else { return }
+
+        var updated = servers[index]
+        if let tagIndex = updated.tags.firstIndex(of: tag) {
+            updated.tags.remove(at: tagIndex)
+        } else {
+            updated.tags.append(tag)
+        }
+        updated.updatedAt = Date()
+        servers[index] = updated
+
+        // Tags are app metadata, so only update cache
+        UserDefaults.standard.cachedServers = servers
+    }
+
+    func enableServers(with tag: ServerTag) {
+        let configIndex = settings.activeConfigIndex
+        var taggedCount = 0
+        var enabledCount = 0
+
+        for i in 0..<servers.count {
+            let server = servers[i]
+            guard isServerInActiveUniverse(server), server.tags.contains(tag) else { continue }
+            taggedCount += 1
+
+            if !(servers[i].inConfigs[safe: configIndex] ?? false) {
+                servers[i].inConfigs[configIndex] = true
+                servers[i].updatedAt = Date()
+                enabledCount += 1
+            }
+        }
+
+        guard taggedCount > 0 else {
+            showToast(message: "No servers tagged \(tag.rawValue)", type: .warning)
+            return
+        }
+
+        guard enabledCount > 0 else {
+            showToast(message: "All \(tag.rawValue) servers already enabled", type: .warning)
+            return
+        }
+
+        objectWillChange.send()
+        syncToConfigs()
+        showToast(message: "Enabled \(enabledCount) \(tag.rawValue) server(s)", type: .success)
+    }
+
     func toggleServer(_ server: ServerModel) {
         guard let index = servers.firstIndex(where: { $0.id == server.id }) else { return }
 

@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Server tags (UI, Backend, Creativity, Dev Ops, Advanced) with per-server tagging and bulk enable by tag.
+
 ### Fixed
 - **Critical: macOS 26 Launch Crash** - Fixed fatal crash on app startup caused by `Bundle.module` assertion failure when SPM resource bundle is missing. Replaced direct `Bundle.module` access with safe bundle lookup that gracefully handles missing resources without crashing.
 - **Critical: Missing Resource Bundle in Builds** - Fixed GitHub Actions workflows (build-dmg.yml and build-appstore.yml) to copy the SPM resource bundle (`MCPServerManager_MCPServerManager.bundle`) containing fonts to the app's Resources folder. This was the root cause of the crash - the bundle was never being included in distributed builds.

@@ -16,6 +16,7 @@ struct ServerCardView: View {
     @Environment(\.themeColors) private var themeColors
 
     let onToggle: () -> Void
+    let onTagToggle: (ServerTag) -> Void
     let onDelete: () -> Void
     let onUpdate: (String) -> (success: Bool, invalidReason: String?, config: ServerConfig?)
     let onUpdateForced: (ServerConfig) -> Bool
@@ -45,6 +46,26 @@ struct ServerCardView: View {
                     .font(DesignTokens.Typography.bodySmall)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Tags")
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundColor(themeColors.mutedText)
+
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 70), spacing: 6)],
+                        alignment: .leading,
+                        spacing: 6
+                    ) {
+                        ForEach(ServerTag.allCases) { tag in
+                            TagToggleChip(
+                                tag: tag,
+                                isSelected: server.tags.contains(tag),
+                                action: { onTagToggle(tag) }
+                            )
+                        }
+                    }
+                }
 
                 // Config preview or editor
                 if isEditing && !server.isCodexUniverse {
@@ -280,5 +301,31 @@ struct ConfigBadge: View {
         } else {
             return .gray.opacity(0.3)
         }
+    }
+}
+
+struct TagToggleChip: View {
+    let tag: ServerTag
+    let isSelected: Bool
+    let action: () -> Void
+    @Environment(\.themeColors) private var themeColors
+
+    var body: some View {
+        Button(action: action) {
+            Text(tag.rawValue)
+                .font(DesignTokens.Typography.caption)
+                .foregroundColor(isSelected ? themeColors.textOnAccent : themeColors.secondaryText)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .fill(isSelected ? AnyShapeStyle(themeColors.accentGradient) : AnyShapeStyle(themeColors.glassBackground))
+                        .overlay(
+                            Capsule()
+                                .stroke(isSelected ? themeColors.primaryAccent.opacity(0.6) : themeColors.borderColor, lineWidth: 1)
+                        )
+                )
+        }
+        .buttonStyle(.plain)
     }
 }
