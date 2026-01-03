@@ -4,44 +4,41 @@ Quick reference for Claude Code when working on MCP Server Manager.
 
 ## ⚠️ CRITICAL CONTEXT
 
-**What this app does:** Native macOS app for managing MCP server configs for **CLAUDE CODE**, **GEMINI CLI**, and **CODEX**
+**What this app does:** Native macOS app for managing MCP server configs for **CLAUDE CODE** and **GEMINI CLI**
 **NOT for:** Claude Desktop (different product, different config files)
 **Tech stack:** SwiftUI + Swift Package Manager, macOS 13.0+ only
 **No backend:** Direct filesystem manipulation, no server
 
-## Config File Support (Triple Config System)
+## Config File Support (Dual Config System)
 
 ```
 Config 1: ~/.claude.json  (Claude Code) - JSON only
 Config 2: ~/.settings.json (Gemini CLI) - JSON only
-Config 3: ~/.codex.json    (Codex)      - TOML only
 ```
 
 **How Servers Are Shared:**
 - **Claude ↔ Gemini:** Servers with same name are **merged and shared** (identical JSON syntax). Toggle states are independent via `inConfigs[0]` and `inConfigs[1]`
-- **Codex:** Completely **isolated universe** (sourceUniverse: 2). Never shares servers with Claude/Gemini. Uses TOML format.
 
-**File Format Detection:** `ConfigFormat.swift` detects .json vs .toml, ConfigManager handles both formats using TOMLKit dependency.
+**File Format Detection:** `ConfigFormat.swift` ensures valid JSON format.
 
 ## Architecture & Key Files
 
 ```
 Models/
-  - ServerModel.swift      # sourceUniverse locks servers to config (0=Claude, 1=Gemini, 2=Codex)
+  - ServerModel.swift      # sourceUniverse locks servers to config (0=Claude, 1=Gemini)
   - ServerConfig.swift     # MCP server structure (stdio/http/sse transport)
-  - ConfigFormat.swift     # Detects JSON vs TOML
-  - Settings.swift         # config1Path, config2Path, config3Path
+  - ConfigFormat.swift     # JSON validation
+  - Settings.swift         # config1Path, config2Path
 
 ViewModels/
   - ServerViewModel.swift  # All business logic, mergeConfigs(), syncToConfigs()
 
 Services/
-  - ConfigManager.swift    # File I/O for JSON + TOML, security-scoped bookmarks
+  - ConfigManager.swift    # File I/O for JSON, security-scoped bookmarks
 
 Views/Modals/
   - AddServerModal.swift       # For Claude Code & Gemini CLI (JSON, has registry browser)
-  - AddCodexServerModal.swift  # For Codex only (TOML, no registry, cyan theme)
-  - SettingsModal.swift        # Manages all 3 config paths
+  - SettingsModal.swift        # Manages the 2 config paths
 ```
 
 ## Important Features
@@ -124,7 +121,6 @@ swift build -c release       # Build release binary
 ❌ Mentioning "Claude Desktop" in user-facing text
 ❌ Forgetting to update CHANGELOG.md
 ❌ Thinking Claude/Gemini are separate (they share servers by name!)
-❌ Mixing Codex servers with Claude/Gemini (Codex is truly isolated)
 ❌ Committing without user approval
 ❌ Creating new files when editing existing ones works
 ❌ Using bash for file operations (use Read/Edit/Write tools instead)
