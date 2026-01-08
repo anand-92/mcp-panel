@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Mini Mode** - Super compact view for quick server toggling. Click "Mini" button (⇧⌘M) to shrink window to a minimal server list with on/off toggles. Click the Claude/Gemini badge to switch configs. Perfect for keeping the app accessible while working.
+- **Responsive Toolbar** - Toolbar now gracefully adapts when window is narrowed. Buttons collapse to icon-only mode using `ViewThatFits`, with tooltips for discoverability.
 - **Server List View** - New compact list view mode for better density when managing many servers. Toggle between Grid, List, and Raw JSON modes.
 - Server tags (UI, Backend, Creativity, Dev Ops, Advanced) with per-server tagging and bulk enable by tag.
 

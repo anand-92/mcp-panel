@@ -8,6 +8,12 @@ struct ContentView: View {
     @State private var showQuickActions = false
     @State private var showImporter = false
     @State private var showExporter = false
+    @State private var miniMode = false
+    @State private var previousWindowFrame: NSRect?
+
+    // Mini mode dimensions
+    private let miniModeWidth: CGFloat = 280
+    private let miniModeHeight: CGFloat = 500
 
     var body: some View {
         ZStack {
@@ -22,30 +28,36 @@ struct ContentView: View {
                     .ignoresSafeArea()
             }
 
-            VStack(spacing: 0) {
-                // Header
-                HeaderView(
-                    viewModel: viewModel,
-                    showSettings: $showSettings,
-                    showAddServer: $showAddServer,
-                    showQuickActions: $showQuickActions
-                )
+            if miniMode {
+                // Mini mode view
+                MiniModeView(viewModel: viewModel, onExpand: exitMiniMode)
+            } else {
+                // Normal mode
+                VStack(spacing: 0) {
+                    // Header
+                    HeaderView(
+                        viewModel: viewModel,
+                        showSettings: $showSettings,
+                        showAddServer: $showAddServer,
+                        showQuickActions: $showQuickActions
+                    )
 
-                // Toolbar
-                ToolbarView(viewModel: viewModel)
+                    // Toolbar with mini mode toggle
+                    ToolbarView(viewModel: viewModel, onMiniMode: enterMiniMode)
 
-                // Main content area - switches based on view mode
-                Group {
-                    switch viewModel.viewMode {
-                    case .grid:
-                        ServerGridView(viewModel: viewModel, showAddServer: $showAddServer)
-                    case .list:
-                        ServerListView(viewModel: viewModel, showAddServer: $showAddServer)
-                    case .rawJSON:
-                        RawJSONView(viewModel: viewModel)
+                    // Main content area - switches based on view mode
+                    Group {
+                        switch viewModel.viewMode {
+                        case .grid:
+                            ServerGridView(viewModel: viewModel, showAddServer: $showAddServer)
+                        case .list:
+                            ServerListView(viewModel: viewModel, showAddServer: $showAddServer)
+                        case .rawJSON:
+                            RawJSONView(viewModel: viewModel)
+                        }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
 
             // Toast notification - positioned to not block UI
@@ -157,7 +169,13 @@ struct ContentView: View {
         }
         .environment(\.themeColors, viewModel.themeColors)
         .environment(\.currentTheme, viewModel.currentTheme)
-        .frame(minWidth: 900, minHeight: 600)
+        .frame(
+            minWidth: miniMode ? miniModeWidth : 900,
+            maxWidth: miniMode ? miniModeWidth : .infinity,
+            minHeight: miniMode ? 300 : 600,
+            maxHeight: miniMode ? .infinity : .infinity
+        )
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: miniMode)
         .fileImporter(
             isPresented: $showImporter,
             allowedContentTypes: [.json],
@@ -196,5 +214,66 @@ struct ContentView: View {
         case .failure(let error):
             print("ERROR: File picker error: \(error)")
         }
+    }
+
+    // MARK: - Mini Mode
+
+    private func enterMiniMode() {
+        guard let window = NSApp.windows.first else { return }
+
+        // Save current frame to restore later
+        previousWindowFrame = window.frame
+
+        // Calculate new position (keep top-right corner in same place)
+        let currentFrame = window.frame
+        let newWidth = miniModeWidth
+        let newHeight = miniModeHeight
+        let newX = currentFrame.maxX - newWidth
+        let newY = currentFrame.maxY - newHeight
+
+        // Animate to mini mode
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            miniMode = true
+        }
+
+        // Resize window with animation
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.4
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            window.animator().setFrame(NSRect(x: newX, y: newY, width: newWidth, height: newHeight), display: true)
+        }
+    }
+
+    private func exitMiniMode() {
+        guard let window = NSApp.windows.first else { return }
+
+        // Determine target frame
+        let targetFrame: NSRect
+        if let savedFrame = previousWindowFrame {
+            targetFrame = savedFrame
+        } else {
+            // Default to a sensible size if no saved frame
+            let screen = NSScreen.main ?? NSScreen.screens.first!
+            let defaultWidth: CGFloat = 1200
+            let defaultHeight: CGFloat = 800
+            let x = (screen.frame.width - defaultWidth) / 2
+            let y = (screen.frame.height - defaultHeight) / 2
+            targetFrame = NSRect(x: x, y: y, width: defaultWidth, height: defaultHeight)
+        }
+
+        // Animate back to normal mode
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            miniMode = false
+        }
+
+        // Resize window with animation
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.4
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            window.animator().setFrame(targetFrame, display: true)
+        }
+
+        // Clear saved frame
+        previousWindowFrame = nil
     }
 }
