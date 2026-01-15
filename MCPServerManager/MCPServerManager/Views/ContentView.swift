@@ -175,7 +175,6 @@ struct ContentView: View {
             minHeight: miniMode ? 300 : 600,
             maxHeight: miniMode ? .infinity : .infinity
         )
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: miniMode)
         .fileImporter(
             isPresented: $showImporter,
             allowedContentTypes: [.json],
@@ -231,16 +230,16 @@ struct ContentView: View {
         let newX = currentFrame.maxX - newWidth
         let newY = currentFrame.maxY - newHeight
 
-        // Animate to mini mode
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-            miniMode = true
-        }
+        // Update state first (no animation) so frame constraints allow smaller size
+        miniMode = true
 
-        // Resize window with animation
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.4
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            window.animator().setFrame(NSRect(x: newX, y: newY, width: newWidth, height: newHeight), display: true)
+        // Defer window resize to next run loop to avoid constraint conflicts on macOS 26
+        DispatchQueue.main.async {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.35
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                window.animator().setFrame(NSRect(x: newX, y: newY, width: newWidth, height: newHeight), display: true)
+            }
         }
     }
 
@@ -261,19 +260,19 @@ struct ContentView: View {
             targetFrame = NSRect(x: x, y: y, width: defaultWidth, height: defaultHeight)
         }
 
-        // Animate back to normal mode
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-            miniMode = false
-        }
-
-        // Resize window with animation
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.4
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            window.animator().setFrame(targetFrame, display: true)
-        }
+        // Update state first (no animation) so frame constraints allow larger size
+        miniMode = false
 
         // Clear saved frame
         previousWindowFrame = nil
+
+        // Defer window resize to next run loop to avoid constraint conflicts on macOS 26
+        DispatchQueue.main.async {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.35
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                window.animator().setFrame(targetFrame, display: true)
+            }
+        }
     }
 }
