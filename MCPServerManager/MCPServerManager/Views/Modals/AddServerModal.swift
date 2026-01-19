@@ -5,166 +5,35 @@ struct AddServerModal: View {
     @ObservedObject var viewModel: ServerViewModel
     @Environment(\.themeColors) private var themeColors
 
-    @State private var jsonText: String = ""
-    @State private var errorMessage: String = ""
+    // MARK: - Entry State
+
+    @State private var jsonText = ""
+    @State private var errorMessage = ""
     @State private var entryMode: EntryMode = .manual
-    @State private var registryImages: [String: String] = [:] // Map server names to image URLs from registry
-    @State private var showForceAlert: Bool = false
-    @State private var invalidServerDetails: String = ""
-    @State private var pendingSaveJSON: String = ""
+    @State private var registryImages: [String: String] = [:]
+
+    // MARK: - Force Save State
+
+    @State private var showForceAlert = false
+    @State private var invalidServerDetails = ""
+    @State private var pendingSaveJSON = ""
     @State private var pendingServerDict: [String: ServerConfig]?
     @State private var pendingRegistryImages: [String: String]?
 
-    enum EntryMode {
+    private enum EntryMode {
         case manual
         case browse
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("BULK ADD")
-                        .font(DesignTokens.Typography.labelSmall)
-                        .foregroundColor(.secondary)
-                        .tracking(1.5)
-
-                    Text("Add Servers")
-                        .font(DesignTokens.Typography.title2)
-                }
-
-                Spacer()
-
-                Button(action: { isPresented = false }) {
-                    Image(systemName: "xmark")
-                        .font(DesignTokens.Typography.title3)
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(24)
-
+            headerView
             Divider()
-
-            // Mode Switcher
-            HStack(spacing: 0) {
-                ModeButton(
-                    title: "Manual Entry",
-                    icon: "text.cursor",
-                    isSelected: entryMode == .manual,
-                    themeColors: themeColors
-                ) {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        entryMode = .manual
-                    }
-                }
-
-                ModeButton(
-                    title: "Browse Registry",
-                    icon: "square.grid.2x2",
-                    isSelected: entryMode == .browse,
-                    themeColors: themeColors
-                ) {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        entryMode = .browse
-                    }
-                }
-            }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 16)
-
+            modeSwitcher
             Divider()
-
-            // Content
-            Group {
-                if entryMode == .manual {
-                    manualEntryView
-                } else {
-                    BrowseRegistryView(registryService: MCPRegistryService.shared) { selectedServer in
-                        handleServerSelection(selectedServer)
-                    }
-                }
-            }
-
+            contentView
             Divider()
-
-            // Footer
-            HStack(spacing: 12) {
-                Button(action: formatJSON) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "text.alignleft")
-                        Text("Format JSON")
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.white.opacity(0.05))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                            )
-                    )
-                }
-                .buttonStyle(.plain)
-
-                Button(action: validateJSON) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark.shield")
-                        Text("Validate")
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.white.opacity(0.05))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                            )
-                    )
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                Button(action: {
-                    isPresented = false
-                }) {
-                    Text("Cancel")
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.white.opacity(0.1))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                                )
-                        )
-                }
-                .buttonStyle(.plain)
-
-                Button(action: addServers) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "plus.circle.fill")
-                        Text("Add Servers")
-                    }
-                    .foregroundColor(themeColors.textOnAccent)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(themeColors.accentGradient)
-                    )
-                    .shadow(color: themeColors.primaryAccent.opacity(0.3), radius: 8, x: 0, y: 4)
-                }
-                .buttonStyle(.plain)
-                .disabled(jsonText.isEmpty)
-                .opacity(jsonText.isEmpty ? 0.5 : 1.0)
-            }
-            .padding(24)
+            footerView
         }
         .frame(
             minWidth: 700,
@@ -177,134 +46,98 @@ struct AddServerModal: View {
         .modifier(LiquidGlassModifier(shape: RoundedRectangle(cornerRadius: 20)))
         .shadow(radius: 30)
         .alert("Invalid Server Configuration", isPresented: $showForceAlert) {
-            Button("Cancel", role: .cancel) {
-                showForceAlert = false
-                pendingSaveJSON = ""
-                pendingServerDict = nil
-                pendingRegistryImages = nil
-                invalidServerDetails = ""
-            }
-            Button("Force Save") {
-                forceSave()
-            }
+            Button("Cancel", role: .cancel) { clearPendingState() }
+            Button("Force Save", action: forceSave)
         } message: {
             Text("The following servers have validation errors:\n\n\(invalidServerDetails)\n\nDo you want to force save anyway? This will override all validations.")
         }
     }
 
-    private func formatJSON() {
-        // First normalize quotes (curly quotes from Notes/Word/Slack)
-        let normalized = jsonText.normalizingQuotes()
+    // MARK: - View Components
 
-        guard let data = normalized.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data),
-              let formatted = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]),
-              let result = String(data: formatted, encoding: .utf8) else {
-            errorMessage = "Invalid JSON format (after normalizing quotes)"
-            return
+    private var headerView: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("BULK ADD")
+                    .font(DesignTokens.Typography.labelSmall)
+                    .foregroundColor(.secondary)
+                    .tracking(1.5)
+
+                Text("Add Servers")
+                    .font(DesignTokens.Typography.title2)
+            }
+
+            Spacer()
+
+            Button(action: { isPresented = false }) {
+                Image(systemName: "xmark")
+                    .font(DesignTokens.Typography.title3)
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(.plain)
         }
-        jsonText = result
-        errorMessage = ""
+        .padding(24)
     }
 
-    private func validateJSON() {
-        #if DEBUG
-        print("DEBUG AddServerModal: Starting validation")
-        print("DEBUG AddServerModal: JSON text length: \(jsonText.count)")
-        #endif
+    private var modeSwitcher: some View {
+        HStack(spacing: 0) {
+            ModeButton(
+                title: "Manual Entry",
+                icon: "text.cursor",
+                isSelected: entryMode == .manual,
+                themeColors: themeColors
+            ) {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    entryMode = .manual
+                }
+            }
 
-        // Use the same forgiving parser as addServers
-        guard let serverDict = ServerExtractor.extractServerEntries(from: jsonText) else {
-            errorMessage = "Could not parse JSON. Check Console.app logs for details. Expected format: {\"server-name\": {\"command\": \"...\"}} or wrap in {\"mcpServers\": {...}}"
-            #if DEBUG
-            print("DEBUG AddServerModal: ServerExtractor returned nil")
-            #endif
-            return
+            ModeButton(
+                title: "Browse Registry",
+                icon: "square.grid.2x2",
+                isSelected: entryMode == .browse,
+                themeColors: themeColors
+            ) {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    entryMode = .browse
+                }
+            }
         }
-
-        #if DEBUG
-        print("DEBUG AddServerModal: Extracted \(serverDict.count) servers")
-        #endif
-
-        guard !serverDict.isEmpty else {
-            errorMessage = "No valid server configurations found in JSON"
-            return
-        }
-
-        // Check if any servers are invalid
-        let invalidServers = serverDict.filter { !$0.value.isValid }
-        if !invalidServers.isEmpty {
-            let details = invalidServers.map { name, config in
-                let reason = getInvalidReason(config)
-                return "\(name): \(reason)"
-            }.joined(separator: "; ")
-            errorMessage = "Invalid server config(s): \(details)"
-            #if DEBUG
-            print("DEBUG AddServerModal: Invalid servers: \(details)")
-            #endif
-            return
-        }
-
-        errorMessage = "✓ Valid! Found \(serverDict.count) server(s)"
-        #if DEBUG
-        print("DEBUG AddServerModal: Validation succeeded")
-        #endif
+        .padding(.horizontal, 24)
+        .padding(.vertical, 16)
     }
 
-    private func getInvalidReason(_ config: ServerConfig) -> String {
-        if config.command == nil && config.httpUrl == nil && config.transport == nil && config.remotes == nil {
-            return "missing command, httpUrl, transport, or remotes"
-        }
-        if let cmd = config.command, cmd.trimmingCharacters(in: .whitespaces).isEmpty {
-            return "empty command"
-        }
-        if let httpUrlString = config.httpUrl, httpUrlString.trimmingCharacters(in: .whitespaces).isEmpty {
-            return "empty httpUrl"
-        }
-        return "unknown issue"
-    }
-
-    private func addServers() {
-        if let result = viewModel.addServers(from: jsonText, registryImages: registryImages.isEmpty ? nil : registryImages) {
-            // Validation failed, show force save alert
-            let details = result.invalidServers.map { name, reason in
-                "\(name): \(reason)"
-            }.joined(separator: "\n")
-
-            invalidServerDetails = details
-            pendingSaveJSON = jsonText
-            pendingServerDict = result.serverDict  // Store parsed dictionary to avoid re-parsing
-            pendingRegistryImages = registryImages.isEmpty ? nil : registryImages
-            showForceAlert = true
+    @ViewBuilder
+    private var contentView: some View {
+        if entryMode == .manual {
+            manualEntryView
         } else {
-            // Success or no validation issues
-            isPresented = false
-            jsonText = ""
-            errorMessage = ""
-            registryImages = [:]
+            BrowseRegistryView(registryService: MCPRegistryService.shared) { selectedServer in
+                handleServerSelection(selectedServer)
+            }
         }
     }
 
-    private func forceSave() {
-        // Use parsed dictionary if available to avoid re-parsing
-        if let serverDict = pendingServerDict {
-            viewModel.addServersForced(serverDict: serverDict, registryImages: pendingRegistryImages)
-        } else {
-            // Fallback to JSON parsing (shouldn't happen in normal flow)
-            viewModel.addServersForced(from: pendingSaveJSON, registryImages: pendingRegistryImages)
-        }
-        showForceAlert = false
-        isPresented = false
-        jsonText = ""
-        errorMessage = ""
-        registryImages = [:]
-        pendingSaveJSON = ""
-        pendingServerDict = nil
-        pendingRegistryImages = nil
-        invalidServerDetails = ""
-    }
+    private var footerView: some View {
+        HStack(spacing: 12) {
+            SecondaryButton(icon: "text.alignleft", title: "Format JSON", action: formatJSON)
+            SecondaryButton(icon: "checkmark.shield", title: "Validate", action: validateJSON)
 
-    // MARK: - Computed Views
+            Spacer()
+
+            SecondaryButton(title: "Cancel") { isPresented = false }
+
+            PrimaryButton(
+                icon: "plus.circle.fill",
+                title: "Add Servers",
+                themeColors: themeColors,
+                action: addServers
+            )
+            .disabled(jsonText.isEmpty)
+            .opacity(jsonText.isEmpty ? 0.5 : 1.0)
+        }
+        .padding(24)
+    }
 
     private var manualEntryView: some View {
         ScrollView {
@@ -331,66 +164,233 @@ struct AddServerModal: View {
                     .focusable(true)
 
                 if !errorMessage.isEmpty {
-                    HStack {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                        Text(errorMessage)
-                    }
-                    .font(DesignTokens.Typography.bodySmall)
-                    .foregroundColor(.red)
-                    .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.red.opacity(0.1))
-                    )
+                    errorMessageView
                 }
             }
             .padding(24)
         }
     }
 
-    // MARK: - Server Selection Handler
+    private var errorMessageView: some View {
+        HStack {
+            Image(systemName: "exclamationmark.triangle.fill")
+            Text(errorMessage)
+        }
+        .font(DesignTokens.Typography.bodySmall)
+        .foregroundColor(.red)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.red.opacity(0.1))
+        )
+    }
+
+    // MARK: - State Management
+
+    private func clearPendingState() {
+        showForceAlert = false
+        pendingSaveJSON = ""
+        pendingServerDict = nil
+        pendingRegistryImages = nil
+        invalidServerDetails = ""
+    }
+
+    private func resetForm() {
+        jsonText = ""
+        errorMessage = ""
+        registryImages = [:]
+        clearPendingState()
+    }
+
+    // MARK: - JSON Operations
+
+    private func formatJSON() {
+        let normalized = jsonText.normalizingQuotes()
+
+        guard let data = normalized.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data),
+              let formatted = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]),
+              let result = String(data: formatted, encoding: .utf8)
+        else {
+            errorMessage = "Invalid JSON format (after normalizing quotes)"
+            return
+        }
+
+        jsonText = result
+        errorMessage = ""
+    }
+
+    private func validateJSON() {
+        guard let serverDict = ServerExtractor.extractServerEntries(from: jsonText) else {
+            errorMessage = "Could not parse JSON. Expected format: {\"server-name\": {\"command\": \"...\"}} or wrap in {\"mcpServers\": {...}}"
+            return
+        }
+
+        guard !serverDict.isEmpty else {
+            errorMessage = "No valid server configurations found in JSON"
+            return
+        }
+
+        let invalidServers = serverDict.filter { !$0.value.isValid }
+        if !invalidServers.isEmpty {
+            let details = invalidServers
+                .map { "\($0.key): \(getInvalidReason($0.value))" }
+                .joined(separator: "; ")
+            errorMessage = "Invalid server config(s): \(details)"
+            return
+        }
+
+        errorMessage = "Valid! Found \(serverDict.count) server(s)"
+    }
+
+    private func getInvalidReason(_ config: ServerConfig) -> String {
+        let hasNoEndpoint = config.command == nil
+            && config.httpUrl == nil
+            && config.transport == nil
+            && config.remotes == nil
+
+        if hasNoEndpoint {
+            return "missing command, httpUrl, transport, or remotes"
+        }
+        if let cmd = config.command, cmd.trimmingCharacters(in: .whitespaces).isEmpty {
+            return "empty command"
+        }
+        if let url = config.httpUrl, url.trimmingCharacters(in: .whitespaces).isEmpty {
+            return "empty httpUrl"
+        }
+        return "unknown issue"
+    }
+
+    // MARK: - Server Actions
+
+    private func addServers() {
+        let images = registryImages.isEmpty ? nil : registryImages
+
+        guard let result = viewModel.addServers(from: jsonText, registryImages: images) else {
+            isPresented = false
+            resetForm()
+            return
+        }
+
+        // Validation failed - show force save alert
+        invalidServerDetails = result.invalidServers
+            .map { "\($0.key): \($0.value)" }
+            .joined(separator: "\n")
+        pendingSaveJSON = jsonText
+        pendingServerDict = result.serverDict
+        pendingRegistryImages = images
+        showForceAlert = true
+    }
+
+    private func forceSave() {
+        if let serverDict = pendingServerDict {
+            viewModel.addServersForced(serverDict: serverDict, registryImages: pendingRegistryImages)
+        } else {
+            viewModel.addServersForced(from: pendingSaveJSON, registryImages: pendingRegistryImages)
+        }
+
+        isPresented = false
+        resetForm()
+    }
+
+    // MARK: - Registry Selection
 
     private func handleServerSelection(_ server: RegistryServer) {
-        // Wrap the config with the server name
-        let wrappedConfig: [String: ServerConfig] = [server.displayName: server.config]
-
-        // Store the image URL for this server if available
         if let imageUrl = server.imageUrl {
             registryImages[server.displayName] = imageUrl
-            #if DEBUG
-            print("AddServerModal: Stored registry image for '\(server.displayName)': \(imageUrl)")
-            #endif
         }
 
-        // Format as pretty JSON
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        let wrappedConfig = [server.displayName: server.config]
+        jsonText = encodeAsPrettyJSON(wrappedConfig) ?? server.configJSON
 
-        if let data = try? encoder.encode(wrappedConfig),
-           let jsonString = String(data: data, encoding: .utf8) {
-            jsonText = jsonString
-        } else {
-            // Fallback to unwrapped config if encoding fails
-            jsonText = server.configJSON
-        }
-
-        // Switch back to manual mode
         withAnimation(.easeInOut(duration: 0.2)) {
             entryMode = .manual
         }
-
-        // Clear any errors
         errorMessage = ""
+    }
 
-        #if DEBUG
-        print("AddServerModal: Selected server '\(server.name)', populated JSON with wrapper")
-        #endif
+    private func encodeAsPrettyJSON(_ value: [String: ServerConfig]) -> String? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+
+        guard let data = try? encoder.encode(value) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+}
+
+// MARK: - Button Components
+
+private struct SecondaryButton: View {
+    let icon: String?
+    let title: String
+    let action: () -> Void
+
+    init(icon: String? = nil, title: String, action: @escaping () -> Void) {
+        self.icon = icon
+        self.title = title
+        self.action = action
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                if let icon {
+                    Image(systemName: icon)
+                }
+                Text(title)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.white.opacity(0.05))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct PrimaryButton: View {
+    let icon: String?
+    let title: String
+    let themeColors: ThemeColors
+    let action: () -> Void
+
+    init(icon: String? = nil, title: String, themeColors: ThemeColors, action: @escaping () -> Void) {
+        self.icon = icon
+        self.title = title
+        self.themeColors = themeColors
+        self.action = action
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                if let icon {
+                    Image(systemName: icon)
+                }
+                Text(title)
+            }
+            .foregroundColor(themeColors.textOnAccent)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(themeColors.accentGradient)
+            )
+            .shadow(color: themeColors.primaryAccent.opacity(0.3), radius: 8, x: 0, y: 4)
+        }
+        .buttonStyle(.plain)
     }
 }
 
 // MARK: - Mode Button Component
 
-struct ModeButton: View {
+private struct ModeButton: View {
     let title: String
     let icon: String
     let isSelected: Bool
@@ -408,22 +408,23 @@ struct ModeButton: View {
             .foregroundColor(isSelected ? themeColors.textOnAccent : .secondary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
-            .background(
-                Group {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(themeColors.accentGradient)
-                    } else {
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.white.opacity(0.03))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                            )
-                    }
-                }
-            )
+            .background(modeButtonBackground)
         }
         .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var modeButtonBackground: some View {
+        if isSelected {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(themeColors.accentGradient)
+        } else {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.white.opacity(0.03))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+        }
     }
 }

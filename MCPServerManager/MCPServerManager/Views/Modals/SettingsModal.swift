@@ -19,279 +19,228 @@ struct SettingsModal: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("PREFERENCES")
-                        .font(DesignTokens.Typography.labelSmall)
-                        .foregroundColor(.secondary)
-                        .tracking(1.5)
-
-                    Text("Settings")
-                        .font(DesignTokens.Typography.title2)
-                }
-
-                Spacer()
-
-                Button(action: { isPresented = false }) {
-                    Image(systemName: "xmark")
-                        .font(DesignTokens.Typography.title3)
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(24)
-
+            headerView
             Divider()
-
-            // Content
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Configuration Files Section
-                    SettingsSection(
-                        icon: "doc.text.fill",
-                        title: "Configuration Files",
-                        description: "Manage MCP server config files"
-                    ) {
-                        VStack(spacing: 16) {
-                            // Config Path 1
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Image(systemName: "1.circle.fill")
-                                        .foregroundColor(themeColors.primaryAccent)
-                                    Text("Config Path 1")
-                                        .font(DesignTokens.Typography.label)
-                                }
-
-                                HStack {
-                                    TextField("~/.claude.json", text: $config1Path)
-                                        .textFieldStyle(.roundedBorder)
-                                        .focusable(true)
-
-                                    Button(action: {
-                                        selectConfigFile { path in
-                                            config1Path = path
-                                        }
-                                    }) {
-                                        HStack(spacing: 6) {
-                                            Image(systemName: "folder")
-                                            Text("Browse")
-                                        }
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 8)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .fill(Color.white.opacity(0.1))
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 8)
-                                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                                                )
-                                        )
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-
-                            // Config Path 2
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Image(systemName: "2.circle.fill")
-                                        .foregroundColor(themeColors.primaryAccent)
-                                    Text("Config Path 2")
-                                        .font(DesignTokens.Typography.label)
-                                }
-
-                                HStack {
-                                    TextField("~/.settings.json", text: $config2Path)
-                                        .textFieldStyle(.roundedBorder)
-                                        .focusable(true)
-
-                                    Button(action: {
-                                        selectConfigFile { path in
-                                            config2Path = path
-                                        }
-                                    }) {
-                                        HStack(spacing: 6) {
-                                            Image(systemName: "folder")
-                                            Text("Browse")
-                                        }
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 8)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .fill(Color.white.opacity(0.1))
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 8)
-                                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                                                )
-                                        )
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                        }
-                    }
-
-                    // Appearance Section
-                    SettingsSection(
-                        icon: "paintbrush.fill",
-                        title: "Appearance",
-                        description: "Customize the app's look and feel"
-                    ) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Theme")
-                                .font(DesignTokens.Typography.label)
-
-                            Picker("", selection: $selectedTheme) {
-                                ForEach(AppTheme.allCases, id: \.self) { theme in
-                                    Text(theme.rawValue).tag(theme)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .onChange(of: selectedTheme) { newTheme in
-                                viewModel.settings.overrideTheme = newTheme == .auto ? nil : newTheme.rawValue
-                                viewModel.saveSettings()
-                            }
-
-                            Text("'Auto' detects theme based on active config (Claude Code or Gemini CLI)")
-                                .font(DesignTokens.Typography.bodySmall)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-
-                    // Privacy & Security Section
-                    SettingsSection(
-                        icon: "lock.shield.fill",
-                        title: "Privacy & Security",
-                        description: "Control data visibility and confirmations"
-                    ) {
-                        VStack(spacing: 16) {
-                            SettingsToggleRow(
-                                isOn: $confirmDelete,
-                                icon: "trash.circle.fill",
-                                label: "Confirm before deleting",
-                                description: "Show confirmation dialog when deleting servers"
-                            )
-
-                            SettingsToggleRow(
-                                isOn: $blurJSONPreviews,
-                                icon: "eye.slash.fill",
-                                label: "Blur JSON previews",
-                                description: "Apply blur to code previews (removed when editing)"
-                            )
-                        }
-                    }
-
-                    // Network Section
-                    SettingsSection(
-                        icon: "network",
-                        title: "Network",
-                        description: "Configure internet-based features"
-                    ) {
-                        VStack(spacing: 16) {
-                            SettingsToggleRow(
-                                isOn: $fetchServerLogos,
-                                icon: "photo.circle.fill",
-                                label: "Fetch server logos",
-                                description: "Download logos from internet (no tracking)"
-                            )
-
-                            Divider()
-
-                            // Test Connection
-                            VStack(alignment: .leading, spacing: 8) {
-                                Button(action: testConnection) {
-                                    HStack {
-                                        Image(systemName: testingConnection ? "arrow.triangle.2.circlepath" : "network.badge.shield.half.filled")
-                                        if testingConnection {
-                                            ProgressView()
-                                                .scaleEffect(0.7)
-                                        }
-                                        Text(testingConnection ? "Testing..." : "Test Connection")
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 8)
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(testingConnection)
-
-                                if !testResult.isEmpty {
-                                    Text(testResult)
-                                        .font(DesignTokens.Typography.bodySmall)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                        }
-                    }
-                }
-                .padding(24)
-            }
-
+            contentScrollView
             Divider()
-
-            // Footer
-            HStack(spacing: 12) {
-                Spacer()
-
-                Button(action: {
-                    isPresented = false
-                }) {
-                    Text("Cancel")
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.white.opacity(0.1))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                                )
-                        )
-                }
-                .buttonStyle(.plain)
-
-                Button(action: {
-                    saveSettings()
-                }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark.circle.fill")
-                        Text("Save Settings")
-                    }
-                    .foregroundColor(Color(hex: "#1a1a1a"))
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(themeColors.accentGradient)
-                    )
-                    .shadow(color: themeColors.primaryAccent.opacity(0.3), radius: 8, x: 0, y: 4)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(24)
+            footerView
         }
         .frame(width: 600, height: 700)
         .modifier(LiquidGlassModifier(shape: RoundedRectangle(cornerRadius: 20)))
         .shadow(radius: 30)
-        .onAppear {
-            config1Path = viewModel.settings.config1Path
-            config2Path = viewModel.settings.config2Path
-            confirmDelete = viewModel.settings.confirmDelete
-            fetchServerLogos = UserDefaults.standard.object(forKey: "fetchServerLogos") as? Bool ?? true
-            blurJSONPreviews = viewModel.settings.blurJSONPreviews
-
-            // Load theme from settings
-            if let themeStr = viewModel.settings.overrideTheme,
-               let theme = AppTheme(rawValue: themeStr) {
-                selectedTheme = theme
-            } else {
-                selectedTheme = .auto
-            }
-        }
+        .onAppear(perform: loadSettings)
         .alert("Bookmark Storage Failed", isPresented: $showBookmarkAlert) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(bookmarkAlertMessage)
+        }
+    }
+
+    // MARK: - Header
+
+    private var headerView: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("PREFERENCES")
+                    .font(DesignTokens.Typography.labelSmall)
+                    .foregroundColor(.secondary)
+                    .tracking(1.5)
+
+                Text("Settings")
+                    .font(DesignTokens.Typography.title2)
+            }
+
+            Spacer()
+
+            Button(action: { isPresented = false }) {
+                Image(systemName: "xmark")
+                    .font(DesignTokens.Typography.title3)
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(24)
+    }
+
+    // MARK: - Content
+
+    private var contentScrollView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                configurationFilesSection
+                appearanceSection
+                privacySecuritySection
+                networkSection
+            }
+            .padding(24)
+        }
+    }
+
+    private var configurationFilesSection: some View {
+        SettingsSection(
+            icon: "doc.text.fill",
+            title: "Configuration Files",
+            description: "Manage MCP server config files"
+        ) {
+            VStack(spacing: 16) {
+                ConfigPathRow(
+                    number: 1,
+                    placeholder: "~/.claude.json",
+                    path: $config1Path,
+                    onBrowse: { selectConfigFile { config1Path = $0 } }
+                )
+
+                ConfigPathRow(
+                    number: 2,
+                    placeholder: "~/.settings.json",
+                    path: $config2Path,
+                    onBrowse: { selectConfigFile { config2Path = $0 } }
+                )
+            }
+        }
+    }
+
+    private var appearanceSection: some View {
+        SettingsSection(
+            icon: "paintbrush.fill",
+            title: "Appearance",
+            description: "Customize the app's look and feel"
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Theme")
+                    .font(DesignTokens.Typography.label)
+
+                Picker("", selection: $selectedTheme) {
+                    ForEach(AppTheme.allCases, id: \.self) { theme in
+                        Text(theme.rawValue).tag(theme)
+                    }
+                }
+                .pickerStyle(.menu)
+                .onChange(of: selectedTheme) { newTheme in
+                    viewModel.settings.overrideTheme = newTheme == .auto ? nil : newTheme.rawValue
+                    viewModel.saveSettings()
+                }
+
+                Text("'Auto' detects theme based on active config (Claude Code or Gemini CLI)")
+                    .font(DesignTokens.Typography.bodySmall)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    private var privacySecuritySection: some View {
+        SettingsSection(
+            icon: "lock.shield.fill",
+            title: "Privacy & Security",
+            description: "Control data visibility and confirmations"
+        ) {
+            VStack(spacing: 16) {
+                SettingsToggleRow(
+                    isOn: $confirmDelete,
+                    icon: "trash.circle.fill",
+                    label: "Confirm before deleting",
+                    description: "Show confirmation dialog when deleting servers"
+                )
+
+                SettingsToggleRow(
+                    isOn: $blurJSONPreviews,
+                    icon: "eye.slash.fill",
+                    label: "Blur JSON previews",
+                    description: "Apply blur to code previews (removed when editing)"
+                )
+            }
+        }
+    }
+
+    private var networkSection: some View {
+        SettingsSection(
+            icon: "network",
+            title: "Network",
+            description: "Configure internet-based features"
+        ) {
+            VStack(spacing: 16) {
+                SettingsToggleRow(
+                    isOn: $fetchServerLogos,
+                    icon: "photo.circle.fill",
+                    label: "Fetch server logos",
+                    description: "Download logos from internet (no tracking)"
+                )
+
+                Divider()
+
+                testConnectionView
+            }
+        }
+    }
+
+    private var testConnectionView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button(action: testConnection) {
+                HStack {
+                    Image(systemName: testingConnection ? "arrow.triangle.2.circlepath" : "network.badge.shield.half.filled")
+                    if testingConnection {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                    }
+                    Text(testingConnection ? "Testing..." : "Test Connection")
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+            }
+            .buttonStyle(.bordered)
+            .disabled(testingConnection)
+
+            if !testResult.isEmpty {
+                Text(testResult)
+                    .font(DesignTokens.Typography.bodySmall)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    // MARK: - Footer
+
+    private var footerView: some View {
+        HStack(spacing: 12) {
+            Spacer()
+
+            GlassButton(label: "Cancel") {
+                isPresented = false
+            }
+
+            Button(action: saveSettings) {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("Save Settings")
+                }
+                .foregroundColor(Color(hex: "#1a1a1a"))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(themeColors.accentGradient)
+                )
+                .shadow(color: themeColors.primaryAccent.opacity(0.3), radius: 8, x: 0, y: 4)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(24)
+    }
+
+    // MARK: - Actions
+
+    private func loadSettings() {
+        config1Path = viewModel.settings.config1Path
+        config2Path = viewModel.settings.config2Path
+        confirmDelete = viewModel.settings.confirmDelete
+        fetchServerLogos = UserDefaults.standard.object(forKey: "fetchServerLogos") as? Bool ?? true
+        blurJSONPreviews = viewModel.settings.blurJSONPreviews
+
+        if let themeStr = viewModel.settings.overrideTheme,
+           let theme = AppTheme(rawValue: themeStr) {
+            selectedTheme = theme
+        } else {
+            selectedTheme = .auto
         }
     }
 
@@ -304,19 +253,16 @@ struct SettingsModal: View {
         panel.showsHiddenFiles = true
         panel.message = "Select a config file to manage MCP servers"
 
-        if panel.runModal() == .OK, let url = panel.url {
-            // Store security-scoped bookmark for this file
-            do {
-                try ConfigManager.shared.storeBookmarkForConfigFile(url: url, path: url.path)
+        guard panel.runModal() == .OK, let url = panel.url else { return }
 
-                let path = url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
-                completion(path)
-            } catch {
-                print("❌ Failed to store bookmark: \(error.localizedDescription)")
-                // Show alert and don't save the path
-                bookmarkAlertMessage = "Failed to create persistent access to the selected file. The app may not be able to access this file after restart.\n\nError: \(error.localizedDescription)"
-                showBookmarkAlert = true
-            }
+        do {
+            try ConfigManager.shared.storeBookmarkForConfigFile(url: url, path: url.path)
+            let path = url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
+            completion(path)
+        } catch {
+            print("Failed to store bookmark: \(error.localizedDescription)")
+            bookmarkAlertMessage = "Failed to create persistent access to the selected file. The app may not be able to access this file after restart.\n\nError: \(error.localizedDescription)"
+            showBookmarkAlert = true
         }
     }
 
@@ -332,9 +278,9 @@ struct SettingsModal: View {
 
                 switch result {
                 case .success(let count):
-                    testResult = "✓ Found \(count) server(s) in config"
+                    testResult = "Found \(count) server(s) in config"
                 case .failure(let error):
-                    testResult = "✗ Error: \(error.localizedDescription)"
+                    testResult = "Error: \(error.localizedDescription)"
                 }
             }
         }
@@ -350,19 +296,78 @@ struct SettingsModal: View {
     }
 }
 
+// MARK: - Config Path Row Component
+
+private struct ConfigPathRow: View {
+    let number: Int
+    let placeholder: String
+    @Binding var path: String
+    let onBrowse: () -> Void
+
+    @Environment(\.themeColors) private var themeColors
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "\(number).circle.fill")
+                    .foregroundColor(themeColors.primaryAccent)
+                Text("Config Path \(number)")
+                    .font(DesignTokens.Typography.label)
+            }
+
+            HStack {
+                TextField(placeholder, text: $path)
+                    .textFieldStyle(.roundedBorder)
+                    .focusable(true)
+
+                GlassButton(icon: "folder", label: "Browse", action: onBrowse)
+            }
+        }
+    }
+}
+
+// MARK: - Glass Button Component
+
+private struct GlassButton: View {
+    var icon: String?
+    let label: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                if let icon {
+                    Image(systemName: icon)
+                }
+                Text(label)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.white.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Settings Section Component
 
 struct SettingsSection<Content: View>: View {
     let icon: String
     let title: String
     let description: String
-    let content: () -> Content
+    @ViewBuilder let content: () -> Content
 
     @Environment(\.themeColors) private var themeColors
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Section Header
             HStack(spacing: 10) {
                 Image(systemName: icon)
                     .font(.system(size: 16, weight: .semibold))
@@ -378,7 +383,6 @@ struct SettingsSection<Content: View>: View {
                 }
             }
 
-            // Section Content
             VStack(alignment: .leading, spacing: 12) {
                 content()
             }
@@ -407,13 +411,11 @@ struct SettingsToggleRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            // Icon
             Image(systemName: icon)
                 .font(.system(size: 18))
                 .foregroundColor(themeColors.primaryAccent.opacity(0.8))
                 .frame(width: 24)
 
-            // Text content
             VStack(alignment: .leading, spacing: 4) {
                 Text(label)
                     .font(DesignTokens.Typography.label)
@@ -425,7 +427,6 @@ struct SettingsToggleRow: View {
 
             Spacer()
 
-            // Toggle
             CheckboxToggle(isOn: $isOn, label: "")
         }
     }

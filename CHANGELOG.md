@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 - **Critical: macOS 26 Mini Mode Crash** - Fixed crash when toggling between mini mode and normal mode on macOS 26 (Tahoe). The crash occurred in `NSHostingView.invalidateSizeConstraintsIfNecessary()` due to simultaneous SwiftUI state animations and AppKit window resize animations conflicting during constraint updates. Fixed by sequencing operations: update state first, then defer window resize to next run loop.
+- **Header Text Scaling** - Fixed header button text wrapping at narrow window widths. Text now scales smoothly with window size using `minimumScaleFactor` instead of wrapping awkwardly.
 - **Critical: macOS 26 Launch Crash** - Fixed fatal crash on app startup caused by `Bundle.module` assertion failure when SPM resource bundle is missing. Replaced direct `Bundle.module` access with safe bundle lookup that gracefully handles missing resources without crashing.
 - **Critical: Missing Resource Bundle in Builds** - Fixed GitHub Actions workflows (build-dmg.yml and build-appstore.yml) to copy the SPM resource bundle (`MCPServerManager_MCPServerManager.bundle`) containing fonts to the app's Resources folder. This was the root cause of the crash - the bundle was never being included in distributed builds.
 - **Flexible Configuration** - Updated `ServerConfig` to support unlimited custom fields (e.g., `enabled_tools`, `startup_timeout_sec`, `enabled`), preserving all data in the configuration file.

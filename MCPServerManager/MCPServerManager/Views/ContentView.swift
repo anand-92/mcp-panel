@@ -11,160 +11,22 @@ struct ContentView: View {
     @State private var miniMode = false
     @State private var previousWindowFrame: NSRect?
 
-    // Mini mode dimensions
     private let miniModeWidth: CGFloat = 280
     private let miniModeHeight: CGFloat = 500
 
     var body: some View {
         ZStack {
-            // Background - uses dynamic theme
-            if #available(macOS 26.0, *) {
-                // macOS 26: Allow window transparency to show through
-                Color.clear
-                    .ignoresSafeArea()
-            } else {
-                // macOS 13-25: Use gradient background
-                viewModel.themeColors.backgroundGradient
-                    .ignoresSafeArea()
+            backgroundView
+            mainContent
+            toastOverlay
+            onboardingOverlay
+            loadingOverlay
+            quickActionsOverlay
+            modalOverlay(isPresented: showSettings) {
+                SettingsModal(isPresented: $showSettings, viewModel: viewModel)
             }
-
-            if miniMode {
-                // Mini mode view
-                MiniModeView(viewModel: viewModel, onExpand: exitMiniMode)
-            } else {
-                // Normal mode
-                VStack(spacing: 0) {
-                    // Header
-                    HeaderView(
-                        viewModel: viewModel,
-                        showSettings: $showSettings,
-                        showAddServer: $showAddServer,
-                        showQuickActions: $showQuickActions
-                    )
-
-                    // Toolbar with mini mode toggle
-                    ToolbarView(viewModel: viewModel, onMiniMode: enterMiniMode)
-
-                    // Main content area - switches based on view mode
-                    Group {
-                        switch viewModel.viewMode {
-                        case .grid:
-                            ServerGridView(viewModel: viewModel, showAddServer: $showAddServer)
-                        case .list:
-                            ServerListView(viewModel: viewModel, showAddServer: $showAddServer)
-                        case .rawJSON:
-                            RawJSONView(viewModel: viewModel)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            }
-
-            // Toast notification - positioned to not block UI
-            if viewModel.showToast {
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        ToastView(message: viewModel.toastMessage, type: viewModel.toastType)
-                            .padding(.trailing, 20)
-                            .padding(.bottom, 80) // Keep away from bottom buttons
-                    }
-                }
-                .transition(.asymmetric(
-                    insertion: .move(edge: .trailing).combined(with: .opacity),
-                    removal: .move(edge: .trailing).combined(with: .opacity)
-                ))
-                .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.showToast)
-                .allowsHitTesting(false) // Let clicks pass through
-            }
-
-            // Onboarding overlay
-            if viewModel.showOnboarding {
-                OnboardingModal(viewModel: viewModel)
-                    .transition(.opacity)
-            }
-
-            // Loading overlay
-            if viewModel.isLoading {
-                ZStack {
-                    Color.black.opacity(0.5)
-                        .ignoresSafeArea()
-                        .blur(radius: 10)
-
-                    VStack(spacing: 16) {
-                        ProgressView()
-                            .scaleEffect(1.5)
-
-                        Text("Loading configuration...")
-                            .font(DesignTokens.Typography.bodyLarge)
-                    }
-                    .padding(40)
-                    .background(
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color(nsColor: .windowBackgroundColor))
-                            .shadow(radius: 30)
-                    )
-                }
-                .transition(.opacity)
-            }
-
-            // Quick Actions Menu - Floating overlay
-            if showQuickActions {
-                ZStack(alignment: .topLeading) {
-                    // Backdrop with gradient
-                    RadialGradient(
-                        gradient: Gradient(colors: [
-                            Color.black.opacity(0.7),
-                            Color.black.opacity(0.5),
-                            Color.black.opacity(0.3),
-                            Color.black.opacity(0.0)
-                        ]),
-                        center: UnitPoint(x: 0.15, y: 0.15),
-                        startRadius: 50,
-                        endRadius: 1200
-                    )
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            showQuickActions = false
-                        }
-                    }
-
-                    // Menu
-                    QuickActionsMenu(
-                        viewModel: viewModel,
-                        showAddServer: $showAddServer,
-                        showImporter: $showImporter,
-                        showExporter: $showExporter,
-                        isExpanded: $showQuickActions
-                    )
-                }
-                .transition(.opacity)
-            }
-
-            // Settings Modal with dark backdrop
-            if showSettings {
-                ZStack {
-                    Color.black.opacity(0.5)
-                        .ignoresSafeArea()
-                        .transition(.opacity)
-
-                    SettingsModal(isPresented: $showSettings, viewModel: viewModel)
-                }
-                .transition(.opacity)
-            }
-
-            // Add Server Modal with dark backdrop
-            if showAddServer {
-                ZStack {
-                    Color.black.opacity(0.5)
-                        .ignoresSafeArea()
-                        .transition(.opacity)
-
-                    AddServerModal(isPresented: $showAddServer, viewModel: viewModel)
-                }
-                .transition(.opacity)
+            modalOverlay(isPresented: showAddServer) {
+                AddServerModal(isPresented: $showAddServer, viewModel: viewModel)
             }
         }
         .environment(\.themeColors, viewModel.themeColors)
@@ -173,7 +35,7 @@ struct ContentView: View {
             minWidth: miniMode ? miniModeWidth : 900,
             maxWidth: miniMode ? miniModeWidth : .infinity,
             minHeight: miniMode ? 300 : 600,
-            maxHeight: miniMode ? .infinity : .infinity
+            maxHeight: .infinity
         )
         .fileImporter(
             isPresented: $showImporter,
@@ -185,34 +47,179 @@ struct ContentView: View {
             document: JSONDocument(content: viewModel.exportServers()),
             contentType: .json,
             defaultFilename: "mcp-servers.json"
-        ) { result in
-            if case .success = result {
-                // Success
+        ) { _ in }
+    }
+
+    // MARK: - View Components
+
+    @ViewBuilder
+    private var backgroundView: some View {
+        if #available(macOS 26.0, *) {
+            Color.clear.ignoresSafeArea()
+        } else {
+            viewModel.themeColors.backgroundGradient.ignoresSafeArea()
+        }
+    }
+
+    @ViewBuilder
+    private var mainContent: some View {
+        if miniMode {
+            MiniModeView(viewModel: viewModel, onExpand: exitMiniMode)
+        } else {
+            VStack(spacing: 0) {
+                HeaderView(
+                    viewModel: viewModel,
+                    showSettings: $showSettings,
+                    showAddServer: $showAddServer,
+                    showQuickActions: $showQuickActions
+                )
+                ToolbarView(viewModel: viewModel, onMiniMode: enterMiniMode)
+                serverContentView
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
 
-    private func handleImport(_ result: Result<URL, Error>) {
-        switch result {
-        case .success(let url):
-            let accessing = url.startAccessingSecurityScopedResource()
-            defer {
-                if accessing {
-                    url.stopAccessingSecurityScopedResource()
-                }
-            }
-
-            do {
-                let data = try Data(contentsOf: url)
-                if let jsonString = String(data: data, encoding: .utf8) {
-                    _ = viewModel.addServers(from: jsonString)  // Discard validation result for file import
-                }
-            } catch {
-                print("ERROR: Import error: \(error)")
-            }
-        case .failure(let error):
-            print("ERROR: File picker error: \(error)")
+    @ViewBuilder
+    private var serverContentView: some View {
+        switch viewModel.viewMode {
+        case .grid:
+            ServerGridView(viewModel: viewModel, showAddServer: $showAddServer)
+        case .list:
+            ServerListView(viewModel: viewModel, showAddServer: $showAddServer)
+        case .rawJSON:
+            RawJSONView(viewModel: viewModel)
         }
+    }
+
+    @ViewBuilder
+    private var toastOverlay: some View {
+        if viewModel.showToast {
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    ToastView(message: viewModel.toastMessage, type: viewModel.toastType)
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 80)
+                }
+            }
+            .transition(.asymmetric(
+                insertion: .move(edge: .trailing).combined(with: .opacity),
+                removal: .move(edge: .trailing).combined(with: .opacity)
+            ))
+            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.showToast)
+            .allowsHitTesting(false)
+        }
+    }
+
+    @ViewBuilder
+    private var onboardingOverlay: some View {
+        if viewModel.showOnboarding {
+            OnboardingModal(viewModel: viewModel)
+                .transition(.opacity)
+        }
+    }
+
+    @ViewBuilder
+    private var loadingOverlay: some View {
+        if viewModel.isLoading {
+            ZStack {
+                Color.black.opacity(0.5)
+                    .ignoresSafeArea()
+                    .blur(radius: 10)
+
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                    Text("Loading configuration...")
+                        .font(DesignTokens.Typography.bodyLarge)
+                }
+                .padding(40)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color(nsColor: .windowBackgroundColor))
+                        .shadow(radius: 30)
+                )
+            }
+            .transition(.opacity)
+        }
+    }
+
+    @ViewBuilder
+    private var quickActionsOverlay: some View {
+        if showQuickActions {
+            ZStack(alignment: .topLeading) {
+                RadialGradient(
+                    gradient: Gradient(colors: [
+                        Color.black.opacity(0.7),
+                        Color.black.opacity(0.5),
+                        Color.black.opacity(0.3),
+                        Color.black.opacity(0.0)
+                    ]),
+                    center: UnitPoint(x: 0.15, y: 0.15),
+                    startRadius: 50,
+                    endRadius: 1200
+                )
+                .ignoresSafeArea()
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        showQuickActions = false
+                    }
+                }
+
+                QuickActionsMenu(
+                    viewModel: viewModel,
+                    showAddServer: $showAddServer,
+                    showImporter: $showImporter,
+                    showExporter: $showExporter,
+                    isExpanded: $showQuickActions
+                )
+            }
+            .transition(.opacity)
+        }
+    }
+
+    @ViewBuilder
+    private func modalOverlay<Content: View>(
+        isPresented: Bool,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        if isPresented {
+            ZStack {
+                Color.black.opacity(0.5)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                content()
+            }
+            .transition(.opacity)
+        }
+    }
+
+    // MARK: - Import Handler
+
+    private func handleImport(_ result: Result<URL, Error>) {
+        guard case .success(let url) = result else {
+            if case .failure(let error) = result {
+                print("ERROR: File picker error: \(error)")
+            }
+            return
+        }
+
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessing {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        guard let data = try? Data(contentsOf: url),
+              let jsonString = String(data: data, encoding: .utf8) else {
+            print("ERROR: Failed to read import file")
+            return
+        }
+
+        _ = viewModel.addServers(from: jsonString)
     }
 
     // MARK: - Mini Mode
@@ -220,58 +227,47 @@ struct ContentView: View {
     private func enterMiniMode() {
         guard let window = NSApp.windows.first else { return }
 
-        // Save current frame to restore later
         previousWindowFrame = window.frame
 
-        // Calculate new position (keep top-right corner in same place)
         let currentFrame = window.frame
-        let newWidth = miniModeWidth
-        let newHeight = miniModeHeight
-        let newX = currentFrame.maxX - newWidth
-        let newY = currentFrame.maxY - newHeight
+        let targetFrame = NSRect(
+            x: currentFrame.maxX - miniModeWidth,
+            y: currentFrame.maxY - miniModeHeight,
+            width: miniModeWidth,
+            height: miniModeHeight
+        )
 
-        // Update state first (no animation) so frame constraints allow smaller size
         miniMode = true
-
-        // Defer window resize to next run loop to avoid constraint conflicts on macOS 26
-        DispatchQueue.main.async {
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.35
-                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                window.animator().setFrame(NSRect(x: newX, y: newY, width: newWidth, height: newHeight), display: true)
-            }
-        }
+        animateWindowFrame(window, to: targetFrame)
     }
 
     private func exitMiniMode() {
         guard let window = NSApp.windows.first else { return }
 
-        // Determine target frame
-        let targetFrame: NSRect
-        if let savedFrame = previousWindowFrame {
-            targetFrame = savedFrame
-        } else {
-            // Default to a sensible size if no saved frame
-            let screen = NSScreen.main ?? NSScreen.screens.first!
-            let defaultWidth: CGFloat = 1200
-            let defaultHeight: CGFloat = 800
-            let x = (screen.frame.width - defaultWidth) / 2
-            let y = (screen.frame.height - defaultHeight) / 2
-            targetFrame = NSRect(x: x, y: y, width: defaultWidth, height: defaultHeight)
-        }
-
-        // Update state first (no animation) so frame constraints allow larger size
-        miniMode = false
-
-        // Clear saved frame
+        let targetFrame = previousWindowFrame ?? defaultWindowFrame()
         previousWindowFrame = nil
+        miniMode = false
+        animateWindowFrame(window, to: targetFrame)
+    }
 
-        // Defer window resize to next run loop to avoid constraint conflicts on macOS 26
+    private func defaultWindowFrame() -> NSRect {
+        let screen = NSScreen.main ?? NSScreen.screens.first!
+        let width: CGFloat = 1200
+        let height: CGFloat = 800
+        return NSRect(
+            x: (screen.frame.width - width) / 2,
+            y: (screen.frame.height - height) / 2,
+            width: width,
+            height: height
+        )
+    }
+
+    private func animateWindowFrame(_ window: NSWindow, to frame: NSRect) {
         DispatchQueue.main.async {
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.35
                 context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                window.animator().setFrame(targetFrame, display: true)
+                window.animator().setFrame(frame, display: true)
             }
         }
     }

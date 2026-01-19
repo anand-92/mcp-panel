@@ -55,6 +55,14 @@ enum ViewMode: String, Codable, CaseIterable {
         case .rawJSON: return "Raw JSON"
         }
     }
+
+    var icon: String {
+        switch self {
+        case .grid: return "square.grid.2x2"
+        case .list: return "list.bullet"
+        case .rawJSON: return "curlybraces"
+        }
+    }
 }
 
 enum FilterMode: String, Codable, CaseIterable {
@@ -69,6 +77,24 @@ enum FilterMode: String, Codable, CaseIterable {
         case .active: return "Active Only"
         case .disabled: return "Disabled Only"
         case .recent: return "Recently Modified"
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .all: return "All"
+        case .active: return "Active"
+        case .disabled: return "Disabled"
+        case .recent: return "Recent"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .all: return "square.stack.3d.up.fill"
+        case .active: return "checkmark.circle.fill"
+        case .disabled: return "circle.slash"
+        case .recent: return "clock.arrow.circlepath"
         }
     }
 }

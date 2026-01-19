@@ -5,78 +5,54 @@ class ConfigManager {
 
     private init() {}
 
-    // MARK: - File Operations
+    // MARK: - Path Resolution
 
     func expandPath(_ path: String) -> URL {
-        let nsString = NSString(string: path)
-        let expanded = nsString.expandingTildeInPath
+        let expanded = NSString(string: path).expandingTildeInPath
         return URL(fileURLWithPath: expanded)
     }
 
-    /// Resolves a URL for the given path, using bookmarks if available
-    private func resolveURL(for path: String) -> URL? {
-        // First try to resolve from bookmark
-        if let bookmarkedURL = BookmarkManager.shared.resolveBookmark(for: path) {
-            return bookmarkedURL
-        }
-
-        // Fallback to direct path expansion (will only work if file was just selected via picker)
-        return expandPath(path)
+    private func resolveURL(for path: String) -> URL {
+        BookmarkManager.shared.resolveBookmark(for: path) ?? expandPath(path)
     }
 
-    /// Executes a closure with access to the config file at the given path
-    private func withConfigAccess<T>(_ path: String, _ closure: (URL) throws -> T) throws -> T {
-        guard let url = resolveURL(for: path) else {
-            throw NSError(
-                domain: "ConfigManager",
-                code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "Permission denied for '\(path)'. Click Settings → Browse to grant access."]
-            )
-        }
+    private func withConfigAccess<T>(_ path: String, _ operation: (URL) throws -> T) throws -> T {
+        let url = resolveURL(for: path)
 
-        // Try with security-scoped access first
         if BookmarkManager.shared.hasBookmark(for: path) {
-            return try url.withSecurityScopedAccess(closure)
+            return try url.withSecurityScopedAccess(operation)
         }
 
-        // Fallback to direct access (for newly selected files)
-        return try closure(url)
+        return try operation(url)
     }
+
+    // MARK: - Read/Write Config
 
     func readConfig(from path: String) throws -> [String: ServerConfig] {
-        return try withConfigAccess(path) { url in
-            // If file doesn't exist, return empty dictionary instead of trying to create it
-            // This prevents permission errors on app launch when bookmarks aren't established
+        try withConfigAccess(path) { url in
             guard FileManager.default.fileExists(atPath: url.path) else {
                 return [:]
             }
 
             let data = try Data(contentsOf: url)
-            return try self.parseJSON(data: data)
+            return try self.parseServers(from: data)
         }
     }
 
-    // MARK: - JSON Parsing
-
-    private func parseJSON(data: Data) throws -> [String: ServerConfig] {
+    private func parseServers(from data: Data) throws -> [String: ServerConfig] {
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
 
-        // Extract mcpServers section
         guard let mcpServers = json["mcpServers"] as? [String: Any] else {
             return [:]
         }
 
-        // Convert to ServerConfig dictionary
-        var servers: [String: ServerConfig] = [:]
-        for (name, value) in mcpServers {
+        return mcpServers.compactMapValues { value in
             guard let serverData = try? JSONSerialization.data(withJSONObject: value),
                   let config = try? JSONDecoder().decode(ServerConfig.self, from: serverData) else {
-                continue
+                return nil
             }
-            servers[name] = config
+            return config
         }
-
-        return servers
     }
 
     func writeConfig(servers: [String: ServerConfig], to path: String) throws {
@@ -86,54 +62,57 @@ class ConfigManager {
     }
 
     private func writeJSONConfig(servers: [String: ServerConfig], to url: URL) throws {
-        // Read existing config to preserve other keys
-        var json: [String: Any] = [:]
-        if FileManager.default.fileExists(atPath: url.path) {
-            let data = try Data(contentsOf: url)
-            json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-        }
+        var json = readExistingJSON(at: url)
 
-        // Convert servers to dictionary
-        var mcpServers: [String: Any] = [:]
-        for (name, config) in servers {
+        let mcpServers = try servers.mapValues { config -> [String: Any] in
             let data = try JSONEncoder().encode(config)
-            let configDict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-            mcpServers[name] = configDict
+            return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
         }
 
-        // Update mcpServers section
         json["mcpServers"] = mcpServers
 
-        // Write back to file
-        let data = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
-        try data.write(to: url)
+        let outputData = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
+        try outputData.write(to: url)
+    }
+
+    private func readExistingJSON(at url: URL) -> [String: Any] {
+        guard FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return [:]
+        }
+        return json
     }
 
     func testConnection(to path: String) throws -> Int {
-        let servers = try readConfig(from: path)
-        return servers.count
+        try readConfig(from: path).count
     }
 
-    /// Stores a security-scoped bookmark for a user-selected config file
-    /// Call this after user selects a file via file picker
+    // MARK: - Bookmarks
+
     func storeBookmarkForConfigFile(url: URL, path: String) throws {
-        // Start accessing the security-scoped resource
-        let accessing = url.startAccessingSecurityScopedResource()
+        let didStartAccess = url.startAccessingSecurityScopedResource()
         defer {
-            if accessing {
+            if didStartAccess {
                 url.stopAccessingSecurityScopedResource()
             }
         }
 
-        // Store the bookmark
         try BookmarkManager.shared.storeBookmark(for: url)
-
-        print("📌 Stored bookmark for config: \(path)")
+        print("Stored bookmark for config: \(path)")
     }
 
     // MARK: - Server Operations
 
     func addServer(name: String, config: ServerConfig, to configPath: String) throws {
+        try setServer(name: name, config: config, in: configPath)
+    }
+
+    func updateServer(name: String, config: ServerConfig, in configPath: String) throws {
+        try setServer(name: name, config: config, in: configPath)
+    }
+
+    private func setServer(name: String, config: ServerConfig, in configPath: String) throws {
         var servers = try readConfig(from: configPath)
         servers[name] = config
         try writeConfig(servers: servers, to: configPath)
@@ -145,12 +124,6 @@ class ConfigManager {
         try writeConfig(servers: servers, to: configPath)
     }
 
-    func updateServer(name: String, config: ServerConfig, in configPath: String) throws {
-        var servers = try readConfig(from: configPath)
-        servers[name] = config
-        try writeConfig(servers: servers, to: configPath)
-    }
-
     // MARK: - Bulk Operations
 
     func addServers(_ newServers: [String: ServerConfig], to configPath: String, merge: Bool = true) throws {
@@ -159,22 +132,22 @@ class ConfigManager {
         try writeConfig(servers: servers, to: configPath)
     }
 
+    // MARK: - Export
+
     func exportServers(from servers: [ServerModel], configIndex: Int) -> String {
         let filteredServers = servers
             .filter { $0.inConfigs[safe: configIndex] ?? false }
-            .reduce(into: [String: ServerConfig]()) { result, server in
-                result[server.name] = server.config
-            }
+            .reduce(into: [String: ServerConfig]()) { $0[$1.name] = $1.config }
 
+        return encodeToJSON(filteredServers) ?? "{}"
+    }
+
+    private func encodeToJSON<T: Encodable>(_ value: T) -> String? {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
 
-        guard let data = try? encoder.encode(filteredServers),
-              let string = String(data: data, encoding: .utf8) else {
-            return "{}"
-        }
-
-        return string
+        guard let data = try? encoder.encode(value) else { return nil }
+        return String(data: data, encoding: .utf8)
     }
 }
 
@@ -187,32 +160,23 @@ extension UserDefaults {
         static let hasCompletedOnboarding = "has_completed_onboarding"
     }
 
+    private func decode<T: Decodable>(_ type: T.Type, forKey key: String) -> T? {
+        guard let data = data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(type, from: data)
+    }
+
+    private func encode<T: Encodable>(_ value: T, forKey key: String) {
+        set(try? JSONEncoder().encode(value), forKey: key)
+    }
+
     var appSettings: AppSettings {
-        get {
-            guard let data = data(forKey: Keys.settings),
-                  let settings = try? JSONDecoder().decode(AppSettings.self, from: data) else {
-                return .default
-            }
-            return settings
-        }
-        set {
-            let data = try? JSONEncoder().encode(newValue)
-            set(data, forKey: Keys.settings)
-        }
+        get { decode(AppSettings.self, forKey: Keys.settings) ?? .default }
+        set { encode(newValue, forKey: Keys.settings) }
     }
 
     var cachedServers: [ServerModel] {
-        get {
-            guard let data = data(forKey: Keys.servers),
-                  let servers = try? JSONDecoder().decode([ServerModel].self, from: data) else {
-                return []
-            }
-            return servers
-        }
-        set {
-            let data = try? JSONEncoder().encode(newValue)
-            set(data, forKey: Keys.servers)
-        }
+        get { decode([ServerModel].self, forKey: Keys.servers) ?? [] }
+        set { encode(newValue, forKey: Keys.servers) }
     }
 
     var hasCompletedOnboarding: Bool {

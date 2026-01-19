@@ -107,35 +107,29 @@ class ServerViewModel: ObservableObject {
         skipSync = true
 
         Task {
+            var loadError: Error?
+
             do {
                 let config1 = try configManager.readConfig(from: settings.config1Path)
                 let config2 = try configManager.readConfig(from: settings.config2Path)
-
-                let merged = mergeConfigs(config1: config1, config2: config2)
-                servers = merged
-
-                // Cache to UserDefaults
-                UserDefaults.standard.cachedServers = servers
-
-                // Clean up unused custom icons
-                let usedIcons = Set(servers.compactMap { $0.customIconPath })
-                CustomIconManager.shared.cleanupUnusedIcons(usedFilenames: usedIcons)
-
-                skipSync = false
-                isLoading = false
+                servers = mergeConfigs(config1: config1, config2: config2)
             } catch {
                 #if DEBUG
                 print("Error loading servers: \(error)")
                 #endif
-                // Load from cache if available
                 servers = UserDefaults.standard.cachedServers
+                loadError = error
+            }
 
-                // Clean up unused custom icons
-                let usedIcons = Set(servers.compactMap { $0.customIconPath })
-                CustomIconManager.shared.cleanupUnusedIcons(usedFilenames: usedIcons)
+            UserDefaults.standard.cachedServers = servers
 
-                skipSync = false
-                isLoading = false
+            let usedIcons = Set(servers.compactMap { $0.customIconPath })
+            CustomIconManager.shared.cleanupUnusedIcons(usedFilenames: usedIcons)
+
+            skipSync = false
+            isLoading = false
+
+            if let error = loadError {
                 showToast(message: "Failed to load config: \(error.localizedDescription)", type: .error)
             }
         }
@@ -145,9 +139,11 @@ class ServerViewModel: ObservableObject {
         var merged: [String: ServerModel] = [:]
         let now = Date()
 
-        // Start with cached servers to preserve metadata
+        // Start with cached servers to preserve metadata, but reset inConfigs
         for server in UserDefaults.standard.cachedServers {
-            merged[server.name] = server
+            var cachedServer = server
+            cachedServer.inConfigs = [false, false]
+            merged[server.name] = cachedServer
         }
 
         // Process config1 servers (Claude Code)
@@ -169,6 +165,7 @@ class ServerViewModel: ObservableObject {
         // Process config2 servers (Gemini CLI)
         for (name, config) in config2 {
             if var existing = merged[name] {
+                // Only update config if not already set by config1
                 if !existing.inConfigs[0] {
                     existing.config = config
                 }
@@ -182,17 +179,6 @@ class ServerViewModel: ObservableObject {
                     inConfigs: [false, true]
                 )
             }
-        }
-
-        // Reset inConfigs for servers not in their respective configs
-        for (name, var server) in merged {
-            if !config1.keys.contains(name) {
-                server.inConfigs[0] = false
-            }
-            if !config2.keys.contains(name) {
-                server.inConfigs[1] = false
-            }
-            merged[name] = server
         }
 
         return Array(merged.values).sorted { $0.name < $1.name }
@@ -238,149 +224,77 @@ class ServerViewModel: ObservableObject {
     // MARK: - Server CRUD
 
     func addServers(from jsonString: String, registryImages: [String: String]? = nil) -> (invalidServers: [String: String], serverDict: [String: ServerConfig])? {
-        #if DEBUG
-        print("DEBUG: Starting addServers with input length: \(jsonString.count)")
-        if let images = registryImages {
-            print("DEBUG: Registry images provided for \(images.count) servers")
-        }
-        #endif
-
-        // Use forgiving parser to extract server entries
         guard let serverDict = ServerExtractor.extractServerEntries(from: jsonString) else {
-            #if DEBUG
-            print("DEBUG: Failed to parse JSON")
-            #endif
             showToast(message: "Could not parse JSON. Please check format.", type: .error)
             return nil
         }
 
         guard !serverDict.isEmpty else {
             showToast(message: "No servers found in JSON", type: .warning)
-            #if DEBUG
-            print("DEBUG: Parsed dictionary is empty")
-            #endif
             return nil
         }
 
-        #if DEBUG
-        print("DEBUG: Found \(serverDict.count) servers in JSON")
-        #endif
-
-        // Check for invalid servers first
-        var invalidServers: [String: String] = [:]
-        for (name, config) in serverDict {
-            if !config.isValid {
-                let reason = getInvalidReason(config)
-                invalidServers[name] = reason
-            }
+        // Check for invalid servers
+        let invalidServers = serverDict.compactMapValues { config -> String? in
+            config.isValid ? nil : getInvalidReason(config)
         }
 
-        // If there are invalid servers, return them for UI to handle
         if !invalidServers.isEmpty {
             return (invalidServers: invalidServers, serverDict: serverDict)
         }
 
-        // All servers are valid, proceed with adding
-        addServersInternal(serverDict: serverDict, registryImages: registryImages, skipValidation: false)
+        addServersInternal(serverDict: serverDict, registryImages: registryImages, forceMode: false)
         return nil
     }
 
     func addServersForced(from jsonString: String, registryImages: [String: String]? = nil) {
-        #if DEBUG
-        print("DEBUG: Force adding servers, bypassing validation")
-        #endif
-
         guard let serverDict = ServerExtractor.extractServerEntries(from: jsonString) else {
             showToast(message: "Could not parse JSON. Please check format.", type: .error)
             return
         }
-
-        addServersInternal(serverDict: serverDict, registryImages: registryImages, skipValidation: true)
+        addServersInternal(serverDict: serverDict, registryImages: registryImages, forceMode: true)
     }
 
     func addServersForced(serverDict: [String: ServerConfig], registryImages: [String: String]? = nil) {
-        #if DEBUG
-        print("DEBUG: Force adding servers from parsed dictionary, bypassing validation")
-        #endif
-
-        addServersInternal(serverDict: serverDict, registryImages: registryImages, skipValidation: true)
+        addServersInternal(serverDict: serverDict, registryImages: registryImages, forceMode: true)
     }
 
-    private func addServersInternal(serverDict: [String: ServerConfig], registryImages: [String: String]?, skipValidation: Bool) {
-        var addedCount = 0
+    private func addServersInternal(serverDict: [String: ServerConfig], registryImages: [String: String]?, forceMode: Bool) {
+        let configIndex = settings.activeConfigIndex
+        let now = Date()
 
         for (name, config) in serverDict {
-            #if DEBUG
-            print("DEBUG: Processing server '\(name)'...")
-            print("DEBUG: Config valid: \(config.isValid)")
-            print("DEBUG: Has command: \(config.command != nil)")
-            print("DEBUG: Command: \(config.command ?? "nil")")
-            print("DEBUG: Args: \(config.args ?? [])")
-            print("DEBUG: Has transport: \(config.transport != nil)")
-            print("DEBUG: Has remotes: \(config.remotes != nil)")
-            #endif
-
-            // Note: When skipValidation is false, the caller already validates all servers
-            // and returns early if any are invalid, so this check is unnecessary
-
-            // Get registry image URL if available
             let registryImageUrl = registryImages?[name]
 
-            if let index = self.servers.firstIndex(where: { $0.name == name }) {
-                var updatedServer = self.servers[index]
-                updatedServer.config = config
-                updatedServer.updatedAt = Date()
-                updatedServer.inConfigs[settings.activeConfigIndex] = true
-                // Update registry image URL if provided
+            if let index = servers.firstIndex(where: { $0.name == name }) {
+                servers[index].config = config
+                servers[index].updatedAt = now
+                servers[index].inConfigs[configIndex] = true
                 if let imageUrl = registryImageUrl {
-                    updatedServer.registryImageUrl = imageUrl
+                    servers[index].registryImageUrl = imageUrl
                 }
-                self.servers[index] = updatedServer
-                #if DEBUG
-                print("DEBUG: Updated existing server '\(name)'")
-                #endif
             } else {
-                // Brand new server
                 var inConfigs = [false, false]
-                inConfigs[settings.activeConfigIndex] = true
+                inConfigs[configIndex] = true
 
                 let newServer = ServerModel(
                     name: name,
                     config: config,
-                    updatedAt: Date(),
+                    updatedAt: now,
                     inConfigs: inConfigs,
                     registryImageUrl: registryImageUrl
                 )
-                self.servers.append(newServer)
-                #if DEBUG
-                print("DEBUG: Added new server '\(name)' to config \(settings.activeConfigIndex)")
-                #endif
+                servers.append(newServer)
             }
-            addedCount += 1
         }
 
-        self.servers.sort { $0.name < $1.name }
-
-        // Force UI update
+        servers.sort { $0.name < $1.name }
         objectWillChange.send()
-
-        // Sync to files
         syncToConfigs()
 
-        if skipValidation {
-            showToast(message: "Force saved \(addedCount) server(s)", type: .success)
-        } else {
-            showToast(message: "Added \(addedCount) server(s)", type: .success)
-        }
-
-        #if DEBUG
-        print("DEBUG: Total servers now: \(self.servers.count)")
-        print("DEBUG: Filtered servers: \(filteredServers.count)")
-        print("DEBUG: Active config index: \(settings.activeConfigIndex)")
-        print("DEBUG: Filter mode: \(filterMode)")
-        #endif
+        let message = forceMode ? "Force saved \(serverDict.count) server(s)" : "Added \(serverDict.count) server(s)"
+        showToast(message: message, type: .success)
     }
-
 
     private func getInvalidReason(_ config: ServerConfig) -> String {
         if config.command == nil && config.httpUrl == nil && config.transport == nil && config.remotes == nil {
@@ -395,44 +309,32 @@ class ServerViewModel: ObservableObject {
         return "unknown issue"
     }
 
+    private func parseServerConfig(from jsonString: String) throws -> ServerConfig {
+        let normalized = jsonString.normalizingQuotes()
+
+        guard let data = normalized.data(using: .utf8) else {
+            throw NSError(domain: "MCPServerManager", code: -1, userInfo: [
+                NSLocalizedDescriptionKey: "Failed to convert JSON string to data"
+            ])
+        }
+
+        return try JSONDecoder().decode(ServerConfig.self, from: data)
+    }
+
     func updateServer(_ server: ServerModel, with jsonString: String) -> (success: Bool, invalidReason: String?, config: ServerConfig?) {
         do {
-            // Normalize quotes first (curly quotes from Notes/Word/Slack)
-            let normalized = jsonString.normalizingQuotes()
-
-            guard let data = normalized.data(using: .utf8) else {
-                throw NSError(domain: "MCPServerManager", code: -1, userInfo: [
-                    NSLocalizedDescriptionKey: "Failed to convert JSON string to data"
-                ])
-            }
-
-            // Decode with proper error propagation
-            let config: ServerConfig
-            do {
-                config = try JSONDecoder().decode(ServerConfig.self, from: data)
-            } catch {
-                // Preserve the actual JSONDecoder error details
-                throw NSError(domain: "MCPServerManager", code: -1, userInfo: [
-                    NSLocalizedDescriptionKey: "JSON parsing error: \(error.localizedDescription)"
-                ])
-            }
+            let config = try parseServerConfig(from: jsonString)
 
             if !config.isValid {
-                let reason = getInvalidReason(config)
-                return (success: false, invalidReason: reason, config: config)
+                return (success: false, invalidReason: getInvalidReason(config), config: config)
             }
 
-            if let index = servers.firstIndex(where: { $0.id == server.id }) {
-                var updated = servers[index]
-                updated.config = config
-                updated.updatedAt = Date()
-                servers[index] = updated
-
-                syncToConfigs()
-                showToast(message: "Server updated", type: .success)
-                return (success: true, invalidReason: nil, config: nil)
+            guard applyServerUpdate(server, config: config) else {
+                return (success: false, invalidReason: nil, config: nil)
             }
-            return (success: false, invalidReason: nil, config: nil)
+
+            showToast(message: "Server updated", type: .success)
+            return (success: true, invalidReason: nil, config: nil)
         } catch {
             showToast(message: "Failed to update: \(error.localizedDescription)", type: .error)
             return (success: false, invalidReason: nil, config: nil)
@@ -441,27 +343,10 @@ class ServerViewModel: ObservableObject {
 
     func updateServerForced(_ server: ServerModel, with jsonString: String) -> Bool {
         do {
-            let normalized = jsonString.normalizingQuotes()
-
-            guard let data = normalized.data(using: .utf8) else {
-                throw NSError(domain: "MCPServerManager", code: -1, userInfo: [
-                    NSLocalizedDescriptionKey: "Failed to convert JSON string to data"
-                ])
-            }
-
-            let config = try JSONDecoder().decode(ServerConfig.self, from: data)
-
-            if let index = servers.firstIndex(where: { $0.id == server.id }) {
-                var updated = servers[index]
-                updated.config = config
-                updated.updatedAt = Date()
-                servers[index] = updated
-
-                syncToConfigs()
-                showToast(message: "Server force saved", type: .success)
-                return true
-            }
-            return false
+            let config = try parseServerConfig(from: jsonString)
+            guard applyServerUpdate(server, config: config) else { return false }
+            showToast(message: "Server force saved", type: .success)
+            return true
         } catch {
             showToast(message: "Failed to update: \(error.localizedDescription)", type: .error)
             return false
@@ -469,44 +354,35 @@ class ServerViewModel: ObservableObject {
     }
 
     func updateServerForced(_ server: ServerModel, config: ServerConfig) -> Bool {
-        if let index = servers.firstIndex(where: { $0.id == server.id }) {
-            var updated = servers[index]
-            updated.config = config
-            updated.updatedAt = Date()
-            servers[index] = updated
+        guard applyServerUpdate(server, config: config) else { return false }
+        showToast(message: "Server force saved", type: .success)
+        return true
+    }
 
-            syncToConfigs()
-            showToast(message: "Server force saved", type: .success)
-            return true
+    private func applyServerUpdate(_ server: ServerModel, config: ServerConfig) -> Bool {
+        guard let index = servers.firstIndex(where: { $0.id == server.id }) else {
+            return false
         }
-        return false
+
+        servers[index].config = config
+        servers[index].updatedAt = Date()
+        syncToConfigs()
+        return true
     }
 
     func applyRawJSON(_ jsonText: String) -> (success: Bool, invalidServers: [String: String]?, serverDict: [String: ServerConfig]?) {
         do {
-            let normalized = jsonText.normalizingQuotes()
+            let serverDict = try parseServerDict(from: jsonText)
 
-            guard let data = normalized.data(using: .utf8) else {
-                throw NSError(domain: "Invalid JSON", code: -1)
-            }
-
-            let serverDict = try JSONDecoder().decode([String: ServerConfig].self, from: data)
-
-            // Check for invalid servers
-            var invalidServers: [String: String] = [:]
-            for (name, config) in serverDict {
-                if !config.isValid {
-                    let reason = getInvalidReason(config)
-                    invalidServers[name] = reason
-                }
+            let invalidServers = serverDict.compactMapValues { config -> String? in
+                config.isValid ? nil : getInvalidReason(config)
             }
 
             if !invalidServers.isEmpty {
                 return (success: false, invalidServers: invalidServers, serverDict: serverDict)
             }
 
-            // Apply changes
-            applyRawJSONInternal(serverDict: serverDict, skipValidation: false)
+            applyRawJSONInternal(serverDict: serverDict, forceMode: false)
             return (success: true, invalidServers: nil, serverDict: nil)
         } catch {
             showToast(message: "Failed to parse JSON: \(error.localizedDescription)", type: .error)
@@ -515,22 +391,27 @@ class ServerViewModel: ObservableObject {
     }
 
     func applyRawJSONForced(_ jsonText: String) throws {
+        let serverDict = try parseServerDict(from: jsonText)
+        applyRawJSONInternal(serverDict: serverDict, forceMode: true)
+    }
+
+    func applyRawJSONForced(serverDict: [String: ServerConfig]) {
+        applyRawJSONInternal(serverDict: serverDict, forceMode: true)
+    }
+
+    private func parseServerDict(from jsonText: String) throws -> [String: ServerConfig] {
         let normalized = jsonText.normalizingQuotes()
 
         guard let data = normalized.data(using: .utf8) else {
             throw NSError(domain: "Invalid JSON", code: -1)
         }
 
-        let serverDict = try JSONDecoder().decode([String: ServerConfig].self, from: data)
-        applyRawJSONInternal(serverDict: serverDict, skipValidation: true)
+        return try JSONDecoder().decode([String: ServerConfig].self, from: data)
     }
 
-    func applyRawJSONForced(serverDict: [String: ServerConfig]) {
-        applyRawJSONInternal(serverDict: serverDict, skipValidation: true)
-    }
-
-    private func applyRawJSONInternal(serverDict: [String: ServerConfig], skipValidation: Bool) {
+    private func applyRawJSONInternal(serverDict: [String: ServerConfig], forceMode: Bool) {
         let configIndex = settings.activeConfigIndex
+        let now = Date()
 
         // Remove all servers from this config
         for i in 0..<servers.count {
@@ -538,15 +419,11 @@ class ServerViewModel: ObservableObject {
         }
 
         // Add/update servers from JSON
-        // Note: When skipValidation is false, the caller already validates all servers
-        // and returns early if any are invalid, so no validation check needed here
         for (name, config) in serverDict {
             if let index = servers.firstIndex(where: { $0.name == name }) {
-                var updated = servers[index]
-                updated.config = config
-                updated.inConfigs[configIndex] = true
-                updated.updatedAt = Date()
-                servers[index] = updated
+                servers[index].config = config
+                servers[index].inConfigs[configIndex] = true
+                servers[index].updatedAt = now
             } else {
                 var inConfigs = [false, false]
                 inConfigs[configIndex] = true
@@ -554,7 +431,7 @@ class ServerViewModel: ObservableObject {
                 let newServer = ServerModel(
                     name: name,
                     config: config,
-                    updatedAt: Date(),
+                    updatedAt: now,
                     inConfigs: inConfigs
                 )
                 servers.append(newServer)
@@ -565,7 +442,7 @@ class ServerViewModel: ObservableObject {
         objectWillChange.send()
         syncToConfigs()
 
-        let message = skipValidation ? "Configuration force saved" : "Configuration updated"
+        let message = forceMode ? "Configuration force saved" : "Configuration updated"
         showToast(message: message, type: .success)
     }
 
@@ -583,45 +460,32 @@ class ServerViewModel: ObservableObject {
 
     func enableServers(with tag: ServerTag) {
         let configIndex = settings.activeConfigIndex
-        guard configIndex >= 0 && configIndex < 2 else {
-             showToast(message: "Invalid config index", type: .error)
-             return
-        }
+        let now = Date()
 
-        var indicesToUpdate: [Int] = []
-        var taggedCount = 0
+        let taggedServers = servers.enumerated().filter { $0.element.tags.contains(tag) }
 
-        // 1. Identify servers to update
-        for i in 0..<servers.count {
-            let server = servers[i]
-            guard server.tags.contains(tag) else { continue }
-            taggedCount += 1
-
-            if !(servers[i].inConfigs[safe: configIndex] ?? false) {
-                indicesToUpdate.append(i)
-            }
-        }
-
-        guard taggedCount > 0 else {
+        guard !taggedServers.isEmpty else {
             showToast(message: "No servers tagged \(tag.rawValue)", type: .warning)
             return
         }
 
-        guard !indicesToUpdate.isEmpty else {
+        let indicesToEnable = taggedServers
+            .filter { !(servers[$0.offset].inConfigs[safe: configIndex] ?? false) }
+            .map { $0.offset }
+
+        guard !indicesToEnable.isEmpty else {
             showToast(message: "All \(tag.rawValue) servers already enabled", type: .warning)
             return
         }
 
-        // 2. Batch update
-        for index in indicesToUpdate {
+        for index in indicesToEnable {
             servers[index].inConfigs[configIndex] = true
-            servers[index].updatedAt = Date()
+            servers[index].updatedAt = now
         }
 
-        // 3. Single notification and sync
         objectWillChange.send()
         syncToConfigs()
-        showToast(message: "Enabled \(indicesToUpdate.count) \(tag.rawValue) server(s)", type: .success)
+        showToast(message: "Enabled \(indicesToEnable.count) \(tag.rawValue) server(s)", type: .success)
     }
 
     func toggleTag(_ tag: ServerTag, for server: ServerModel) {
@@ -687,25 +551,16 @@ class ServerViewModel: ObservableObject {
 
     func toggleAllServers(_ enable: Bool) {
         let configIndex = settings.activeConfigIndex
-        #if DEBUG
-        print("DEBUG: toggleAllServers called with enable=\(enable), configIndex=\(configIndex), serverCount=\(servers.count)")
-        #endif
+        let now = Date()
 
         for i in 0..<servers.count {
-            #if DEBUG
-            let before = servers[i].inConfigs[configIndex]
-            #endif
             servers[i].inConfigs[configIndex] = enable
-            servers[i].updatedAt = Date()
-            #if DEBUG
-            print("DEBUG: Server '\(servers[i].name)': \(before) -> \(enable)")
-            #endif
+            servers[i].updatedAt = now
         }
 
-        // Force UI update
         objectWillChange.send()
-
         syncToConfigs()
+
         let status = enable ? "enabled" : "disabled"
         showToast(message: "All servers \(status)", type: .success)
     }
@@ -717,12 +572,7 @@ class ServerViewModel: ObservableObject {
     }
 
     func testConnection(to path: String) async -> Result<Int, Error> {
-        do {
-            let count = try configManager.testConnection(to: path)
-            return .success(count)
-        } catch {
-            return .failure(error)
-        }
+        Result { try configManager.testConnection(to: path) }
     }
 
     // MARK: - Toast
@@ -730,7 +580,6 @@ class ServerViewModel: ObservableObject {
     private var toastTask: Task<Void, Never>?
 
     func showToast(message: String, type: ToastType) {
-        // Cancel any existing toast timer
         toastTask?.cancel()
 
         toastMessage = message
@@ -740,15 +589,10 @@ class ServerViewModel: ObservableObject {
         }
 
         toastTask = Task { @MainActor in
-            do {
-                try await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
-                if !Task.isCancelled {
-                    withAnimation {
-                        showToast = false
-                    }
-                }
-            } catch {
-                // Task was cancelled, ignore
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation {
+                showToast = false
             }
         }
     }
