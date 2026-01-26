@@ -276,6 +276,25 @@ jobs:
           echo "⚠️  Notarization failed or returned Invalid status"
           echo "   DMG is code-signed but not notarized - may show warning on first open"
           echo "   Users can right-click > Open to bypass the warning"
+
+          # Fetch the notarization log to see why it failed
+          SUBMISSION_ID=$(grep "id:" notary_output.txt | head -1 | awk '{print $2}')
+          if [ -n "$SUBMISSION_ID" ]; then
+            echo ""
+            echo "📋 Fetching notarization log for submission: $SUBMISSION_ID"
+            xcrun notarytool log "$SUBMISSION_ID" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" \
+              notarization_log.json 2>&1 || true
+
+            if [ -f notarization_log.json ]; then
+              echo "=== NOTARIZATION LOG ==="
+              cat notarization_log.json
+              echo "========================"
+            fi
+          fi
+
           exit 0
         fi
 
