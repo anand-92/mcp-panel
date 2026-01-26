@@ -20,84 +20,8 @@ jobs:
       with:
         xcode-version: latest-stable
 
-    - name: Build Swift app
-      working-directory: MCPServerManager
-      run: |
-        # Build for native architecture
-        swift build -c release
-
-        # Verify binary was created
-        ls -la .build/release/
-        file .build/release/MCPServerManager
-
-    - name: Create app bundle
-      working-directory: MCPServerManager
-      run: |
-        # Create .app structure
-        mkdir -p build/MCP-Server-Manager.app/Contents/MacOS
-        mkdir -p build/MCP-Server-Manager.app/Contents/Resources
-        mkdir -p build/MCP-Server-Manager.app/Contents/Frameworks
-
-        # Copy binary
-        cp .build/release/MCPServerManager build/MCP-Server-Manager.app/Contents/MacOS/
-
-        # Fix rpath in binary to point to Frameworks directory
-        install_name_tool -add_rpath "@executable_path/../Frameworks" build/MCP-Server-Manager.app/Contents/MacOS/MCPServerManager
-
-        # Copy Sparkle framework
-        cp -R .build/release/Sparkle.framework build/MCP-Server-Manager.app/Contents/Frameworks/
-
-        # Copy app icon
-        cp icons/AppIcon.icns build/MCP-Server-Manager.app/Contents/Resources/AppIcon.icns
-
-        # Copy SPM resource bundle (contains fonts)
-        if [ -d ".build/release/MCPServerManager_MCPServerManager.bundle" ]; then
-          cp -R .build/release/MCPServerManager_MCPServerManager.bundle build/MCP-Server-Manager.app/Contents/Resources/
-          echo "✅ Resource bundle copied"
-        else
-          echo "⚠️ Resource bundle not found at .build/release/MCPServerManager_MCPServerManager.bundle"
-          ls -la .build/release/ | grep -i bundle || echo "No bundles found"
-        fi
-
-        # Create Info.plist
-        cat > build/MCP-Server-Manager.app/Contents/Info.plist << 'EOF'
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-            <key>CFBundleExecutable</key>
-            <string>MCPServerManager</string>
-            <key>CFBundleIdentifier</key>
-            <string>com.mcpmanager.app</string>
-            <key>CFBundleName</key>
-            <string>MCP Server Manager</string>
-            <key>CFBundlePackageType</key>
-            <string>APPL</string>
-            <key>CFBundleShortVersionString</key>
-            <string>2.0.2.${{ github.run_number }}</string>
-            <key>CFBundleVersion</key>
-            <string>${{ github.run_number }}</string>
-            <key>LSMinimumSystemVersion</key>
-            <string>13.0</string>
-            <key>NSHighResolutionCapable</key>
-            <true/>
-            <key>CFBundleIconFile</key>
-            <string>AppIcon</string>
-            <key>SUFeedURL</key>
-            <string>https://github.com/${{ github.repository }}/releases/download/latest/appcast.xml</string>
-            <key>SUPublicEDKey</key>
-            <string>SnkRxHZxaHrqHMoSW/Ls6dbeqZaGZBlS5AQ9I8OE3JI=</string>
-            <key>SUEnableAutomaticChecks</key>
-            <true/>
-            <key>SUAutomaticallyUpdate</key>
-            <false/>
-            <key>SUAllowsAutomaticUpdates</key>
-            <true/>
-            <key>SUEnableInstallerLauncherService</key>
-            <true/>
-        </dict>
-        </plist>
-        EOF
+    - name: Install xcodegen
+      run: brew install xcodegen
 
     - name: Import certificates
       env:
@@ -147,6 +71,97 @@ jobs:
         echo "Imported certificates:"
         security find-identity -v -p codesigning
 
+    - name: Generate Xcode project and build with widget
+      env:
+        APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      run: |
+        # Generate Xcode project from project.yml
+        xcodegen generate
+        echo "✅ Xcode project generated"
+
+        # Restore entitlements (xcodegen resets them)
+        cat > MCPServerManager/MCPServerManager/MCPServerManager.entitlements << 'ENTITLEMENTS'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>com.apple.security.app-sandbox</key>
+            <true/>
+            <key>com.apple.security.files.user-selected.read-write</key>
+            <true/>
+            <key>com.apple.security.application-groups</key>
+            <array>
+                <string>group.com.anand-92.mcp-panel</string>
+            </array>
+        </dict>
+        </plist>
+        ENTITLEMENTS
+
+        cat > MCPServerManagerWidget/MCPServerManagerWidget.entitlements << 'ENTITLEMENTS'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>com.apple.security.app-sandbox</key>
+            <true/>
+            <key>com.apple.security.application-groups</key>
+            <array>
+                <string>group.com.anand-92.mcp-panel</string>
+            </array>
+        </dict>
+        </plist>
+        ENTITLEMENTS
+
+        # Build with xcodebuild (includes widget extension)
+        xcodebuild -project MCPServerManager.xcodeproj \
+          -scheme MCPServerManager \
+          -configuration Release \
+          -derivedDataPath build \
+          CODE_SIGNING_ALLOWED=NO \
+          build
+
+        echo "✅ Build completed with widget extension"
+
+        # Copy built app to expected location
+        mkdir -p MCPServerManager/build
+        cp -R build/Build/Products/Release/MCPServerManager.app MCPServerManager/build/MCP-Server-Manager.app
+
+        # Verify widget is embedded
+        if [ -d "MCPServerManager/build/MCP-Server-Manager.app/Contents/PlugIns/MCPServerManagerWidget.appex" ]; then
+          echo "✅ Widget extension embedded successfully"
+        else
+          echo "⚠️ Widget extension not found in app bundle"
+          ls -la MCPServerManager/build/MCP-Server-Manager.app/Contents/PlugIns/ || echo "No PlugIns directory"
+        fi
+
+    - name: Add Sparkle framework and update Info.plist
+      working-directory: MCPServerManager
+      run: |
+        # Download Sparkle framework
+        curl -L https://github.com/sparkle-project/Sparkle/releases/download/2.5.2/Sparkle-2.5.2.tar.xz -o sparkle.tar.xz
+        tar -xf sparkle.tar.xz
+
+        # Copy Sparkle framework to app bundle
+        mkdir -p build/MCP-Server-Manager.app/Contents/Frameworks
+        cp -R Sparkle.framework build/MCP-Server-Manager.app/Contents/Frameworks/
+
+        # Fix rpath in binary
+        install_name_tool -add_rpath "@executable_path/../Frameworks" build/MCP-Server-Manager.app/Contents/MacOS/MCPServerManager 2>/dev/null || true
+
+        # Copy app icon
+        cp icons/AppIcon.icns build/MCP-Server-Manager.app/Contents/Resources/AppIcon.icns
+
+        # Update Info.plist with Sparkle keys and version
+        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 3.1.${{ github.run_number }}" build/MCP-Server-Manager.app/Contents/Info.plist
+        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" build/MCP-Server-Manager.app/Contents/Info.plist
+        /usr/libexec/PlistBuddy -c "Add :SUFeedURL string https://github.com/${{ github.repository }}/releases/download/latest/appcast.xml" build/MCP-Server-Manager.app/Contents/Info.plist 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :SUFeedURL https://github.com/${{ github.repository }}/releases/download/latest/appcast.xml" build/MCP-Server-Manager.app/Contents/Info.plist
+        /usr/libexec/PlistBuddy -c "Add :SUPublicEDKey string SnkRxHZxaHrqHMoSW/Ls6dbeqZaGZBlS5AQ9I8OE3JI=" build/MCP-Server-Manager.app/Contents/Info.plist 2>/dev/null || true
+        /usr/libexec/PlistBuddy -c "Add :SUEnableAutomaticChecks bool true" build/MCP-Server-Manager.app/Contents/Info.plist 2>/dev/null || true
+        /usr/libexec/PlistBuddy -c "Add :SUAllowsAutomaticUpdates bool true" build/MCP-Server-Manager.app/Contents/Info.plist 2>/dev/null || true
+
+        echo "✅ Sparkle framework and Info.plist updated"
+
     - name: Sign app bundle
       working-directory: MCPServerManager
       env:
@@ -157,7 +172,6 @@ jobs:
         security find-identity -v -p codesigning
 
         # Get the first valid Developer ID or Mac App Store certificate
-        # Prefer Developer ID Application for direct distribution, but accept App Store certs as fallback
         IDENTITY=$(security find-identity -v -p codesigning | grep -E "Developer ID Application|Apple Distribution|3rd Party Mac Developer Application" | head -1 | awk -F'"' '{print $2}')
 
         if [ -z "$IDENTITY" ]; then
@@ -168,17 +182,30 @@ jobs:
 
         echo "Signing with identity: $IDENTITY"
 
-        # Sign the app bundle with hardened runtime
-        # Note: Using relaxed entitlements for direct distribution (DMG)
-        # App Store builds should NOT use these entitlements
-        # Using --deep to sign embedded frameworks (like Sparkle.framework)
-        codesign --force --deep --sign "$IDENTITY" \
+        # Sign the widget extension first
+        if [ -d "build/MCP-Server-Manager.app/Contents/PlugIns/MCPServerManagerWidget.appex" ]; then
+          codesign --force --sign "$IDENTITY" \
+            --options runtime \
+            --entitlements ../MCPServerManagerWidget/MCPServerManagerWidget.entitlements \
+            --timestamp \
+            build/MCP-Server-Manager.app/Contents/PlugIns/MCPServerManagerWidget.appex
+          echo "✅ Widget extension signed"
+        fi
+
+        # Sign Sparkle framework
+        codesign --force --sign "$IDENTITY" \
+          --options runtime \
+          --timestamp \
+          build/MCP-Server-Manager.app/Contents/Frameworks/Sparkle.framework
+
+        # Sign the main app bundle
+        codesign --force --sign "$IDENTITY" \
           --options runtime \
           --entitlements ../entitlements.plist \
           --timestamp \
           build/MCP-Server-Manager.app || {
             echo "⚠️  Signing with entitlements failed, trying without..."
-            codesign --force --deep --sign "$IDENTITY" \
+            codesign --force --sign "$IDENTITY" \
               --options runtime \
               --timestamp \
               build/MCP-Server-Manager.app
@@ -187,7 +214,7 @@ jobs:
         # Verify the signature
         echo "Verifying signature..."
         codesign --verify --verbose build/MCP-Server-Manager.app
-        echo "✓ App bundle signed successfully"
+        echo "✅ App bundle signed successfully"
 
     - name: Install create-dmg tool
       run: brew install create-dmg
@@ -204,7 +231,7 @@ jobs:
       working-directory: MCPServerManager
       run: |
         # Create installer DMG with Applications symlink
-        VERSION="2.0.2.${{ github.run_number }}"
+        VERSION="3.1.${{ github.run_number }}"
         bash ../create-dmg.sh build/MCP-Server-Manager.app "build/MCP-Server-Manager-v${VERSION}.dmg"
 
         # Also create a "latest" symlink for consistent naming
@@ -219,7 +246,7 @@ jobs:
         APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       run: |
-        VERSION="2.0.2.${{ github.run_number }}"
+        VERSION="3.1.${{ github.run_number }}"
         DMG_PATH="build/MCP-Server-Manager-v${VERSION}.dmg"
 
         if [ -z "$APPLE_ID" ] || [ -z "$APPLE_APP_SPECIFIC_PASSWORD" ]; then
@@ -239,12 +266,12 @@ jobs:
 
         # Check if notarization was accepted
         if grep -q "status: Accepted" notary_output.txt; then
-          echo "✓ Notarization successful"
+          echo "✅ Notarization successful"
 
           # Staple the notarization ticket to the DMG
           echo "Stapling notarization ticket..."
           xcrun stapler staple "$DMG_PATH"
-          echo "✓ DMG notarized and stapled"
+          echo "✅ DMG notarized and stapled"
         else
           echo "⚠️  Notarization failed or returned Invalid status"
           echo "   DMG is code-signed but not notarized - may show warning on first open"
@@ -257,7 +284,7 @@ jobs:
       env:
         RUN_NUMBER: ${{ github.run_number }}
       run: |
-        VERSION="2.0.2.${RUN_NUMBER}"
+        VERSION="3.1.${RUN_NUMBER}"
 
         # Extract [Unreleased] section from CHANGELOG.md
         bash extract-changelog.sh CHANGELOG.md MCPServerManager/build/release-notes.html MCPServerManager/build/release-notes.md
@@ -272,7 +299,7 @@ jobs:
         </html>
         VERSION_INFO
 
-        echo "✓ Release notes generated from CHANGELOG.md"
+        echo "✅ Release notes generated from CHANGELOG.md"
 
     - name: Generate and Sign Appcast
       working-directory: MCPServerManager/build
@@ -281,7 +308,7 @@ jobs:
         RUN_NUMBER: ${{ github.run_number }}
         SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
       run: |
-        VERSION="2.0.2.${RUN_NUMBER}"
+        VERSION="3.1.${RUN_NUMBER}"
         PUBDATE=$(date -u +"%a, %d %b %Y %H:%M:%S %z")
         DMG_PATH="MCP-Server-Manager-v${VERSION}.dmg"
 
@@ -308,11 +335,9 @@ jobs:
             echo "⚠️  Error: Private key file is empty"
             echo "⚠️  Falling back to unsigned appcast"
           else
-            echo "✓ Private key file created ($(wc -c < sparkle_private_key.txt) bytes)"
+            echo "✅ Private key file created ($(wc -c < sparkle_private_key.txt) bytes)"
 
             # Use generate_appcast with the archives directory
-            # This will scan the archives folder and generate a signed appcast
-            # The tool will automatically link HTML files that match DMG names
             /usr/local/bin/generate_appcast \
               --ed-key-file sparkle_private_key.txt \
               --download-url-prefix "https://github.com/${REPO}/releases/download/latest/" \
@@ -323,12 +348,10 @@ jobs:
           # Move generated appcast and HTML to current directory
           if [ -f archives/appcast.xml ]; then
             mv archives/appcast.xml .
-            # Also copy the versioned HTML file for GitHub release
             cp "archives/MCP-Server-Manager-v${VERSION}.html" .
-            echo "✓ Signed appcast generated successfully"
+            echo "✅ Signed appcast generated successfully"
           else
             echo "⚠️  generate_appcast failed, creating unsigned appcast"
-            # Fallback to unsigned appcast with inline release notes
             cat > appcast.xml << APPCAST_EOF
         <?xml version="1.0" encoding="utf-8"?>
         <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
@@ -339,7 +362,7 @@ jobs:
               <title>Version ${VERSION}</title>
               <pubDate>${PUBDATE}</pubDate>
               <sparkle:version>${VERSION}</sparkle:version>
-              <sparkle:shortVersionString>2.0.2</sparkle:shortVersionString>
+              <sparkle:shortVersionString>3.1</sparkle:shortVersionString>
               <link>https://github.com/${REPO}/releases</link>
               <sparkle:releaseNotesLink>https://github.com/${REPO}/releases/download/latest/${VERSION}.html</sparkle:releaseNotesLink>
               <description><![CDATA[
@@ -352,14 +375,13 @@ jobs:
           </channel>
         </rss>
         APPCAST_EOF
-            echo "✓ Unsigned appcast created with release notes"
+            echo "✅ Unsigned appcast created with release notes"
           fi
 
           # Cleanup
           rm -f sparkle_private_key.txt
         else
           echo "⚠️  SPARKLE_PRIVATE_KEY not set - creating unsigned appcast"
-          # Create unsigned appcast with inline release notes
           cat > appcast.xml << APPCAST_EOF
         <?xml version="1.0" encoding="utf-8"?>
         <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
@@ -370,7 +392,7 @@ jobs:
               <title>Version ${VERSION}</title>
               <pubDate>${PUBDATE}</pubDate>
               <sparkle:version>${VERSION}</sparkle:version>
-              <sparkle:shortVersionString>2.0.2</sparkle:shortVersionString>
+              <sparkle:shortVersionString>3.1</sparkle:shortVersionString>
               <link>https://github.com/${REPO}/releases</link>
               <sparkle:releaseNotesLink>https://github.com/${REPO}/releases/download/latest/${VERSION}.html</sparkle:releaseNotesLink>
               <description><![CDATA[
@@ -383,7 +405,7 @@ jobs:
           </channel>
         </rss>
         APPCAST_EOF
-          echo "✓ Unsigned appcast created with release notes"
+          echo "✅ Unsigned appcast created with release notes"
         fi
 
     - name: List build artifacts
@@ -393,12 +415,14 @@ jobs:
         find . -name "*.dmg" -type f || echo "No DMG files found"
         find . -name "*.app" -type d || echo "No APP bundles found"
         find . -name "appcast.xml" -type f || echo "No appcast.xml found"
+        echo "Widget extension check:"
+        ls -la MCPServerManager/build/MCP-Server-Manager.app/Contents/PlugIns/ 2>/dev/null || echo "No PlugIns"
 
     - name: Upload DMG artifact
       uses: actions/upload-artifact@v4
       if: success()
       with:
-        name: mcp-server-manager-v2.0.2.${{ github.run_number }}
+        name: mcp-server-manager-v3.1.${{ github.run_number }}
         path: MCPServerManager/build/MCP-Server-Manager-v*.dmg
         retention-days: 30
 
@@ -415,7 +439,7 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/swifty'
       with:
         tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
-        name: ${{ startsWith(github.ref, 'refs/tags/') && format('Release {0}', github.ref_name) || format('Latest Build v2.0.2.{0}', github.run_number) }}
+        name: ${{ startsWith(github.ref, 'refs/tags/') && format('Release {0}', github.ref_name) || format('Latest Build v3.1.{0}', github.run_number) }}
         body_path: MCPServerManager/build/release-notes.md
         generate_release_notes: false
         prerelease: false
@@ -425,3 +449,8 @@ jobs:
           MCPServerManager/build/*.html
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Cleanup keychain
+      if: always()
+      run: |
+        security delete-keychain build.keychain || true
