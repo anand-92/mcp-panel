@@ -295,9 +295,9 @@ jobs:
         </plist>
         WIDGET_ENT
 
-        # Sign the widget extension first
+        # Sign the widget extension first (must be done before main app, with its own entitlements)
         if [ -d "$APP_PATH/Contents/PlugIns/MCPServerManagerWidget.appex" ]; then
-          codesign --deep --force --sign "$APP_SIGNING_IDENTITY" \
+          codesign --force --sign "$APP_SIGNING_IDENTITY" \
             --entitlements widget-appstore.entitlements \
             --options runtime \
             --timestamp \
@@ -305,8 +305,8 @@ jobs:
           echo "✅ Widget extension signed"
         fi
 
-        # Sign the main app
-        codesign --deep --force --sign "$APP_SIGNING_IDENTITY" \
+        # Sign the main app (without --deep since widget is already signed with its own entitlements)
+        codesign --force --sign "$APP_SIGNING_IDENTITY" \
           --entitlements appstore.entitlements \
           --options runtime \
           --timestamp \
