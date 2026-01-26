@@ -192,7 +192,31 @@ jobs:
           echo "✅ Widget extension signed"
         fi
 
-        # Sign Sparkle framework
+        # Sign Sparkle framework components (inside-out)
+        SPARKLE_PATH="build/MCP-Server-Manager.app/Contents/Frameworks/Sparkle.framework/Versions/B"
+
+        # Sign XPC Services first
+        if [ -d "$SPARKLE_PATH/XPCServices" ]; then
+          find "$SPARKLE_PATH/XPCServices" -name "*.xpc" -type d | while read xpc; do
+            echo "Signing XPC: $xpc"
+            codesign --force --sign "$IDENTITY" --options runtime --timestamp "$xpc"
+          done
+        fi
+
+        # Sign Updater.app
+        if [ -d "$SPARKLE_PATH/Updater.app" ]; then
+          echo "Signing Updater.app"
+          codesign --force --sign "$IDENTITY" --options runtime --timestamp "$SPARKLE_PATH/Updater.app"
+        fi
+
+        # Sign Autoupdate binary
+        if [ -f "$SPARKLE_PATH/Autoupdate" ]; then
+          echo "Signing Autoupdate"
+          codesign --force --sign "$IDENTITY" --options runtime --timestamp "$SPARKLE_PATH/Autoupdate"
+        fi
+
+        # Sign the Sparkle framework itself (after all nested components)
+        echo "Signing Sparkle.framework"
         codesign --force --sign "$IDENTITY" \
           --options runtime \
           --timestamp \
