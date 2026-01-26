@@ -277,10 +277,28 @@ jobs:
 
         echo "Signing with: $APP_SIGNING_IDENTITY"
 
+        # Create widget entitlements with correct application identifier for App Store
+        cat > widget-appstore.entitlements << 'WIDGET_ENT'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>com.apple.application-identifier</key>
+            <string>NW6B3R27LQ.com.mcpmanager.app.widget</string>
+            <key>com.apple.security.app-sandbox</key>
+            <true/>
+            <key>com.apple.security.application-groups</key>
+            <array>
+                <string>group.com.anand-92.mcp-panel</string>
+            </array>
+        </dict>
+        </plist>
+        WIDGET_ENT
+
         # Sign the widget extension first
         if [ -d "$APP_PATH/Contents/PlugIns/MCPServerManagerWidget.appex" ]; then
           codesign --deep --force --sign "$APP_SIGNING_IDENTITY" \
-            --entitlements MCPServerManagerWidget/MCPServerManagerWidget.entitlements \
+            --entitlements widget-appstore.entitlements \
             --options runtime \
             --timestamp \
             "$APP_PATH/Contents/PlugIns/MCPServerManagerWidget.appex"
