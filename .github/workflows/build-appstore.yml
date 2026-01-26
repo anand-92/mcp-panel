@@ -131,6 +131,8 @@ jobs:
                 SKIP_INSTALL: YES
                 CODE_SIGN_IDENTITY: "3rd Party Mac Developer Application"
                 PROVISIONING_PROFILE_SPECIFIER: ""
+                MARKETING_VERSION: "$(MARKETING_VERSION)"
+                CURRENT_PROJECT_VERSION: "$(CURRENT_PROJECT_VERSION)"
                 LD_RUNPATH_SEARCH_PATHS:
                   - $(inherited)
                   - "@executable_path/../Frameworks"
@@ -229,14 +231,31 @@ jobs:
         # Copy app icon
         cp MCPServerManager/icons/AppIcon.icns "$APP_PATH/Contents/Resources/AppIcon.icns"
 
-        # Copy provisioning profile
+        # Copy provisioning profiles
         cp embedded.provisionprofile "$APP_PATH/Contents/embedded.provisionprofile"
+
+        # Copy widget provisioning profile (required for TestFlight - fixes error 90885)
+        WIDGET_APPEX="$APP_PATH/Contents/PlugIns/MCPServerManagerWidget.appex"
+        if [ -d "$WIDGET_APPEX" ] && [ -f "embedded-widget.provisionprofile" ]; then
+          cp embedded-widget.provisionprofile "$WIDGET_APPEX/Contents/embedded.provisionprofile"
+          echo "✅ Widget provisioning profile embedded"
+        elif [ -d "$WIDGET_APPEX" ]; then
+          echo "⚠️ Warning: embedded-widget.provisionprofile not found - widget may fail TestFlight validation"
+        fi
 
         # Update Info.plist with version
         /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION_NUMBER" "$APP_PATH/Contents/Info.plist"
         /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" "$APP_PATH/Contents/Info.plist"
         /usr/libexec/PlistBuddy -c "Add :LSApplicationCategoryType string public.app-category.developer-tools" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
         /usr/libexec/PlistBuddy -c "Add :NSHumanReadableCopyright string 'Copyright © 2025 Nikhil Anand. All rights reserved.'" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+
+        # Update widget Info.plist with matching version (fixes App Store Connect error 90473)
+        WIDGET_PLIST="$APP_PATH/Contents/PlugIns/MCPServerManagerWidget.appex/Contents/Info.plist"
+        if [ -f "$WIDGET_PLIST" ]; then
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION_NUMBER" "$WIDGET_PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" "$WIDGET_PLIST"
+          echo "✅ Widget version updated to $VERSION_NUMBER (${{ github.run_number }})"
+        fi
 
         # Verify widget is embedded
         if [ -d "$APP_PATH/Contents/PlugIns/MCPServerManagerWidget.appex" ]; then

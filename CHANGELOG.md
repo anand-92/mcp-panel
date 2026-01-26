@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Codex Support** - Completely removed Codex configuration support. The app now focuses on Claude Code and Gemini CLI only (both use JSON format). Removed TOMLKit dependency, TOML parsing/writing, third config path, and all Codex-specific UI components.
 
 ### Fixed
+- **Widget App Store Connect Warnings** - Fixed version mismatch warnings (90473) and provisioning profile error (90885) for the widget extension. Widget now inherits `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` from project settings instead of using hardcoded values. Added explicit code signing settings to widget target.
 - **Critical: macOS 26 Mini Mode Crash** - Fixed crash when toggling between mini mode and normal mode on macOS 26 (Tahoe). The crash occurred in `NSHostingView.invalidateSizeConstraintsIfNecessary()` due to simultaneous SwiftUI state animations and AppKit window resize animations conflicting during constraint updates. Fixed by sequencing operations: update state first, then defer window resize to next run loop.
 - **Header Text Scaling** - Fixed header button text wrapping at narrow window widths. Text now scales smoothly with window size using `minimumScaleFactor` instead of wrapping awkwardly.
 - **Critical: macOS 26 Launch Crash** - Fixed fatal crash on app startup caused by `Bundle.module` assertion failure when SPM resource bundle is missing. Replaced direct `Bundle.module` access with safe bundle lookup that gracefully handles missing resources without crashing.
