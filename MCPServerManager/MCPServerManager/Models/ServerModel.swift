@@ -10,6 +10,7 @@ struct ServerModel: Identifiable, Codable, Equatable {
     var registryImageUrl: String? // Image URL from MCP registry (takes precedence over fetched icons)
     var customIconPath: String? // User-selected custom icon path (takes highest precedence)
     var tags: [ServerTag]
+    var showInWidget: Bool // Whether this server appears in the macOS widget
 
     init(id: UUID = UUID(),
          name: String,
@@ -19,7 +20,8 @@ struct ServerModel: Identifiable, Codable, Equatable {
          inConfigs: [Bool] = [false, false],
          registryImageUrl: String? = nil,
          customIconPath: String? = nil,
-         tags: [ServerTag] = []) {
+         tags: [ServerTag] = [],
+         showInWidget: Bool = false) {
         self.id = id
         self.name = name
         self.config = config
@@ -29,6 +31,7 @@ struct ServerModel: Identifiable, Codable, Equatable {
         self.registryImageUrl = registryImageUrl
         self.customIconPath = customIconPath
         self.tags = tags
+        self.showInWidget = showInWidget
     }
 
     enum CodingKeys: String, CodingKey {
@@ -41,6 +44,7 @@ struct ServerModel: Identifiable, Codable, Equatable {
         case registryImageUrl
         case customIconPath
         case tags
+        case showInWidget
     }
 
     init(from decoder: Decoder) throws {
@@ -54,6 +58,7 @@ struct ServerModel: Identifiable, Codable, Equatable {
         registryImageUrl = try container.decodeIfPresent(String.self, forKey: .registryImageUrl)
         customIconPath = try container.decodeIfPresent(String.self, forKey: .customIconPath)
         tags = try container.decodeIfPresent([ServerTag].self, forKey: .tags) ?? []
+        showInWidget = try container.decodeIfPresent(Bool.self, forKey: .showInWidget) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -67,6 +72,7 @@ struct ServerModel: Identifiable, Codable, Equatable {
         try container.encodeIfPresent(registryImageUrl, forKey: .registryImageUrl)
         try container.encodeIfPresent(customIconPath, forKey: .customIconPath)
         try container.encode(tags, forKey: .tags)
+        try container.encode(showInWidget, forKey: .showInWidget)
     }
 
     // MARK: - Computed Properties

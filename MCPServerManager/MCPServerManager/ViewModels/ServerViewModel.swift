@@ -517,6 +517,11 @@ class ServerViewModel: ObservableObject {
 
         syncToConfigs()
 
+        // Also sync to widget if this server is shown there
+        if updated.showInWidget {
+            syncToWidget()
+        }
+
         let status = updated.inConfigs[configIndex] ? "enabled" : "disabled"
         showToast(message: "\(server.name) \(status)", type: .success)
     }
@@ -563,6 +568,50 @@ class ServerViewModel: ObservableObject {
 
         let status = enable ? "enabled" : "disabled"
         showToast(message: "All servers \(status)", type: .success)
+    }
+
+    // MARK: - Widget Integration
+
+    /// Toggle whether a server appears in the macOS widget
+    func toggleShowInWidget(_ server: ServerModel) {
+        guard let index = servers.firstIndex(where: { $0.id == server.id }) else { return }
+
+        let currentWidgetCount = servers.filter { $0.showInWidget }.count
+
+        // If trying to add and already at max, show warning
+        if !servers[index].showInWidget && currentWidgetCount >= SharedDataManager.maxWidgetServers {
+            showToast(message: "Maximum \(SharedDataManager.maxWidgetServers) servers can be shown in widget", type: .warning)
+            return
+        }
+
+        servers[index].showInWidget.toggle()
+        servers[index].updatedAt = Date()
+
+        // Update cache
+        UserDefaults.standard.cachedServers = servers
+
+        // Sync to widget
+        syncToWidget()
+
+        let status = servers[index].showInWidget ? "added to" : "removed from"
+        showToast(message: "\(server.name) \(status) widget", type: .success)
+    }
+
+    /// Sync servers marked for widget to shared storage
+    func syncToWidget() {
+        let widgetServers = servers
+            .filter { $0.showInWidget }
+            .prefix(SharedDataManager.maxWidgetServers)
+            .map { server in
+                SharedDataManager.WidgetServer(
+                    id: server.id,
+                    name: server.name,
+                    isEnabled: server.inConfigs[safe: settings.activeConfigIndex] ?? false,
+                    configIndex: settings.activeConfigIndex
+                )
+            }
+
+        SharedDataManager.shared.saveWidgetServers(Array(widgetServers))
     }
 
     // MARK: - Import/Export

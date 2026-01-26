@@ -2,6 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ContentView: View {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var viewModel = ServerViewModel()
     @State private var showSettings = false
     @State private var showAddServer = false
@@ -48,6 +49,31 @@ struct ContentView: View {
             contentType: .json,
             defaultFilename: "mcp-servers.json"
         ) { _ in }
+        .onAppear {
+            // Setup menu bar with view model
+            appDelegate.setupMenuBar(with: viewModel)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("WidgetServerToggled"))) { notification in
+            handleWidgetServerToggle(notification)
+        }
+    }
+
+    // MARK: - Widget Server Toggle Handler
+
+    private func handleWidgetServerToggle(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let serverID = userInfo["serverID"] as? UUID,
+              let newState = userInfo["newState"] as? Bool else {
+            return
+        }
+
+        // Find and toggle the server
+        if let server = viewModel.servers.first(where: { $0.id == serverID }) {
+            let currentState = server.inConfigs[safe: viewModel.settings.activeConfigIndex] ?? false
+            if currentState != newState {
+                viewModel.toggleServer(server)
+            }
+        }
     }
 
     // MARK: - View Components

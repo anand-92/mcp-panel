@@ -1,0 +1,124 @@
+import WidgetKit
+import SwiftUI
+
+/// Timeline provider for the MCP Server Manager Widget
+struct WidgetProvider: TimelineProvider {
+    typealias Entry = ServerEntry
+
+    /// App Group identifier for accessing shared data
+    private let suiteName = "group.com.anand-92.mcp-panel"
+    private let widgetServersKey = "widgetServers"
+
+    func placeholder(in context: Context) -> ServerEntry {
+        ServerEntry(
+            date: Date(),
+            servers: [
+                WidgetServerModel(id: UUID(), name: "example-server", isEnabled: true),
+                WidgetServerModel(id: UUID(), name: "another-server", isEnabled: false)
+            ],
+            configName: "Claude"
+        )
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (ServerEntry) -> Void) {
+        let entry = createEntry()
+        completion(entry)
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<ServerEntry>) -> Void) {
+        let entry = createEntry()
+
+        // Refresh every 15 minutes or when data changes
+        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date()
+        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
+        completion(timeline)
+    }
+
+    private func createEntry() -> ServerEntry {
+        let servers = loadWidgetServers()
+        let configName = servers.first.map { $0.configIndex == 0 ? "Claude" : "Gemini" } ?? "Claude"
+
+        return ServerEntry(
+            date: Date(),
+            servers: servers.map { WidgetServerModel(id: $0.id, name: $0.name, isEnabled: $0.isEnabled) },
+            configName: configName
+        )
+    }
+
+    private func loadWidgetServers() -> [SharedWidgetServer] {
+        guard let defaults = UserDefaults(suiteName: suiteName),
+              let data = defaults.data(forKey: widgetServersKey) else {
+            return []
+        }
+
+        do {
+            return try JSONDecoder().decode([SharedWidgetServer].self, from: data)
+        } catch {
+            return []
+        }
+    }
+}
+
+/// Shared widget server model (must match SharedDataManager.WidgetServer)
+struct SharedWidgetServer: Codable, Identifiable {
+    let id: UUID
+    let name: String
+    var isEnabled: Bool
+    let configIndex: Int
+}
+
+// MARK: - AppIntent Timeline Provider (macOS 14+)
+
+@available(macOS 14.0, *)
+struct WidgetProvider_AppIntent: AppIntentTimelineProvider {
+    typealias Entry = ServerEntry
+    typealias Intent = ConfigurationIntent
+
+    private let suiteName = "group.com.anand-92.mcp-panel"
+    private let widgetServersKey = "widgetServers"
+
+    func placeholder(in context: Context) -> ServerEntry {
+        ServerEntry(
+            date: Date(),
+            servers: [
+                WidgetServerModel(id: UUID(), name: "example-server", isEnabled: true),
+                WidgetServerModel(id: UUID(), name: "another-server", isEnabled: false)
+            ],
+            configName: "Claude"
+        )
+    }
+
+    func snapshot(for configuration: ConfigurationIntent, in context: Context) async -> ServerEntry {
+        createEntry()
+    }
+
+    func timeline(for configuration: ConfigurationIntent, in context: Context) async -> Timeline<ServerEntry> {
+        let entry = createEntry()
+        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date()
+        return Timeline(entries: [entry], policy: .after(nextUpdate))
+    }
+
+    private func createEntry() -> ServerEntry {
+        let servers = loadWidgetServers()
+        let configName = servers.first.map { $0.configIndex == 0 ? "Claude" : "Gemini" } ?? "Claude"
+
+        return ServerEntry(
+            date: Date(),
+            servers: servers.map { WidgetServerModel(id: $0.id, name: $0.name, isEnabled: $0.isEnabled) },
+            configName: configName
+        )
+    }
+
+    private func loadWidgetServers() -> [SharedWidgetServer] {
+        guard let defaults = UserDefaults(suiteName: suiteName),
+              let data = defaults.data(forKey: widgetServersKey) else {
+            return []
+        }
+
+        do {
+            return try JSONDecoder().decode([SharedWidgetServer].self, from: data)
+        } catch {
+            return []
+        }
+    }
+}

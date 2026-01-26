@@ -20,6 +20,7 @@ struct ServerCardView: View {
     let onUpdate: (String) -> (success: Bool, invalidReason: String?, config: ServerConfig?)
     let onUpdateForced: (ServerConfig) -> Bool
     let onCustomIconSelected: ((Result<String, Error>) -> Void)?
+    let onWidgetToggle: (() -> Void)?
 
     var body: some View {
         GlassPanel {
@@ -197,6 +198,17 @@ struct ServerCardView: View {
             )
 
             Spacer()
+
+            // Widget toggle button
+            if let onWidgetToggle = onWidgetToggle {
+                Button(action: onWidgetToggle) {
+                    Image(systemName: server.showInWidget ? "widget.small.badge.minus" : "widget.small")
+                        .font(.system(size: 14))
+                        .foregroundColor(server.showInWidget ? themeColors.primaryAccent : themeColors.mutedText)
+                }
+                .buttonStyle(.plain)
+                .help(server.showInWidget ? "Remove from Widget" : "Show in Widget")
+            }
 
             Button(action: handleDeleteTapped) {
                 Image(systemName: "trash")

@@ -7,10 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Menu Bar Mode** - Access MCP servers from the menu bar! Enable in Settings → Menu Bar to add a status bar icon with popover for quick server toggling. Optionally hide the Dock icon for a minimal, always-accessible experience.
+- **macOS Widget Support** - WidgetKit extension for Control Center widgets. Mark servers with "Show in Widget" to display them in small/medium/large widget sizes. Interactive toggles on macOS 14+ (uses App Intents).
+- **"Show in Widget" Feature** - New widget icon button on server cards to control which servers appear in the macOS widget. Maximum 8 servers can be displayed.
+- **Launch at Login** - Option to start MCP Server Manager automatically when you log in (Settings → Menu Bar).
 - **Mini Mode** - Super compact view for quick server toggling. Click "Mini" button (⇧⌘M) to shrink window to a minimal server list with on/off toggles. Click the Claude/Gemini badge to switch configs. Perfect for keeping the app accessible while working.
 - **Responsive Toolbar** - Toolbar now gracefully adapts when window is narrowed. Buttons collapse to icon-only mode using `ViewThatFits`, with tooltips for discoverability.
 - **Server List View** - New compact list view mode for better density when managing many servers. Toggle between Grid, List, and Raw JSON modes.
 - Server tags (UI, Backend, Creativity, Dev Ops, Advanced) with per-server tagging and bulk enable by tag.
+
+### Changed
+- **App Entitlements** - Added App Groups entitlement for main app to widget communication (`group.com.anand-92.mcp-panel`).
 
 ### Removed
 - **Codex Support** - Completely removed Codex configuration support. The app now focuses on Claude Code and Gemini CLI only (both use JSON format). Removed TOMLKit dependency, TOML parsing/writing, third config path, and all Codex-specific UI components.
