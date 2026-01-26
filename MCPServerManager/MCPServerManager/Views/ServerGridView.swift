@@ -35,6 +35,9 @@ struct ServerGridView: View {
                             },
                             onCustomIconSelected: { result in
                                 viewModel.updateCustomIcon(for: server, result: result)
+                            },
+                            onWidgetToggle: {
+                                viewModel.toggleShowInWidget(server)
                             }
                         )
                     }

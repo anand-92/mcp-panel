@@ -7,6 +7,11 @@ struct AppSettings: Codable, Equatable {
     var blurJSONPreviews: Bool
     var overrideTheme: String? // nil = auto-detect, otherwise use the theme name
 
+    // Menu Bar Mode settings
+    var menuBarModeEnabled: Bool
+    var hideDockIconInMenuBarMode: Bool
+    var launchAtLogin: Bool
+
     static let `default` = AppSettings(
         confirmDelete: true,
         configPaths: [
@@ -15,19 +20,47 @@ struct AppSettings: Codable, Equatable {
         ],
         activeConfigIndex: 0,
         blurJSONPreviews: false,
-        overrideTheme: nil
+        overrideTheme: nil,
+        menuBarModeEnabled: false,
+        hideDockIconInMenuBarMode: false,
+        launchAtLogin: false
     )
 
     init(confirmDelete: Bool = true,
          configPaths: [String] = ["~/.claude.json", "~/.settings.json"],
          activeConfigIndex: Int = 0,
          blurJSONPreviews: Bool = false,
-         overrideTheme: String? = nil) {
+         overrideTheme: String? = nil,
+         menuBarModeEnabled: Bool = false,
+         hideDockIconInMenuBarMode: Bool = false,
+         launchAtLogin: Bool = false) {
         self.confirmDelete = confirmDelete
         self.configPaths = configPaths
         self.activeConfigIndex = max(0, min(activeConfigIndex, 1)) // Ensure 0 or 1
         self.blurJSONPreviews = blurJSONPreviews
         self.overrideTheme = overrideTheme
+        self.menuBarModeEnabled = menuBarModeEnabled
+        self.hideDockIconInMenuBarMode = hideDockIconInMenuBarMode
+        self.launchAtLogin = launchAtLogin
+    }
+
+    // Custom Codable for backward compatibility with old settings
+    enum CodingKeys: String, CodingKey {
+        case confirmDelete, configPaths, activeConfigIndex, blurJSONPreviews, overrideTheme
+        case menuBarModeEnabled, hideDockIconInMenuBarMode, launchAtLogin
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        confirmDelete = try container.decode(Bool.self, forKey: .confirmDelete)
+        configPaths = try container.decode([String].self, forKey: .configPaths)
+        activeConfigIndex = try container.decode(Int.self, forKey: .activeConfigIndex)
+        blurJSONPreviews = try container.decode(Bool.self, forKey: .blurJSONPreviews)
+        overrideTheme = try container.decodeIfPresent(String.self, forKey: .overrideTheme)
+        // New settings with defaults for backward compatibility
+        menuBarModeEnabled = try container.decodeIfPresent(Bool.self, forKey: .menuBarModeEnabled) ?? false
+        hideDockIconInMenuBarMode = try container.decodeIfPresent(Bool.self, forKey: .hideDockIconInMenuBarMode) ?? false
+        launchAtLogin = try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
     }
 
     var activeConfigPath: String {

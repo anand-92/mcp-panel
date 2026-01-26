@@ -1,0 +1,90 @@
+name: MCPServerManager
+options:
+  bundleIdPrefix: com.anand-92
+  deploymentTarget:
+    macOS: "13.0"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: true
+  groupSortPosition: top
+
+settings:
+  base:
+    MARKETING_VERSION: "3.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: NW6B3R27LQ
+
+targets:
+  MCPServerManager:
+    type: application
+    platform: macOS
+    sources:
+      - path: MCPServerManager/MCPServerManager
+        excludes:
+          - "**/*.entitlements"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mcpmanager.app
+        INFOPLIST_FILE: MCPServerManager/MCPServerManager/Info.plist
+        CODE_SIGN_ENTITLEMENTS: MCPServerManager/MCPServerManager/MCPServerManager.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_HARDENED_RUNTIME: YES
+        COMBINE_HIDPI_IMAGES: YES
+        LD_RUNPATH_SEARCH_PATHS:
+          - $(inherited)
+          - "@executable_path/../Frameworks"
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+      - package: Sparkle
+      - target: MCPServerManagerWidget
+        embed: true
+        codeSign: true
+        buildPhase:
+          copyFiles:
+            destination: plugins
+    entitlements:
+      path: MCPServerManager/MCPServerManager/MCPServerManager.entitlements
+
+  MCPServerManagerWidget:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: MCPServerManagerWidget
+        excludes:
+          - "**/*.entitlements"
+          - "**/*.md"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mcpmanager.app.widget
+        INFOPLIST_FILE: MCPServerManagerWidget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: MCPServerManagerWidget/MCPServerManagerWidget.entitlements
+        SKIP_INSTALL: YES
+        LD_RUNPATH_SEARCH_PATHS:
+          - $(inherited)
+          - "@executable_path/../Frameworks"
+          - "@executable_path/../../../../Frameworks"
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+      - sdk: AppIntents.framework
+    entitlements:
+      path: MCPServerManagerWidget/MCPServerManagerWidget.entitlements
+
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: "2.5.0"
+
+schemes:
+  MCPServerManager:
+    build:
+      targets:
+        MCPServerManager: all
+        MCPServerManagerWidget: all
+    run:
+      config: Debug
+    archive:
+      config: Release

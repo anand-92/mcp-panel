@@ -2,6 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct SettingsModal: View {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @Binding var isPresented: Bool
     @ObservedObject var viewModel: ServerViewModel
     @Environment(\.themeColors) private var themeColors
@@ -16,6 +17,11 @@ struct SettingsModal: View {
     @State private var testResult: String = ""
     @State private var showBookmarkAlert: Bool = false
     @State private var bookmarkAlertMessage: String = ""
+
+    // Menu Bar settings
+    @State private var menuBarModeEnabled: Bool = false
+    @State private var hideDockIconInMenuBarMode: Bool = false
+    @State private var launchAtLogin: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -68,6 +74,7 @@ struct SettingsModal: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 configurationFilesSection
+                menuBarSection
                 appearanceSection
                 privacySecuritySection
                 networkSection
@@ -95,6 +102,41 @@ struct SettingsModal: View {
                     placeholder: "~/.settings.json",
                     path: $config2Path,
                     onBrowse: { selectConfigFile { config2Path = $0 } }
+                )
+            }
+        }
+    }
+
+    private var menuBarSection: some View {
+        SettingsSection(
+            icon: "menubar.rectangle",
+            title: "Menu Bar",
+            description: "Quick access from the menu bar"
+        ) {
+            VStack(spacing: 16) {
+                SettingsToggleRow(
+                    isOn: $menuBarModeEnabled,
+                    icon: "menubar.arrow.up.rectangle",
+                    label: "Show in Menu Bar",
+                    description: "Add a menu bar icon for quick server access"
+                )
+
+                if menuBarModeEnabled {
+                    SettingsToggleRow(
+                        isOn: $hideDockIconInMenuBarMode,
+                        icon: "dock.rectangle",
+                        label: "Hide Dock Icon",
+                        description: "Run as menu bar-only app (no Dock icon)"
+                    )
+                }
+
+                Divider()
+
+                SettingsToggleRow(
+                    isOn: $launchAtLogin,
+                    icon: "power.circle.fill",
+                    label: "Launch at Login",
+                    description: "Start MCP Server Manager when you log in"
                 )
             }
         }
@@ -236,6 +278,11 @@ struct SettingsModal: View {
         fetchServerLogos = UserDefaults.standard.object(forKey: "fetchServerLogos") as? Bool ?? true
         blurJSONPreviews = viewModel.settings.blurJSONPreviews
 
+        // Menu Bar settings
+        menuBarModeEnabled = viewModel.settings.menuBarModeEnabled
+        hideDockIconInMenuBarMode = viewModel.settings.hideDockIconInMenuBarMode
+        launchAtLogin = appDelegate.isLaunchAtLoginEnabled()
+
         if let themeStr = viewModel.settings.overrideTheme,
            let theme = AppTheme(rawValue: themeStr) {
             selectedTheme = theme
@@ -291,7 +338,24 @@ struct SettingsModal: View {
         viewModel.settings.confirmDelete = confirmDelete
         viewModel.settings.blurJSONPreviews = blurJSONPreviews
         UserDefaults.standard.set(fetchServerLogos, forKey: "fetchServerLogos")
+
+        // Menu Bar settings
+        viewModel.settings.menuBarModeEnabled = menuBarModeEnabled
+        viewModel.settings.hideDockIconInMenuBarMode = hideDockIconInMenuBarMode
+        viewModel.settings.launchAtLogin = launchAtLogin
+
         viewModel.saveSettings()
+
+        // Apply menu bar changes immediately
+        appDelegate.updateMenuBarMode(
+            enabled: menuBarModeEnabled,
+            hideDock: hideDockIconInMenuBarMode,
+            viewModel: viewModel
+        )
+
+        // Update launch at login
+        appDelegate.updateLaunchAtLogin(enabled: launchAtLogin)
+
         isPresented = false
     }
 }

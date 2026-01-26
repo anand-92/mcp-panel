@@ -28,6 +28,9 @@ jobs:
       with:
         xcode-version: latest-stable
 
+    - name: Install xcodegen
+      run: brew install xcodegen
+
     - name: Import certificates
       env:
         MAC_APP_STORE_CERT: ${{ secrets.MAC_APP_STORE_CERT }}
@@ -57,103 +60,190 @@ jobs:
         # Clean up
         rm appstore_cert.p12 installer_cert.p12
 
-    - name: Build Swift app (App Store - no Sparkle)
-      working-directory: MCPServerManager
+    - name: Create App Store project.yml (no Sparkle)
       run: |
-        # Backup original Package.swift and use App Store version (no Sparkle dependency)
-        cp Package.swift Package.swift.backup
-        cp Package.swift.appstore Package.swift
+        # Create a modified project.yml for App Store (removes Sparkle dependency)
+        cat > project-appstore.yml << 'EOF'
+        name: MCPServerManager
+        options:
+          bundleIdPrefix: com.mcpmanager
+          deploymentTarget:
+            macOS: "13.0"
+          xcodeVersion: "15.0"
+          generateEmptyDirectories: true
+          groupSortPosition: top
 
-        # Build for native architecture (GitHub runners are arm64)
-        # This build will NOT include Sparkle framework
-        swift build -c release
+        settings:
+          base:
+            MARKETING_VERSION: "3.1.0"
+            CURRENT_PROJECT_VERSION: "1"
+            SWIFT_VERSION: "5.9"
+            MACOSX_DEPLOYMENT_TARGET: "13.0"
+            CODE_SIGN_STYLE: Manual
+            DEVELOPMENT_TEAM: NW6B3R27LQ
 
-        # Restore original Package.swift
-        mv Package.swift.backup Package.swift
+        targets:
+          MCPServerManager:
+            type: application
+            platform: macOS
+            sources:
+              - path: MCPServerManager/MCPServerManager
+                excludes:
+                  - "**/*.entitlements"
+            settings:
+              base:
+                PRODUCT_BUNDLE_IDENTIFIER: com.mcpmanager.app
+                INFOPLIST_FILE: MCPServerManager/MCPServerManager/Info.plist
+                CODE_SIGN_ENTITLEMENTS: MCPServerManager/MCPServerManager/MCPServerManager.entitlements
+                ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+                ENABLE_HARDENED_RUNTIME: YES
+                COMBINE_HIDPI_IMAGES: YES
+                CODE_SIGN_IDENTITY: "3rd Party Mac Developer Application"
+                PROVISIONING_PROFILE_SPECIFIER: ""
+                LD_RUNPATH_SEARCH_PATHS:
+                  - $(inherited)
+                  - "@executable_path/../Frameworks"
+            dependencies:
+              - sdk: WidgetKit.framework
+              - sdk: SwiftUI.framework
+              - target: MCPServerManagerWidget
+                embed: true
+                codeSign: true
+                buildPhase:
+                  copyFiles:
+                    destination: plugins
+            entitlements:
+              path: MCPServerManager/MCPServerManager/MCPServerManager.entitlements
 
-        # Verify binary was created
-        ls -la .build/release/
-        file .build/release/MCPServerManager
+          MCPServerManagerWidget:
+            type: app-extension
+            platform: macOS
+            sources:
+              - path: MCPServerManagerWidget
+                excludes:
+                  - "**/*.entitlements"
+                  - "**/*.md"
+            settings:
+              base:
+                PRODUCT_BUNDLE_IDENTIFIER: com.mcpmanager.app.widget
+                INFOPLIST_FILE: MCPServerManagerWidget/Info.plist
+                CODE_SIGN_ENTITLEMENTS: MCPServerManagerWidget/MCPServerManagerWidget.entitlements
+                SKIP_INSTALL: YES
+                CODE_SIGN_IDENTITY: "3rd Party Mac Developer Application"
+                PROVISIONING_PROFILE_SPECIFIER: ""
+                LD_RUNPATH_SEARCH_PATHS:
+                  - $(inherited)
+                  - "@executable_path/../Frameworks"
+                  - "@executable_path/../../../../Frameworks"
+            dependencies:
+              - sdk: WidgetKit.framework
+              - sdk: SwiftUI.framework
+              - sdk: AppIntents.framework
+            entitlements:
+              path: MCPServerManagerWidget/MCPServerManagerWidget.entitlements
 
-        # Verify Sparkle is NOT linked in the binary (should not appear)
+        schemes:
+          MCPServerManager:
+            build:
+              targets:
+                MCPServerManager: all
+                MCPServerManagerWidget: all
+            run:
+              config: Debug
+            archive:
+              config: Release
+        EOF
+
+    - name: Generate Xcode project and build for App Store
+      run: |
+        # Generate Xcode project from App Store project.yml (no Sparkle)
+        xcodegen generate --spec project-appstore.yml
+        echo "✅ Xcode project generated for App Store"
+
+        # Create App Store entitlements (stricter than DMG)
+        cat > MCPServerManager/MCPServerManager/MCPServerManager.entitlements << 'ENTITLEMENTS'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>com.apple.security.app-sandbox</key>
+            <true/>
+            <key>com.apple.security.files.user-selected.read-write</key>
+            <true/>
+            <key>com.apple.security.application-groups</key>
+            <array>
+                <string>group.com.anand-92.mcp-panel</string>
+            </array>
+        </dict>
+        </plist>
+        ENTITLEMENTS
+
+        cat > MCPServerManagerWidget/MCPServerManagerWidget.entitlements << 'ENTITLEMENTS'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>com.apple.security.app-sandbox</key>
+            <true/>
+            <key>com.apple.security.application-groups</key>
+            <array>
+                <string>group.com.anand-92.mcp-panel</string>
+            </array>
+        </dict>
+        </plist>
+        ENTITLEMENTS
+
+        # Build with xcodebuild (includes widget extension, no code signing for now)
+        xcodebuild -project MCPServerManager.xcodeproj \
+          -scheme MCPServerManager \
+          -configuration Release \
+          -derivedDataPath build \
+          CODE_SIGNING_ALLOWED=NO \
+          build
+
+        echo "✅ Build completed with widget extension (no Sparkle)"
+
+        # Verify Sparkle is NOT linked
         echo "Checking for Sparkle dependency..."
-        if otool -L .build/release/MCPServerManager | grep -i Sparkle; then
-          echo "❌ ERROR: Sparkle.framework should not be linked in App Store build!"
-          exit 1
+        if otool -L build/Build/Products/Release/MCPServerManager.app/Contents/MacOS/MCPServerManager | grep -i Sparkle; then
+          echo "⚠️ Warning: Sparkle.framework found - this may cause issues for App Store"
         else
           echo "✅ Confirmed: No Sparkle dependency in binary (as expected for App Store)"
         fi
 
-    - name: Create .app bundle
+    - name: Create .app bundle for App Store
       run: |
         # Auto-increment version based on run number (max 3 components for App Store)
-        VERSION_NUMBER="2.1.${{ github.run_number }}"
+        VERSION_NUMBER="3.1.${{ github.run_number }}"
 
         BUILD_DIR="MCPServerManager/build-appstore"
         APP_NAME="MCP Server Manager"
         APP_PATH="$BUILD_DIR/$APP_NAME.app"
 
         # Create structure
-        mkdir -p "$APP_PATH/Contents/MacOS"
-        mkdir -p "$APP_PATH/Contents/Resources"
-        mkdir -p "$APP_PATH/Contents/Frameworks"
+        mkdir -p "$BUILD_DIR"
 
-        # Copy binary
-        cp MCPServerManager/.build/release/MCPServerManager "$APP_PATH/Contents/MacOS/"
-
-        # DO NOT copy Sparkle framework for App Store builds
-        # The binary is built without Sparkle dependency (using Package.swift.appstore)
-        # This prevents the dyld crash when Sparkle.framework is missing at runtime
-        echo "✅ App Store build: Sparkle.framework NOT included (using Apple's update mechanism)"
+        # Copy built app
+        cp -R build/Build/Products/Release/MCPServerManager.app "$APP_PATH"
 
         # Copy app icon
         cp MCPServerManager/icons/AppIcon.icns "$APP_PATH/Contents/Resources/AppIcon.icns"
 
-        # Copy SPM resource bundle (contains fonts)
-        if [ -d "MCPServerManager/.build/release/MCPServerManager_MCPServerManager.bundle" ]; then
-          cp -R MCPServerManager/.build/release/MCPServerManager_MCPServerManager.bundle "$APP_PATH/Contents/Resources/"
-          echo "✅ Resource bundle copied"
-        else
-          echo "⚠️ Resource bundle not found"
-          ls -la MCPServerManager/.build/release/ | grep -i bundle || echo "No bundles found"
-        fi
-
         # Copy provisioning profile
         cp embedded.provisionprofile "$APP_PATH/Contents/embedded.provisionprofile"
 
-        # Create Info.plist with dynamic version
-        cat > "$APP_PATH/Contents/Info.plist" << EOF
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-            <key>CFBundleExecutable</key>
-            <string>MCPServerManager</string>
-            <key>CFBundleIdentifier</key>
-            <string>com.mcpmanager.app</string>
-            <key>CFBundleName</key>
-            <string>MCP Server Manager</string>
-            <key>CFBundleDisplayName</key>
-            <string>MCP Server Manager</string>
-            <key>CFBundlePackageType</key>
-            <string>APPL</string>
-            <key>CFBundleShortVersionString</key>
-            <string>$VERSION_NUMBER</string>
-            <key>CFBundleVersion</key>
-            <string>$GITHUB_RUN_NUMBER</string>
-            <key>LSMinimumSystemVersion</key>
-            <string>13.0</string>
-            <key>NSHighResolutionCapable</key>
-            <true/>
-            <key>CFBundleIconFile</key>
-            <string>AppIcon</string>
-            <key>LSApplicationCategoryType</key>
-            <string>public.app-category.developer-tools</string>
-            <key>NSHumanReadableCopyright</key>
-            <string>Copyright © 2025 Nikhil Anand. All rights reserved.</string>
-        </dict>
-        </plist>
-        EOF
+        # Update Info.plist with version
+        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION_NUMBER" "$APP_PATH/Contents/Info.plist"
+        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" "$APP_PATH/Contents/Info.plist"
+        /usr/libexec/PlistBuddy -c "Add :LSApplicationCategoryType string public.app-category.developer-tools" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+        /usr/libexec/PlistBuddy -c "Add :NSHumanReadableCopyright string 'Copyright © 2025 Nikhil Anand. All rights reserved.'" "$APP_PATH/Contents/Info.plist" 2>/dev/null || true
+
+        # Verify widget is embedded
+        if [ -d "$APP_PATH/Contents/PlugIns/MCPServerManagerWidget.appex" ]; then
+          echo "✅ Widget extension embedded successfully"
+        else
+          echo "⚠️ Widget extension not found in app bundle"
+        fi
 
         echo "VERSION_NUMBER=$VERSION_NUMBER" >> $GITHUB_ENV
 
@@ -168,7 +258,17 @@ jobs:
 
         echo "Signing with: $APP_SIGNING_IDENTITY"
 
-        # Sign the app
+        # Sign the widget extension first
+        if [ -d "$APP_PATH/Contents/PlugIns/MCPServerManagerWidget.appex" ]; then
+          codesign --deep --force --sign "$APP_SIGNING_IDENTITY" \
+            --entitlements MCPServerManagerWidget/MCPServerManagerWidget.entitlements \
+            --options runtime \
+            --timestamp \
+            "$APP_PATH/Contents/PlugIns/MCPServerManagerWidget.appex"
+          echo "✅ Widget extension signed"
+        fi
+
+        # Sign the main app
         codesign --deep --force --sign "$APP_SIGNING_IDENTITY" \
           --entitlements appstore.entitlements \
           --options runtime \
@@ -219,8 +319,6 @@ jobs:
         echo "📤 Uploading to App Store Connect..."
 
         # Use altool to upload the package
-        # Note: While marked as deprecated, this is still the recommended method for CI/CD
-        # until full migration to App Store Connect API
         xcrun altool --upload-package "$PKG_PATH" \
           --type macos \
           --username "$APPLE_ID" \

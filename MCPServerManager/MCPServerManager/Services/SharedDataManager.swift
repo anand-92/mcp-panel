@@ -1,0 +1,129 @@
+import Foundation
+import WidgetKit
+
+/// Manages shared data between the main app and widget extension via App Groups
+class SharedDataManager {
+    static let shared = SharedDataManager()
+
+    /// App Group identifier for sharing data between main app and widget
+    private let suiteName = "group.com.anand-92.mcp-panel"
+
+    /// Maximum number of servers that can be displayed in the widget
+    static let maxWidgetServers = 8
+
+    /// UserDefaults instance using App Group suite
+    private var sharedDefaults: UserDefaults? {
+        UserDefaults(suiteName: suiteName)
+    }
+
+    private let widgetServersKey = "widgetServers"
+
+    // MARK: - Widget Server Model
+
+    /// Lightweight server model for widget display
+    struct WidgetServer: Codable, Identifiable {
+        let id: UUID
+        let name: String
+        var isEnabled: Bool
+        let configIndex: Int // 0 = Claude, 1 = Gemini
+
+        var configName: String {
+            configIndex == 0 ? "Claude" : "Gemini"
+        }
+    }
+
+    // MARK: - Save/Load Widget Servers
+
+    /// Save servers to shared UserDefaults for widget access
+    func saveWidgetServers(_ servers: [WidgetServer]) {
+        guard let defaults = sharedDefaults else {
+            #if DEBUG
+            print("SharedDataManager: Failed to access App Group UserDefaults")
+            #endif
+            return
+        }
+
+        do {
+            let data = try JSONEncoder().encode(servers)
+            defaults.set(data, forKey: widgetServersKey)
+            defaults.synchronize()
+
+            // Reload widget timelines
+            reloadWidgetTimeline()
+
+            #if DEBUG
+            print("SharedDataManager: Saved \(servers.count) servers to widget")
+            #endif
+        } catch {
+            #if DEBUG
+            print("SharedDataManager: Failed to encode widget servers: \(error)")
+            #endif
+        }
+    }
+
+    /// Load servers from shared UserDefaults
+    func loadWidgetServers() -> [WidgetServer] {
+        guard let defaults = sharedDefaults,
+              let data = defaults.data(forKey: widgetServersKey) else {
+            return []
+        }
+
+        do {
+            return try JSONDecoder().decode([WidgetServer].self, from: data)
+        } catch {
+            #if DEBUG
+            print("SharedDataManager: Failed to decode widget servers: \(error)")
+            #endif
+            return []
+        }
+    }
+
+    /// Update a single server's enabled state
+    func updateServerState(serverID: UUID, isEnabled: Bool) {
+        var servers = loadWidgetServers()
+        if let index = servers.firstIndex(where: { $0.id == serverID }) {
+            servers[index].isEnabled = isEnabled
+            saveWidgetServers(servers)
+        }
+    }
+
+    // MARK: - Widget Timeline
+
+    /// Request widget to reload its timeline
+    func reloadWidgetTimeline() {
+        if #available(macOS 14.0, *) {
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+    }
+
+    // MARK: - Notification Handling
+
+    /// Notification name for server toggle from widget
+    static let serverToggledNotificationName = "MCPServerToggled"
+
+    /// Post notification when server is toggled (from widget to main app)
+    func postServerToggledNotification(serverID: UUID, newState: Bool) {
+        let userInfo: [String: Any] = [
+            "serverID": serverID.uuidString,
+            "newState": newState
+        ]
+
+        DistributedNotificationCenter.default().postNotificationName(
+            NSNotification.Name(Self.serverToggledNotificationName),
+            object: nil,
+            userInfo: userInfo,
+            deliverImmediately: true
+        )
+    }
+
+    /// Parse server toggle notification
+    static func parseServerToggledNotification(_ notification: Notification) -> (serverID: UUID, newState: Bool)? {
+        guard let userInfo = notification.userInfo,
+              let serverIDString = userInfo["serverID"] as? String,
+              let serverID = UUID(uuidString: serverIDString),
+              let newState = userInfo["newState"] as? Bool else {
+            return nil
+        }
+        return (serverID, newState)
+    }
+}
