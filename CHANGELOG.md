@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Codex Support** - Completely removed Codex configuration support. The app now focuses on Claude Code and Gemini CLI only (both use JSON format). Removed TOMLKit dependency, TOML parsing/writing, third config path, and all Codex-specific UI components.
 
 ### Fixed
+- **Critical: Widget Empty in TestFlight/App Store** - Fixed widget showing empty even after marking servers with "Show in Widget". The `appstore.entitlements` file was missing the App Groups entitlement (`group.com.anand-92.mcp-panel`), preventing the main app from writing to the shared container that the widget reads from. Also added App Groups to `entitlements.plist` for DMG builds.
 - **Menu Bar Disappearing on Settings** - Fixed bug where opening Settings would cause the menu bar icon to vanish. The issue was caused by incorrect use of `@NSApplicationDelegateAdaptor` property wrapper inside Views (should only be used in the App struct). Changed to access AppDelegate properly via `NSApp.delegate`.
 - **Bookmark Permissions Loss** - Fixed intermittent "no permission to access config file" errors after app restart. Stale bookmarks were being aggressively deleted when refresh failed, even though they often still work for reading. Now preserves stale bookmarks and adds proper security-scoped access when refreshing.
 - **Potential Crash in Mini Mode** - Fixed force unwrap `NSScreen.screens.first!` in `defaultWindowFrame()` that could crash if no screens are available (edge case during display reconfiguration).
