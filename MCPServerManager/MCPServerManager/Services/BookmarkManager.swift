@@ -52,12 +52,21 @@ class BookmarkManager {
 
             if isStale {
                 print("⚠️ Bookmark is stale for: \(path), attempting to refresh...")
-                // Try to refresh the bookmark
+                // Try to refresh the bookmark - but don't delete if refresh fails
+                // The stale bookmark may still work for reading
                 do {
+                    // Need security-scoped access to create new bookmark
+                    let accessing = url.startAccessingSecurityScopedResource()
+                    defer {
+                        if accessing {
+                            url.stopAccessingSecurityScopedResource()
+                        }
+                    }
                     try storeBookmark(for: url)
+                    print("✅ Refreshed stale bookmark for: \(path)")
                 } catch {
-                    print("❌ Failed to refresh bookmark for: \(path) - \(error.localizedDescription)")
-                    UserDefaults.standard.removeObject(forKey: key) // Remove stale bookmark
+                    // Don't delete - stale bookmarks often still work for reading
+                    print("⚠️ Could not refresh bookmark for: \(path) - will retry on next file selection")
                 }
             }
 

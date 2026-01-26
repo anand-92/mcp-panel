@@ -2,7 +2,6 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct SettingsModal: View {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @Binding var isPresented: Bool
     @ObservedObject var viewModel: ServerViewModel
     @Environment(\.themeColors) private var themeColors
@@ -281,7 +280,7 @@ struct SettingsModal: View {
         // Menu Bar settings
         menuBarModeEnabled = viewModel.settings.menuBarModeEnabled
         hideDockIconInMenuBarMode = viewModel.settings.hideDockIconInMenuBarMode
-        launchAtLogin = appDelegate.isLaunchAtLoginEnabled()
+        launchAtLogin = (NSApp.delegate as? AppDelegate)?.isLaunchAtLoginEnabled() ?? false
 
         if let themeStr = viewModel.settings.overrideTheme,
            let theme = AppTheme(rawValue: themeStr) {
@@ -347,14 +346,16 @@ struct SettingsModal: View {
         viewModel.saveSettings()
 
         // Apply menu bar changes immediately
-        appDelegate.updateMenuBarMode(
-            enabled: menuBarModeEnabled,
-            hideDock: hideDockIconInMenuBarMode,
-            viewModel: viewModel
-        )
+        if let appDelegate = NSApp.delegate as? AppDelegate {
+            appDelegate.updateMenuBarMode(
+                enabled: menuBarModeEnabled,
+                hideDock: hideDockIconInMenuBarMode,
+                viewModel: viewModel
+            )
 
-        // Update launch at login
-        appDelegate.updateLaunchAtLogin(enabled: launchAtLogin)
+            // Update launch at login
+            appDelegate.updateLaunchAtLogin(enabled: launchAtLogin)
+        }
 
         isPresented = false
     }

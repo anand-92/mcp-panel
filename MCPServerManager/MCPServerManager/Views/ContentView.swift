@@ -2,7 +2,6 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ContentView: View {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var viewModel = ServerViewModel()
     @State private var showSettings = false
     @State private var showAddServer = false
@@ -51,7 +50,7 @@ struct ContentView: View {
         ) { _ in }
         .onAppear {
             // Setup menu bar with view model
-            appDelegate.setupMenuBar(with: viewModel)
+            (NSApp.delegate as? AppDelegate)?.setupMenuBar(with: viewModel)
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("WidgetServerToggled"))) { notification in
             handleWidgetServerToggle(notification)
@@ -277,9 +276,14 @@ struct ContentView: View {
     }
 
     private func defaultWindowFrame() -> NSRect {
-        let screen = NSScreen.main ?? NSScreen.screens.first!
         let width: CGFloat = 1200
         let height: CGFloat = 800
+
+        guard let screen = NSScreen.main ?? NSScreen.screens.first else {
+            // Fallback if no screens available (edge case)
+            return NSRect(x: 0, y: 0, width: width, height: height)
+        }
+
         return NSRect(
             x: (screen.frame.width - width) / 2,
             y: (screen.frame.height - height) / 2,
