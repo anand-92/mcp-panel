@@ -1,5 +1,6 @@
 import WidgetKit
 import SwiftUI
+import AppIntents
 
 /// Main entry point for the MCP Server Manager Widget
 @main
@@ -13,29 +14,21 @@ struct MCPServerManagerWidget: Widget {
     let kind: String = "MCPServerManagerWidget"
 
     var body: some WidgetConfiguration {
-        if #available(macOS 14.0, *) {
-            return AppIntentConfiguration(
-                kind: kind,
-                intent: ConfigurationIntent.self,
-                provider: WidgetProvider()
-            ) { entry in
+        StaticConfiguration(
+            kind: kind,
+            provider: WidgetProvider()
+        ) { entry in
+            if #available(macOS 14.0, *) {
                 MCPWidgetEntryView(entry: entry)
                     .containerBackground(.fill.tertiary, for: .widget)
-            }
-            .configurationDisplayName("MCP Servers")
-            .description("Quick toggle for your MCP servers")
-            .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-        } else {
-            return StaticConfiguration(
-                kind: kind,
-                provider: WidgetProvider()
-            ) { entry in
+            } else {
                 MCPWidgetEntryView(entry: entry)
+                    .padding()
             }
-            .configurationDisplayName("MCP Servers")
-            .description("Quick toggle for your MCP servers")
-            .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         }
+        .configurationDisplayName("MCP Servers")
+        .description("Quick toggle for your MCP servers")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
 
@@ -53,9 +46,3 @@ struct WidgetServerModel: Identifiable {
     var isEnabled: Bool
 }
 
-/// Configuration intent for macOS 14+
-@available(macOS 14.0, *)
-struct ConfigurationIntent: WidgetConfigurationIntent {
-    static var title: LocalizedStringResource = "Configuration"
-    static var description: IntentDescription = IntentDescription("Configure the widget")
-}

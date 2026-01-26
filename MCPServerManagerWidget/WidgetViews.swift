@@ -1,5 +1,6 @@
 import SwiftUI
 import WidgetKit
+import AppIntents
 
 /// Main entry view for the widget
 struct MCPWidgetEntryView: View {
@@ -231,10 +232,7 @@ struct WidgetServerRow: View {
 
     @available(macOS 14.0, *)
     private var interactiveRow: some View {
-        Button(intent: ServerToggleIntent(
-            serverID: server.id.uuidString,
-            newState: !server.isEnabled
-        )) {
+        Button(intent: ServerToggleIntent(serverID: server.id.uuidString, newState: !server.isEnabled)) {
             rowContent
         }
         .buttonStyle(.plain)
@@ -258,11 +256,9 @@ struct WidgetServerRow: View {
 
             Spacer()
 
-            if #available(macOS 14.0, *) {
-                Image(systemName: server.isEnabled ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: compact ? 12 : 14))
-                    .foregroundColor(server.isEnabled ? .green : .secondary)
-            }
+            Image(systemName: server.isEnabled ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: compact ? 12 : 14))
+                .foregroundColor(server.isEnabled ? .green : .secondary)
         }
         .padding(.horizontal, compact ? 8 : 10)
         .padding(.vertical, compact ? 6 : 8)

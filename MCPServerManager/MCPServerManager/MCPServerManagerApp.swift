@@ -17,17 +17,21 @@ struct MCPServerManagerApp: App {
                     // Ensure window accepts keyboard input
                     NSApp.activate(ignoringOtherApps: true)
 
-                    // Apply Liquid Glass to window background
-                    if let window = NSApp.windows.first {
-                        if #available(macOS 26.0, *) {
-                            window.isOpaque = false
-                            window.backgroundColor = .clear
-                            window.titlebarAppearsTransparent = true
-                        }
-                    }
-
                     // Setup menu bar controller with shared view model
                     appDelegate.setupMenuBarIfNeeded()
+                }
+                .task {
+                    // Apply Liquid Glass to window background (with slight delay to ensure window is ready)
+                    try? await Task.sleep(for: .milliseconds(100))
+                    await MainActor.run {
+                        if let window = NSApp.windows.first {
+                            if #available(macOS 26.0, *) {
+                                window.isOpaque = false
+                                window.backgroundColor = .clear
+                                window.titlebarAppearsTransparent = true
+                            }
+                        }
+                    }
                 }
         }
         .windowStyle(.hiddenTitleBar)
