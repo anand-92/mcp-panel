@@ -6,6 +6,12 @@ class BookmarkManager {
 
     private init() {}
 
+    // Use App Groups UserDefaults so widget can access bookmarks
+    private let suiteName = "group.com.anand-92.mcp-panel"
+    private var sharedDefaults: UserDefaults? {
+        UserDefaults(suiteName: suiteName)
+    }
+
     // MARK: - UserDefaults Keys
 
     private enum Keys {
@@ -25,7 +31,11 @@ class BookmarkManager {
         )
 
         let key = Keys.bookmarkKey(for: url.path)
+
+        // Store in both standard and shared defaults for migration
         UserDefaults.standard.set(bookmarkData, forKey: key)
+        sharedDefaults?.set(bookmarkData, forKey: key)
+        sharedDefaults?.synchronize()
 
         print("✅ Stored bookmark for: \(url.path)")
     }
@@ -36,7 +46,18 @@ class BookmarkManager {
         let expandedPath = NSString(string: path).expandingTildeInPath
         let key = Keys.bookmarkKey(for: expandedPath)
 
-        guard let bookmarkData = UserDefaults.standard.data(forKey: key) else {
+        // Check shared defaults first (for widget access), then fall back to standard defaults
+        var bookmarkData = sharedDefaults?.data(forKey: key)
+        if bookmarkData == nil {
+            bookmarkData = UserDefaults.standard.data(forKey: key)
+            // Migrate to shared defaults if found in standard
+            if let data = bookmarkData {
+                sharedDefaults?.set(data, forKey: key)
+                sharedDefaults?.synchronize()
+            }
+        }
+
+        guard let bookmarkData = bookmarkData else {
             print("⚠️ No bookmark found for: \(path)")
             return nil
         }

@@ -89,6 +89,12 @@ class ServerViewModel: ObservableObject {
 
     func saveSettings() {
         UserDefaults.standard.appSettings = settings
+        // Also save to SharedDataManager for widget access
+        SharedDataManager.shared.saveConfigPaths(
+            config1: settings.configPaths[0],
+            config2: settings.configPaths[1],
+            activeIndex: settings.activeConfigIndex
+        )
         showToast(message: "Settings saved", type: .success)
     }
 
@@ -105,6 +111,13 @@ class ServerViewModel: ObservableObject {
     func loadServers() {
         isLoading = true
         skipSync = true
+
+        // Ensure widget has current config paths
+        SharedDataManager.shared.saveConfigPaths(
+            config1: settings.configPaths[0],
+            config2: settings.configPaths[1],
+            activeIndex: settings.activeConfigIndex
+        )
 
         Task {
             var loadError: Error?

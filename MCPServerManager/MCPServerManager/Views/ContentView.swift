@@ -3,6 +3,7 @@ import UniformTypeIdentifiers
 
 struct ContentView: View {
     @StateObject private var viewModel = ServerViewModel()
+    @EnvironmentObject var appDelegate: AppDelegate // Add this line
     @State private var showSettings = false
     @State private var showAddServer = false
     @State private var showQuickActions = false
@@ -49,8 +50,12 @@ struct ContentView: View {
             defaultFilename: "mcp-servers.json"
         ) { _ in }
         .onAppear {
-            // Setup menu bar with view model
-            (NSApp.delegate as? AppDelegate)?.setupMenuBar(with: viewModel)
+            // Setup menu bar with view model (this ensures view model is available)
+            print("ContentView appeared - setting up menu bar with view model")
+            
+            // Use the environment object directly
+            print("✅ Using AppDelegate environment object, calling setupMenuBar...")
+            appDelegate.setupMenuBar(with: viewModel)
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("WidgetServerToggled"))) { notification in
             handleWidgetServerToggle(notification)

@@ -16,9 +16,6 @@ struct MCPServerManagerApp: App {
                 .onAppear {
                     // Ensure window accepts keyboard input
                     NSApp.activate(ignoringOtherApps: true)
-
-                    // Setup menu bar controller with shared view model
-                    appDelegate.setupMenuBarIfNeeded()
                 }
                 .task {
                     // Apply Liquid Glass to window background (with slight delay to ensure window is ready)
@@ -52,7 +49,7 @@ struct MCPServerManagerApp: App {
     }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var menuBarController: MenuBarController?
     private var widgetNotificationObserver: Any?
 
@@ -60,25 +57,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Register custom fonts (Poppins & Crimson Pro)
         FontManager.registerFonts()
 
-        // Load settings to check menu bar mode
-        let settings = UserDefaults.standard.appSettings
-
-        // Set activation policy based on settings
-        if settings.menuBarModeEnabled && settings.hideDockIconInMenuBarMode {
-            NSApp.setActivationPolicy(.accessory)
-        } else {
-            NSApp.setActivationPolicy(.regular)
-        }
-
-        // Show menu bar icon early if enabled (popover will be set up later with viewModel)
-        if settings.menuBarModeEnabled {
-            Task { @MainActor in
-                if menuBarController == nil {
-                    menuBarController = MenuBarController()
-                }
-                menuBarController?.showMenuBarIcon()
-            }
-        }
+        // Always run as menu bar app
+        NSApp.setActivationPolicy(.accessory)
+        print("🚀 App launched as menu bar app (.accessory policy)")
 
         NSApp.activate(ignoringOtherApps: true)
 
@@ -87,6 +68,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Setup widget notification listener
         setupWidgetNotificationListener()
+        
+        print("🎯 App finish launching - waiting for ContentView to set up menu bar...")
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -96,55 +79,49 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // Keep app alive when window closed if menu bar mode is enabled
+    // Keep app alive when window closed - always keep running for menu bar
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        let settings = UserDefaults.standard.appSettings
-        return !settings.menuBarModeEnabled
+        return false // Never quit when window closes - we're a menu bar app now
     }
 
     // MARK: - Menu Bar Setup
 
-    /// Setup menu bar controller if needed (called after view model is available)
+    /// Setup menu bar with view model (called from ContentView) - ALWAYS ENABLED NOW
     @MainActor
-    func setupMenuBarIfNeeded() {
-        let settings = UserDefaults.standard.appSettings
-        guard settings.menuBarModeEnabled else { return }
+    func setupMenuBar(with viewModel: ServerViewModel) {
+        print("🔧 AppDelegate: Setting up menu bar with view model - ALWAYS ENABLED")
+        print("🔧 Current menuBarController: \(menuBarController == nil ? "nil" : "exists")")
+        
+        // Always create the controller if it doesn't exist
+        if menuBarController == nil {
+            print("🔧 Creating new MenuBarController...")
+            menuBarController = MenuBarController()
+        }
+        
+        // Set up the menu bar controller with the view model
+        print("🔧 Setting up menu bar controller with view model...")
+        menuBarController?.setup(with: viewModel)
+        
+        // Make sure the menu bar icon is visible
+        print("🔧 Showing menu bar icon...")
+        menuBarController?.showMenuBarIcon()
+        
+        print("✅ Menu bar setup complete with view model - should be visible now!")
+        
+        // Let's also check if the status item was created
+        print("🔍 Menu bar status: \(menuBarController?.hasStatusItem == true ? "STATUS ITEM EXISTS" : "NO STATUS ITEM")")
+    }
 
-        // Find the shared view model from ContentView
-        // We'll need to pass it from the view hierarchy
-        // For now, create a minimal setup
+    /// Update menu bar (simplified - always enabled now)
+    @MainActor
+    func updateMenuBarMode(enabled: Bool, hideDock: Bool, viewModel: ServerViewModel) {
+        // Always enabled now, so just ensure it's set up
         if menuBarController == nil {
             menuBarController = MenuBarController()
         }
-    }
-
-    /// Update menu bar with view model (called from ContentView)
-    @MainActor
-    func setupMenuBar(with viewModel: ServerViewModel) {
-        let settings = viewModel.settings
-        updateMenuBarMode(
-            enabled: settings.menuBarModeEnabled,
-            hideDock: settings.hideDockIconInMenuBarMode,
-            viewModel: viewModel
-        )
-    }
-
-    /// Update menu bar visibility (called when settings change)
-    @MainActor
-    func updateMenuBarMode(enabled: Bool, hideDock: Bool, viewModel: ServerViewModel) {
-        if enabled {
-            if menuBarController == nil {
-                menuBarController = MenuBarController()
-            }
-            menuBarController?.setup(with: viewModel)
-            menuBarController?.showMenuBarIcon()
-            NSApp.setActivationPolicy(hideDock ? .accessory : .regular)
-        } else {
-            menuBarController?.cleanup()
-            menuBarController?.hideMenuBarIcon()
-            menuBarController = nil
-            NSApp.setActivationPolicy(.regular)
-        }
+        menuBarController?.setup(with: viewModel)
+        menuBarController?.showMenuBarIcon()
+        NSApp.setActivationPolicy(.accessory) // Always menu bar only
     }
 
     // MARK: - Launch at Login

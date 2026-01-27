@@ -17,9 +17,7 @@ struct SettingsModal: View {
     @State private var showBookmarkAlert: Bool = false
     @State private var bookmarkAlertMessage: String = ""
 
-    // Menu Bar settings
-    @State private var menuBarModeEnabled: Bool = false
-    @State private var hideDockIconInMenuBarMode: Bool = false
+    // Startup settings
     @State private var launchAtLogin: Bool = false
     @State private var launchAtLoginRequiresApproval: Bool = false
 
@@ -74,7 +72,7 @@ struct SettingsModal: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 configurationFilesSection
-                menuBarSection
+                launchAtLoginSection
                 appearanceSection
                 privacySecuritySection
                 networkSection
@@ -107,31 +105,13 @@ struct SettingsModal: View {
         }
     }
 
-    private var menuBarSection: some View {
+    private var launchAtLoginSection: some View {
         SettingsSection(
-            icon: "menubar.rectangle",
-            title: "Menu Bar",
-            description: "Quick access from the menu bar"
+            icon: "power.circle.fill",
+            title: "Startup",
+            description: "Control app startup behavior"
         ) {
             VStack(spacing: 16) {
-                SettingsToggleRow(
-                    isOn: $menuBarModeEnabled,
-                    icon: "menubar.arrow.up.rectangle",
-                    label: "Show in Menu Bar",
-                    description: "Add a menu bar icon for quick server access"
-                )
-
-                if menuBarModeEnabled {
-                    SettingsToggleRow(
-                        isOn: $hideDockIconInMenuBarMode,
-                        icon: "dock.rectangle",
-                        label: "Hide Dock Icon",
-                        description: "Run as menu bar-only app (no Dock icon)"
-                    )
-                }
-
-                Divider()
-
                 SettingsToggleRow(
                     isOn: $launchAtLogin,
                     icon: "power.circle.fill",
@@ -307,9 +287,7 @@ struct SettingsModal: View {
         fetchServerLogos = UserDefaults.standard.object(forKey: "fetchServerLogos") as? Bool ?? true
         blurJSONPreviews = viewModel.settings.blurJSONPreviews
 
-        // Menu Bar settings
-        menuBarModeEnabled = viewModel.settings.menuBarModeEnabled
-        hideDockIconInMenuBarMode = viewModel.settings.hideDockIconInMenuBarMode
+        // Startup settings (menu bar is always enabled now)
         launchAtLogin = viewModel.settings.launchAtLogin
         let requiresApproval = (NSApp.delegate as? AppDelegate)?.launchAtLoginRequiresApproval() ?? false
         launchAtLoginRequiresApproval = launchAtLogin && requiresApproval
@@ -380,20 +358,13 @@ struct SettingsModal: View {
         viewModel.settings.blurJSONPreviews = blurJSONPreviews
         UserDefaults.standard.set(fetchServerLogos, forKey: "fetchServerLogos")
 
-        // Menu Bar settings
-        viewModel.settings.menuBarModeEnabled = menuBarModeEnabled
-        viewModel.settings.hideDockIconInMenuBarMode = hideDockIconInMenuBarMode
+        // Menu Bar is always enabled now - just save launch at login
         viewModel.settings.launchAtLogin = launchAtLogin
-
         viewModel.saveSettings()
-
-        // Apply menu bar changes immediately
+        
+        // Ensure menu bar is set up (always enabled now)
         if let appDelegate = NSApp.delegate as? AppDelegate {
-            appDelegate.updateMenuBarMode(
-                enabled: menuBarModeEnabled,
-                hideDock: hideDockIconInMenuBarMode,
-                viewModel: viewModel
-            )
+            appDelegate.setupMenuBar(with: viewModel)
 
             // Update launch at login
             let launchUpdated = appDelegate.updateLaunchAtLogin(enabled: launchAtLogin)

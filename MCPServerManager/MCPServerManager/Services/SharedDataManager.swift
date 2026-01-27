@@ -17,6 +17,31 @@ class SharedDataManager {
     }
 
     private let widgetServersKey = "widgetServers"
+    private let config1PathKey = "config1Path"
+    private let config2PathKey = "config2Path"
+    private let activeConfigIndexKey = "activeConfigIndex"
+
+    // MARK: - Config Paths (for widget access)
+
+    /// Save config paths to shared UserDefaults
+    func saveConfigPaths(config1: String, config2: String, activeIndex: Int) {
+        guard let defaults = sharedDefaults else { return }
+        defaults.set(config1, forKey: config1PathKey)
+        defaults.set(config2, forKey: config2PathKey)
+        defaults.set(activeIndex, forKey: activeConfigIndexKey)
+        defaults.synchronize()
+    }
+
+    /// Load config paths from shared UserDefaults
+    func loadConfigPaths() -> (config1: String, config2: String, activeIndex: Int)? {
+        guard let defaults = sharedDefaults,
+              let config1 = defaults.string(forKey: config1PathKey),
+              let config2 = defaults.string(forKey: config2PathKey) else {
+            return nil
+        }
+        let activeIndex = defaults.integer(forKey: activeConfigIndexKey)
+        return (config1, config2, activeIndex)
+    }
 
     // MARK: - Widget Server Model
 

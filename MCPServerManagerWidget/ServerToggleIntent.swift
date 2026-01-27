@@ -1,5 +1,6 @@
 import AppIntents
 import WidgetKit
+import Foundation
 
 /// App Intent for toggling server state from the widget (macOS 14+)
 @available(macOS 14.0, *)
@@ -28,10 +29,13 @@ struct ServerToggleIntent: AppIntent {
             return .result()
         }
 
-        // Update the server state in shared storage
+        // Toggle server in actual config files
+        toggleServerInConfigs(serverID: uuid, newState: newState)
+
+        // Update the widget display state
         updateServerState(serverID: uuid, newState: newState)
 
-        // Post notification to main app
+        // Post notification to main app (in case it's running)
         postNotificationToMainApp(serverID: uuid, newState: newState)
 
         // Reload widget timeline
@@ -40,7 +44,88 @@ struct ServerToggleIntent: AppIntent {
         return .result()
     }
 
-    // MARK: - Private Helpers
+    // MARK: - Config File Updates
+
+    private func toggleServerInConfigs(serverID: UUID, newState: Bool) {
+        guard let defaults = UserDefaults(suiteName: suiteName),
+              let config1Path = defaults.string(forKey: "config1Path"),
+              let config2Path = defaults.string(forKey: "config2Path"),
+              let widgetData = defaults.data(forKey: widgetServersKey),
+              let widgetServers = try? JSONDecoder().decode([SharedWidgetServerForIntent].self, from: widgetData),
+              let widgetServer = widgetServers.first(where: { $0.id == serverID }) else {
+            return
+        }
+
+        // Determine which config to update based on server's configIndex
+        let configPath = widgetServer.configIndex == 0 ? config1Path : config2Path
+
+        // Toggle in the appropriate config
+        toggleInConfig(serverID: serverID, serverName: widgetServer.name, newState: newState, configPath: configPath)
+    }
+
+    private func toggleInConfig(serverID: UUID, serverName: String, newState: Bool, configPath: String) {
+        let url = resolveConfigURL(configPath)
+
+        // Read existing config
+        guard let data = try? Data(contentsOf: url),
+              var json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return
+        }
+
+        // Get or create mcpServers object
+        var mcpServers = json["mcpServers"] as? [String: Any] ?? [:]
+
+        // Toggle the server's disabled state
+        if var serverConfig = mcpServers[serverName] as? [String: Any] {
+            if newState {
+                // Enable: remove disabled field
+                serverConfig.removeValue(forKey: "disabled")
+            } else {
+                // Disable: set disabled to true
+                serverConfig["disabled"] = true
+            }
+            mcpServers[serverName] = serverConfig
+        }
+
+        // Save back to config
+        json["mcpServers"] = mcpServers
+
+        if let outputData = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]) {
+            try? outputData.write(to: url)
+        }
+    }
+
+    private func resolveConfigURL(_ path: String) -> URL {
+        // Try to resolve bookmark first
+        if let bookmarkURL = resolveBookmark(for: path) {
+            return bookmarkURL
+        }
+
+        // Fallback to expanding tilde
+        let expandedPath = NSString(string: path).expandingTildeInPath
+        return URL(fileURLWithPath: expandedPath)
+    }
+
+    private func resolveBookmark(for path: String) -> URL? {
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return nil }
+
+        let expandedPath = NSString(string: path).expandingTildeInPath
+        let key = "bookmark_\(expandedPath.replacingOccurrences(of: "~", with: "home"))"
+
+        guard let bookmarkData = defaults.data(forKey: key) else { return nil }
+
+        var isStale = false
+        let url = try? URL(
+            resolvingBookmarkData: bookmarkData,
+            options: .withSecurityScope,
+            relativeTo: nil,
+            bookmarkDataIsStale: &isStale
+        )
+
+        return url
+    }
+
+    // MARK: - Widget Display State
 
     private let suiteName = "group.com.anand-92.mcp-panel"
     private let widgetServersKey = "widgetServers"
@@ -64,6 +149,8 @@ struct ServerToggleIntent: AppIntent {
             // Failed to update, ignore silently
         }
     }
+
+    // MARK: - Notification
 
     private func postNotificationToMainApp(serverID: UUID, newState: Bool) {
         guard let defaults = UserDefaults(suiteName: suiteName) else { return }

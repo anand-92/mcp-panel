@@ -18,8 +18,6 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0.2</string>
-	<key>CFBundleVersion</key>
-	<string>3</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSHumanReadableCopyright</key>
@@ -45,7 +43,5 @@
 	<false/>
 	<key>SUAllowsAutomaticUpdates</key>
 	<true/>
-	<!-- SUEnableInstallerLauncherService removed - only needed for sandboxed apps -->
-	<!-- DMG builds are not sandboxed to allow Sparkle updates to work properly -->
 </dict>
 </plist>

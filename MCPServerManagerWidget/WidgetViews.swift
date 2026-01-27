@@ -57,6 +57,11 @@ struct SmallWidgetView: View {
             Text("MCP")
                 .font(.system(size: 12, weight: .semibold))
 
+            #if DEBUG
+            Text("🔧")
+                .font(.system(size: 10))
+            #endif
+
             Spacer()
 
             Text(entry.configName)
@@ -120,6 +125,11 @@ struct MediumWidgetView: View {
 
             Text("MCP Servers")
                 .font(.system(size: 14, weight: .semibold))
+
+            #if DEBUG
+            Text("🔧")
+                .font(.system(size: 12))
+            #endif
 
             Spacer()
 
@@ -188,6 +198,11 @@ struct LargeWidgetView: View {
 
             Text("MCP Servers")
                 .font(.system(size: 16, weight: .semibold))
+
+            #if DEBUG
+            Text("🔧")
+                .font(.system(size: 14))
+            #endif
 
             Spacer()
 
