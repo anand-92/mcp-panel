@@ -54,10 +54,11 @@ struct EmptyStateView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: "server.rack")
-                .font(DesignTokens.Typography.display)
-                .foregroundColor(.secondary)
-                .padding(30)
+            Image(nsImage: AppIcon.image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 64, height: 64)
+                .padding(20)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
                         .fill(Color.white.opacity(0.05))

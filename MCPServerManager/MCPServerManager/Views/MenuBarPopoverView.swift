@@ -63,9 +63,10 @@ struct MenuBarPopoverView: View {
 
     private var popoverHeader: some View {
         HStack(spacing: 8) {
-            Image(systemName: "server.rack")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(themeColors.accentGradient)
+            Image(nsImage: AppIcon.image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 18, height: 18)
 
             Text("MCP Servers")
                 .font(.system(size: 13, weight: .semibold))
@@ -158,9 +159,11 @@ struct MenuBarPopoverView: View {
 
     private var emptyState: some View {
         VStack(spacing: 8) {
-            Image(systemName: "server.rack")
-                .font(.system(size: 24))
-                .foregroundColor(themeColors.primaryAccent.opacity(0.5))
+            Image(nsImage: AppIcon.image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 32, height: 32)
+                .opacity(0.5)
 
             Text(searchText.isEmpty ? "No servers configured" : "No matching servers")
                 .font(.system(size: 12))

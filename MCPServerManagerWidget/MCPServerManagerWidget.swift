@@ -20,7 +20,10 @@ struct MCPServerManagerWidget: Widget {
         ) { entry in
             if #available(macOS 14.0, *) {
                 MCPWidgetEntryView(entry: entry)
-                    .containerBackground(.fill.tertiary, for: .widget)
+                    .containerBackground(for: .widget) {
+                        // Use clear so our themed background shows through
+                        Color.clear
+                    }
             } else {
                 MCPWidgetEntryView(entry: entry)
                     .padding()
@@ -37,6 +40,7 @@ struct ServerEntry: TimelineEntry {
     let date: Date
     let servers: [WidgetServerModel]
     let configName: String
+    let themeName: String
 }
 
 /// Simplified server model for widget display

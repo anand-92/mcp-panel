@@ -68,3 +68,12 @@ extension NSTextField {
     }
 }
 #endif
+
+// MARK: - App Icon Helper
+
+enum AppIcon {
+    /// Get the app icon (from asset catalog via NSApp.applicationIconImage)
+    static var image: NSImage {
+        NSApp.applicationIconImage ?? NSImage()
+    }
+}

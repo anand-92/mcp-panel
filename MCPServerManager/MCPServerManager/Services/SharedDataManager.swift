@@ -20,6 +20,25 @@ class SharedDataManager {
     private let config1PathKey = "config1Path"
     private let config2PathKey = "config2Path"
     private let activeConfigIndexKey = "activeConfigIndex"
+    private let currentThemeKey = "currentTheme"
+
+    // MARK: - Theme (for widget access)
+
+    /// Save current theme to shared UserDefaults
+    func saveTheme(_ theme: String) {
+        guard let defaults = sharedDefaults else { return }
+        defaults.set(theme, forKey: currentThemeKey)
+        defaults.synchronize()
+        reloadWidgetTimeline()
+        #if DEBUG
+        print("SharedDataManager: Saved theme '\(theme)' to widget")
+        #endif
+    }
+
+    /// Load theme from shared UserDefaults
+    func loadTheme() -> String {
+        sharedDefaults?.string(forKey: currentThemeKey) ?? "claudeCode"
+    }
 
     // MARK: - Config Paths (for widget access)
 

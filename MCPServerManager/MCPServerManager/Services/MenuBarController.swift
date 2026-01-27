@@ -93,9 +93,17 @@ class MenuBarController: NSObject {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
 
         if let button = statusItem?.button {
-            print("📍 MenuBar: Setting up button with server.rack icon...")
-            button.image = NSImage(systemSymbolName: "server.rack", accessibilityDescription: "MCP Servers")
-            button.image?.isTemplate = true
+            print("📍 MenuBar: Setting up button with app icon...")
+            // Use app icon resized for menu bar
+            let appIcon = AppIcon.image
+            let resizedIcon = NSImage(size: NSSize(width: 18, height: 18))
+            resizedIcon.lockFocus()
+            appIcon.draw(in: NSRect(x: 0, y: 0, width: 18, height: 18),
+                        from: NSRect(origin: .zero, size: appIcon.size),
+                        operation: .sourceOver,
+                        fraction: 1.0)
+            resizedIcon.unlockFocus()
+            button.image = resizedIcon
             button.action = #selector(togglePanel)
             button.target = self
             print("📍 MenuBar: Button setup complete")

@@ -95,7 +95,7 @@ struct SettingsModal: View {
         VStack(spacing: 8) {
             // App Icon & Title
             VStack(spacing: 8) {
-                Image(nsImage: NSApp.applicationIconImage)
+                Image(nsImage: AppIcon.image)
                     .resizable()
                     .frame(width: 48, height: 48)
                     .clipShape(RoundedRectangle(cornerRadius: 10))

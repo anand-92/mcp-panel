@@ -85,6 +85,8 @@ class ServerViewModel: ObservableObject {
 
     func loadSettings() {
         settings = UserDefaults.standard.appSettings
+        // Sync current theme to widget on load
+        SharedDataManager.shared.saveTheme(currentTheme.rawValue)
     }
 
     func saveSettings() {
@@ -95,6 +97,8 @@ class ServerViewModel: ObservableObject {
             config2: settings.configPaths[1],
             activeIndex: settings.activeConfigIndex
         )
+        // Save current theme for widget
+        SharedDataManager.shared.saveTheme(currentTheme.rawValue)
         showToast(message: "Settings saved", type: .success)
     }
 

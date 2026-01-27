@@ -8,6 +8,7 @@ struct WidgetProvider: TimelineProvider {
     /// App Group identifier for accessing shared data
     private let suiteName = "group.com.anand-92.mcp-panel"
     private let widgetServersKey = "widgetServers"
+    private let currentThemeKey = "currentTheme"
 
     func placeholder(in context: Context) -> ServerEntry {
         ServerEntry(
@@ -16,7 +17,8 @@ struct WidgetProvider: TimelineProvider {
                 WidgetServerModel(id: UUID(), name: "example-server", isEnabled: true),
                 WidgetServerModel(id: UUID(), name: "another-server", isEnabled: false)
             ],
-            configName: "Claude"
+            configName: "Claude",
+            themeName: "claudeCode"
         )
     }
 
@@ -37,12 +39,21 @@ struct WidgetProvider: TimelineProvider {
     private func createEntry() -> ServerEntry {
         let servers = loadWidgetServers()
         let configName = servers.first.map { $0.configIndex == 0 ? "Claude" : "Gemini" } ?? "Claude"
+        let themeName = loadTheme()
 
         return ServerEntry(
             date: Date(),
             servers: servers.map { WidgetServerModel(id: $0.id, name: $0.name, isEnabled: $0.isEnabled) },
-            configName: configName
+            configName: configName,
+            themeName: themeName
         )
+    }
+
+    private func loadTheme() -> String {
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            return "claudeCode"
+        }
+        return defaults.string(forKey: currentThemeKey) ?? "claudeCode"
     }
 
     private func loadWidgetServers() -> [SharedWidgetServer] {

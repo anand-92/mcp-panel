@@ -372,7 +372,7 @@ private struct AppLogoView: View {
         } label: {
             ZStack {
                 // App icon (visible when not hovered and quick actions not open)
-                Image(nsImage: NSApp.applicationIconImage)
+                Image(nsImage: AppIcon.image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 36, height: 36)
