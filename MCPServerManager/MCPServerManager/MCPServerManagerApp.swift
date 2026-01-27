@@ -70,7 +70,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.setActivationPolicy(.regular)
         }
 
+        // Show menu bar icon early if enabled (popover will be set up later with viewModel)
+        if settings.menuBarModeEnabled {
+            Task { @MainActor in
+                if menuBarController == nil {
+                    menuBarController = MenuBarController()
+                }
+                menuBarController?.showMenuBarIcon()
+            }
+        }
+
         NSApp.activate(ignoringOtherApps: true)
+
+        // Sync launch at login with saved setting
+        syncLaunchAtLogin()
 
         // Setup widget notification listener
         setupWidgetNotificationListener()
@@ -137,28 +150,63 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Launch at Login
 
     /// Update launch at login setting
-    func updateLaunchAtLogin(enabled: Bool) {
+    /// Returns true if successful, false if failed
+    @discardableResult
+    func updateLaunchAtLogin(enabled: Bool) -> Bool {
         if #available(macOS 13.0, *) {
             do {
+                let currentStatus = SMAppService.mainApp.status
                 if enabled {
+                    if currentStatus == .enabled || currentStatus == .requiresApproval {
+                        return true // Already enabled
+                    }
                     try SMAppService.mainApp.register()
+                    let updatedStatus = SMAppService.mainApp.status
+                    return updatedStatus == .enabled || updatedStatus == .requiresApproval
                 } else {
-                    try SMAppService.mainApp.unregister()
+                    if currentStatus != .notRegistered {
+                        try SMAppService.mainApp.unregister()
+                    }
+                    return true
                 }
             } catch {
                 #if DEBUG
                 print("Failed to update launch at login: \(error)")
                 #endif
+                return false
             }
         }
+        return false
     }
 
     /// Check if launch at login is enabled
     func isLaunchAtLoginEnabled() -> Bool {
         if #available(macOS 13.0, *) {
-            return SMAppService.mainApp.status == .enabled
+            let status = SMAppService.mainApp.status
+            return status == .enabled || status == .requiresApproval
         }
         return false
+    }
+
+    /// Check if launch at login requires user approval
+    func launchAtLoginRequiresApproval() -> Bool {
+        if #available(macOS 13.0, *) {
+            return SMAppService.mainApp.status == .requiresApproval
+        }
+        return false
+    }
+
+    /// Try to sync launch at login with saved setting
+    func syncLaunchAtLogin() {
+        let savedSetting = UserDefaults.standard.appSettings.launchAtLogin
+        let systemState = isLaunchAtLoginEnabled()
+
+        if savedSetting != systemState {
+            #if DEBUG
+            print("Launch at login mismatch - saved: \(savedSetting), system: \(systemState). Attempting to sync...")
+            #endif
+            updateLaunchAtLogin(enabled: savedSetting)
+        }
     }
 
     // MARK: - Widget Notification Handling
@@ -174,14 +222,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleWidgetServerToggle(_ notification: Notification) {
-        guard let parsed = SharedDataManager.parseServerToggledNotification(notification) else {
+        // Read pending toggle from shared UserDefaults (sandboxed apps can't receive userInfo)
+        guard let defaults = UserDefaults(suiteName: "group.com.anand-92.mcp-panel"),
+              let pendingToggle = defaults.dictionary(forKey: "pendingServerToggle"),
+              let serverIDString = pendingToggle["serverID"] as? String,
+              let serverID = UUID(uuidString: serverIDString),
+              let newState = pendingToggle["newState"] as? Bool else {
+            #if DEBUG
+            print("Widget toggle: No pending toggle found or invalid data")
+            #endif
             return
         }
 
-        // Find the view model and update the server
-        // This will be called from the widget when a server is toggled
+        // Clear the pending toggle
+        defaults.removeObject(forKey: "pendingServerToggle")
+        defaults.synchronize()
+
         #if DEBUG
-        print("Widget toggled server: \(parsed.serverID), new state: \(parsed.newState)")
+        print("Widget toggled server: \(serverID), new state: \(newState)")
         #endif
 
         // The actual toggle will be handled by the ServerViewModel
@@ -190,8 +248,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             name: NSNotification.Name("WidgetServerToggled"),
             object: nil,
             userInfo: [
-                "serverID": parsed.serverID,
-                "newState": parsed.newState
+                "serverID": serverID,
+                "newState": newState
             ]
         )
     }

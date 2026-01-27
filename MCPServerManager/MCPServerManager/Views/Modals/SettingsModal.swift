@@ -21,6 +21,7 @@ struct SettingsModal: View {
     @State private var menuBarModeEnabled: Bool = false
     @State private var hideDockIconInMenuBarMode: Bool = false
     @State private var launchAtLogin: Bool = false
+    @State private var launchAtLoginRequiresApproval: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -137,6 +138,35 @@ struct SettingsModal: View {
                     label: "Launch at Login",
                     description: "Start MCP Server Manager when you log in"
                 )
+
+                HStack(spacing: 12) {
+                    Text(launchAtLogin && launchAtLoginRequiresApproval
+                         ? "Approval required in System Settings > Login Items."
+                         : "Manage startup behavior in System Settings.")
+                        .font(DesignTokens.Typography.bodySmall)
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    Button(action: openLoginItemsSettings) {
+                        HStack(spacing: 4) {
+                            Text("Open Settings")
+                            Image(systemName: "arrow.up.forward.square")
+                        }
+                        .font(DesignTokens.Typography.labelSmall)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.white.opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                )
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
             }
         }
     }
@@ -280,7 +310,9 @@ struct SettingsModal: View {
         // Menu Bar settings
         menuBarModeEnabled = viewModel.settings.menuBarModeEnabled
         hideDockIconInMenuBarMode = viewModel.settings.hideDockIconInMenuBarMode
-        launchAtLogin = (NSApp.delegate as? AppDelegate)?.isLaunchAtLoginEnabled() ?? false
+        launchAtLogin = viewModel.settings.launchAtLogin
+        let requiresApproval = (NSApp.delegate as? AppDelegate)?.launchAtLoginRequiresApproval() ?? false
+        launchAtLoginRequiresApproval = launchAtLogin && requiresApproval
 
         if let themeStr = viewModel.settings.overrideTheme,
            let theme = AppTheme(rawValue: themeStr) {
@@ -309,6 +341,16 @@ struct SettingsModal: View {
             print("Failed to store bookmark: \(error.localizedDescription)")
             bookmarkAlertMessage = "Failed to create persistent access to the selected file. The app may not be able to access this file after restart.\n\nError: \(error.localizedDescription)"
             showBookmarkAlert = true
+        }
+    }
+
+    private func openLoginItemsSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension"),
+           NSWorkspace.shared.open(url) {
+            return
+        }
+        if let url = URL(string: "x-apple.systempreferences:") {
+            NSWorkspace.shared.open(url)
         }
     }
 
@@ -354,7 +396,13 @@ struct SettingsModal: View {
             )
 
             // Update launch at login
-            appDelegate.updateLaunchAtLogin(enabled: launchAtLogin)
+            let launchUpdated = appDelegate.updateLaunchAtLogin(enabled: launchAtLogin)
+            launchAtLoginRequiresApproval = launchAtLogin && appDelegate.launchAtLoginRequiresApproval()
+            if !launchUpdated {
+                viewModel.showToast(message: "Failed to update Launch at Login. Check System Settings > Login Items.", type: .error)
+            } else if launchAtLoginRequiresApproval {
+                viewModel.showToast(message: "Launch at Login needs approval in System Settings > Login Items.", type: .warning)
+            }
         }
 
         isPresented = false

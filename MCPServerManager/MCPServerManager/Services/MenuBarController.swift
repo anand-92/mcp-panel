@@ -86,12 +86,25 @@ class MenuBarController: NSObject {
     }
 
     @objc private func togglePopover() {
-        guard let popover = popover, let button = statusItem?.button else { return }
+        guard let button = statusItem?.button else { return }
+
+        // If no viewModel yet, just open the main app
+        guard let viewModel = viewModel else {
+            openMainApp()
+            return
+        }
+
+        // Ensure popover exists
+        if popover == nil {
+            setupPopover()
+        }
+
+        guard let popover = popover else { return }
 
         if popover.isShown {
             closePopover()
         } else {
-            viewModel?.loadServers()
+            viewModel.loadServers()
             updatePopoverContent()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             addEventMonitor()

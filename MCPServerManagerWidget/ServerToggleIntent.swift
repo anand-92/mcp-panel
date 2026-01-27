@@ -66,15 +66,22 @@ struct ServerToggleIntent: AppIntent {
     }
 
     private func postNotificationToMainApp(serverID: UUID, newState: Bool) {
-        let userInfo: [String: Any] = [
-            "serverID": serverID.uuidString,
-            "newState": newState
-        ]
+        guard let defaults = UserDefaults(suiteName: suiteName) else { return }
 
+        // Store pending toggle in shared UserDefaults (sandboxed apps can't pass userInfo)
+        let pendingToggle: [String: Any] = [
+            "serverID": serverID.uuidString,
+            "newState": newState,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+        defaults.set(pendingToggle, forKey: "pendingServerToggle")
+        defaults.synchronize()
+
+        // Post notification WITHOUT userInfo (sandboxed apps can't receive it)
         DistributedNotificationCenter.default().postNotificationName(
             NSNotification.Name("MCPServerToggled"),
             object: nil,
-            userInfo: userInfo,
+            userInfo: nil,
             deliverImmediately: true
         )
     }

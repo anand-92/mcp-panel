@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct ServerCardView: View {
@@ -13,6 +14,15 @@ struct ServerCardView: View {
     @State private var invalidReason: String = ""
     @State private var pendingConfig: ServerConfig?
     @Environment(\.themeColors) private var themeColors
+
+    private var widgetSymbolName: String {
+        if #available(macOS 11.0, *) {
+            return NSImage(systemSymbolName: "widget.small.fill", accessibilityDescription: nil) == nil
+                ? "square.grid.2x2"
+                : "widget.small.fill"
+        }
+        return "square.grid.2x2"
+    }
 
     let onToggle: () -> Void
     let onTagToggle: (ServerTag) -> Void
@@ -202,9 +212,16 @@ struct ServerCardView: View {
             // Widget toggle button
             if let onWidgetToggle = onWidgetToggle {
                 Button(action: onWidgetToggle) {
-                    Image(systemName: server.showInWidget ? "widget.small.badge.minus" : "widget.small")
-                        .font(.system(size: 14))
-                        .foregroundColor(server.showInWidget ? themeColors.primaryAccent : themeColors.mutedText)
+                    ZStack {
+                        Image(systemName: widgetSymbolName)
+                            .font(.system(size: 14))
+                        if server.showInWidget {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 8))
+                                .offset(x: 6, y: -6)
+                        }
+                    }
+                    .foregroundColor(server.showInWidget ? themeColors.primaryAccent : themeColors.mutedText)
                 }
                 .buttonStyle(.plain)
                 .help(server.showInWidget ? "Remove from Widget" : "Show in Widget")
