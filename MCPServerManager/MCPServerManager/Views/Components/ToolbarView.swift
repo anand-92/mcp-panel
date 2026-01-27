@@ -2,14 +2,26 @@ import SwiftUI
 
 struct ToolbarView: View {
     @ObservedObject var viewModel: ServerViewModel
-    var onMiniMode: (() -> Void)? = nil
     @Namespace private var namespace
     @Environment(\.themeColors) private var themeColors
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            toolbarContent(compact: false)
-            toolbarContent(compact: true)
+        HStack(spacing: 16) {
+            // Left: View Mode Toggle
+            viewModeToggle()
+
+            // Separator
+            Divider()
+                .frame(height: 24)
+                .opacity(0.3)
+
+            // Center: Filter Pills
+            filterPills()
+
+            Spacer()
+
+            // Right: Actions
+            rightSideActions()
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
@@ -31,36 +43,16 @@ struct ToolbarView: View {
         )
     }
 
-    @ViewBuilder
-    private func toolbarContent(compact: Bool) -> some View {
-        HStack(spacing: compact ? 12 : 16) {
-            // Left: View Mode Toggle
-            viewModeToggle(compact: compact)
-
-            // Separator
-            Divider()
-                .frame(height: 24)
-                .opacity(0.3)
-
-            // Center: Filter Pills
-            filterPills(compact: compact)
-
-            Spacer()
-
-            // Right: Actions
-            rightSideActions(compact: compact)
-        }
-    }
-
     // MARK: - View Mode Toggle
 
     @ViewBuilder
-    private func viewModeToggle(compact: Bool) -> some View {
+    private func viewModeToggle() -> some View {
         HStack(spacing: 2) {
             ForEach(ViewMode.allCases, id: \.self) { mode in
-                viewModeButton(mode: mode, compact: compact)
+                viewModeButton(mode: mode)
             }
         }
+        .fixedSize(horizontal: true, vertical: false)
         .padding(3)
         .background(
             RoundedRectangle(cornerRadius: 10)
@@ -73,7 +65,7 @@ struct ToolbarView: View {
     }
 
     @ViewBuilder
-    private func viewModeButton(mode: ViewMode, compact: Bool) -> some View {
+    private func viewModeButton(mode: ViewMode) -> some View {
         let isSelected = viewModel.viewMode == mode
 
         Button {
@@ -81,16 +73,17 @@ struct ToolbarView: View {
                 viewModel.viewMode = mode
             }
         } label: {
-            HStack(spacing: compact ? 0 : 6) {
+            HStack(spacing: 6) {
                 Image(systemName: mode.icon)
                     .font(.system(size: 13, weight: .medium))
-                if !compact {
-                    Text(mode.displayName)
-                        .font(DesignTokens.Typography.labelSmall)
-                }
+                Text(mode.displayName)
+                    .font(DesignTokens.Typography.labelSmall)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
             }
+            .fixedSize(horizontal: true, vertical: false)
             .foregroundColor(isSelected ? themeColors.textOnAccent : themeColors.mutedText)
-            .padding(.horizontal, compact ? 10 : 14)
+            .padding(.horizontal, 14)
             .padding(.vertical, 6)
             .background {
                 if isSelected {
@@ -103,22 +96,22 @@ struct ToolbarView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(compact ? mode.displayName : "")
     }
 
     // MARK: - Filter Pills
 
     @ViewBuilder
-    private func filterPills(compact: Bool) -> some View {
+    private func filterPills() -> some View {
         HStack(spacing: 6) {
             ForEach(FilterMode.allCases, id: \.self) { mode in
-                filterPillButton(mode: mode, compact: compact)
+                filterPillButton(mode: mode)
             }
         }
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     @ViewBuilder
-    private func filterPillButton(mode: FilterMode, compact: Bool) -> some View {
+    private func filterPillButton(mode: FilterMode) -> some View {
         let isSelected = viewModel.filterMode == mode
         let count = filterCount(for: mode)
 
@@ -132,17 +125,17 @@ struct ToolbarView: View {
                     .fill(filterColor(for: mode, isSelected: isSelected))
                     .frame(width: 8, height: 8)
 
-                // Always show label text - never hide it
                 Text(mode.label)
                     .font(DesignTokens.Typography.labelSmall)
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
 
-                // Only show count badge in non-compact mode
-                if !compact && count > 0 {
+                if count > 0 {
                     Text("\(count)")
                         .font(DesignTokens.Typography.captionSmall)
                         .foregroundColor(isSelected ? themeColors.primaryAccent : themeColors.mutedText)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(
@@ -151,6 +144,7 @@ struct ToolbarView: View {
                         )
                 }
             }
+            .fixedSize(horizontal: true, vertical: false)
             .foregroundColor(isSelected ? themeColors.primaryText : themeColors.secondaryText)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -197,20 +191,16 @@ struct ToolbarView: View {
     // MARK: - Right Side Actions
 
     @ViewBuilder
-    private func rightSideActions(compact: Bool) -> some View {
-        HStack(spacing: compact ? 8 : 10) {
-            enableByTagMenu(compact: compact)
-            toggleAllButton(compact: compact)
-            refreshButton(compact: compact)
-
-            if let onMiniMode = onMiniMode {
-                miniModeButton(action: onMiniMode, compact: compact)
-            }
+    private func rightSideActions() -> some View {
+        HStack(spacing: 10) {
+            enableByTagMenu()
+            toggleAllButton()
+            refreshButton()
         }
     }
 
     @ViewBuilder
-    private func enableByTagMenu(compact: Bool) -> some View {
+    private func enableByTagMenu() -> some View {
         Menu {
             ForEach(ServerTag.allCases) { tag in
                 let count = viewModel.taggedServersCount(for: tag)
@@ -224,25 +214,25 @@ struct ToolbarView: View {
                 .disabled(count == 0)
             }
         } label: {
-            HStack(spacing: compact ? 0 : 6) {
+            HStack(spacing: 6) {
                 Image(systemName: "tag")
                     .font(.system(size: 13, weight: .medium))
-                if !compact {
-                    Text("Tags")
-                        .font(DesignTokens.Typography.labelSmall)
-                }
+                Text("Tags")
+                    .font(DesignTokens.Typography.labelSmall)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 9, weight: .bold))
                     .opacity(0.6)
             }
-            .modifier(ToolbarButtonStyle(compact: compact))
+            .fixedSize(horizontal: true, vertical: false)
+            .modifier(ToolbarButtonStyle())
         }
         .buttonStyle(.plain)
-        .help(compact ? "Enable by Tag" : "")
     }
 
     @ViewBuilder
-    private func toggleAllButton(compact: Bool) -> some View {
+    private func toggleAllButton() -> some View {
         let allEnabled = viewModel.servers.allSatisfy {
             $0.inConfigs[safe: viewModel.settings.activeConfigIndex] ?? false
         }
@@ -253,11 +243,11 @@ struct ToolbarView: View {
             }
         } label: {
             HStack(spacing: 8) {
-                if !compact {
-                    Text(allEnabled ? "All Off" : "All On")
-                        .font(DesignTokens.Typography.labelSmall)
-                        .foregroundColor(themeColors.primaryText)
-                }
+                Text(allEnabled ? "All Off" : "All On")
+                    .font(DesignTokens.Typography.labelSmall)
+                    .foregroundColor(themeColors.primaryText)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
 
                 // Modern toggle switch
                 ZStack {
@@ -276,7 +266,8 @@ struct ToolbarView: View {
                         .offset(x: allEnabled ? 9 : -9)
                 }
             }
-            .padding(.horizontal, compact ? 6 : 10)
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 10)
             .padding(.vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: 8)
@@ -288,11 +279,10 @@ struct ToolbarView: View {
             )
         }
         .buttonStyle(.plain)
-        .help(compact ? (allEnabled ? "Disable All" : "Enable All") : "")
     }
 
     @ViewBuilder
-    private func refreshButton(compact: Bool) -> some View {
+    private func refreshButton() -> some View {
         Button {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
                 viewModel.syncToConfigs()
@@ -306,31 +296,18 @@ struct ToolbarView: View {
         .keyboardShortcut("r", modifiers: .command)
         .help("Refresh (⌘R)")
     }
-
-    @ViewBuilder
-    private func miniModeButton(action: @escaping () -> Void, compact: Bool) -> some View {
-        Button(action: action) {
-            Image(systemName: "rectangle.compress.vertical")
-                .font(.system(size: 13, weight: .medium))
-                .modifier(ToolbarIconButtonStyle())
-        }
-        .buttonStyle(.plain)
-        .keyboardShortcut("m", modifiers: [.command, .shift])
-        .help("Mini Mode (⇧⌘M)")
-    }
 }
 
 // MARK: - Toolbar Button Styles
 
 private struct ToolbarButtonStyle: ViewModifier {
-    let compact: Bool
     @Environment(\.themeColors) private var themeColors
     @State private var isHovered = false
 
     func body(content: Content) -> some View {
         content
             .foregroundColor(isHovered ? themeColors.primaryAccent : themeColors.primaryText)
-            .padding(.horizontal, compact ? 8 : 12)
+            .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 8)

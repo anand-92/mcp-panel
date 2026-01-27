@@ -311,14 +311,13 @@ struct HeaderView: View {
     @Binding var showAddServer: Bool
     @Binding var showQuickActions: Bool
     @Environment(\.themeColors) private var themeColors
-    @State private var isPulsing = false
     @State private var isSearchFocused = false
 
     var body: some View {
         HStack(spacing: 0) {
-            // Left: Logo + Title
+            // Left: Logo + Title (logo has integrated quick actions)
             HStack(spacing: 12) {
-                AppLogoView(themeColors: themeColors)
+                AppLogoView(themeColors: themeColors, showQuickActions: $showQuickActions)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("MCP Panel")
@@ -341,19 +340,13 @@ struct HeaderView: View {
 
             Spacer()
 
-            // Right: Search + Actions
+            // Right: Search + Settings
             HStack(spacing: 12) {
                 SearchField(text: $viewModel.searchText, isFocused: $isSearchFocused)
 
                 Divider()
                     .frame(height: 24)
                     .opacity(0.3)
-
-                QuickActionsButton(
-                    showQuickActions: $showQuickActions,
-                    isPulsing: $isPulsing,
-                    themeColors: themeColors
-                )
 
                 SettingsButton(showSettings: $showSettings, themeColors: themeColors)
             }
@@ -364,22 +357,53 @@ struct HeaderView: View {
     }
 }
 
-// MARK: - App Logo
+// MARK: - App Logo (with integrated Quick Actions)
 
 private struct AppLogoView: View {
     let themeColors: ThemeColors
+    @Binding var showQuickActions: Bool
+    @State private var isHovered = false
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(themeColors.accentGradient)
-                .frame(width: 36, height: 36)
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                showQuickActions.toggle()
+            }
+        } label: {
+            ZStack {
+                // App icon (visible when not hovered and quick actions not open)
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 36, height: 36)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .opacity(isHovered || showQuickActions ? 0 : 1)
+                    .scaleEffect(isHovered || showQuickActions ? 0.5 : 1)
 
-            Image(systemName: "server.rack")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(themeColors.textOnAccent)
+                // Plus/X icon background + icon (visible when hovered or quick actions open)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(themeColors.accentGradient)
+                        .frame(width: 36, height: 36)
+
+                    Image(systemName: showQuickActions ? "xmark" : "plus")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(themeColors.textOnAccent)
+                        .rotationEffect(.degrees(showQuickActions ? 0 : -90))
+                }
+                .opacity(isHovered || showQuickActions ? 1 : 0)
+                .scaleEffect(isHovered || showQuickActions ? 1 : 0.5)
+            }
+            .shadow(color: themeColors.primaryAccent.opacity(isHovered || showQuickActions ? 0.5 : 0.2), radius: isHovered ? 12 : 6, x: 0, y: 4)
+            .scaleEffect(isHovered ? 1.08 : 1.0)
         }
-        .shadow(color: themeColors.primaryAccent.opacity(0.3), radius: 8, x: 0, y: 4)
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                isHovered = hovering
+            }
+        }
+        .help("Quick Actions")
     }
 }
 

@@ -3,17 +3,12 @@ import UniformTypeIdentifiers
 
 struct ContentView: View {
     @StateObject private var viewModel = ServerViewModel()
-    @EnvironmentObject var appDelegate: AppDelegate // Add this line
+    @EnvironmentObject var appDelegate: AppDelegate
     @State private var showSettings = false
     @State private var showAddServer = false
     @State private var showQuickActions = false
     @State private var showImporter = false
     @State private var showExporter = false
-    @State private var miniMode = false
-    @State private var previousWindowFrame: NSRect?
-
-    private let miniModeWidth: CGFloat = 280
-    private let miniModeHeight: CGFloat = 500
 
     var body: some View {
         ZStack {
@@ -32,12 +27,7 @@ struct ContentView: View {
         }
         .environment(\.themeColors, viewModel.themeColors)
         .environment(\.currentTheme, viewModel.currentTheme)
-        .frame(
-            minWidth: miniMode ? miniModeWidth : 900,
-            maxWidth: miniMode ? miniModeWidth : .infinity,
-            minHeight: miniMode ? 300 : 600,
-            maxHeight: .infinity
-        )
+        .frame(minWidth: 900, minHeight: 600)
         .fileImporter(
             isPresented: $showImporter,
             allowedContentTypes: [.json],
@@ -93,20 +83,16 @@ struct ContentView: View {
 
     @ViewBuilder
     private var mainContent: some View {
-        if miniMode {
-            MiniModeView(viewModel: viewModel, onExpand: exitMiniMode)
-        } else {
-            VStack(spacing: 0) {
-                HeaderView(
-                    viewModel: viewModel,
-                    showSettings: $showSettings,
-                    showAddServer: $showAddServer,
-                    showQuickActions: $showQuickActions
-                )
-                ToolbarView(viewModel: viewModel, onMiniMode: enterMiniMode)
-                serverContentView
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
+        VStack(spacing: 0) {
+            HeaderView(
+                viewModel: viewModel,
+                showSettings: $showSettings,
+                showAddServer: $showAddServer,
+                showQuickActions: $showQuickActions
+            )
+            ToolbarView(viewModel: viewModel)
+            serverContentView
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -115,8 +101,6 @@ struct ContentView: View {
         switch viewModel.viewMode {
         case .grid:
             ServerGridView(viewModel: viewModel, showAddServer: $showAddServer)
-        case .list:
-            ServerListView(viewModel: viewModel, showAddServer: $showAddServer)
         case .rawJSON:
             RawJSONView(viewModel: viewModel)
         }
@@ -250,60 +234,5 @@ struct ContentView: View {
         }
 
         _ = viewModel.addServers(from: jsonString)
-    }
-
-    // MARK: - Mini Mode
-
-    private func enterMiniMode() {
-        guard let window = NSApp.windows.first else { return }
-
-        previousWindowFrame = window.frame
-
-        let currentFrame = window.frame
-        let targetFrame = NSRect(
-            x: currentFrame.maxX - miniModeWidth,
-            y: currentFrame.maxY - miniModeHeight,
-            width: miniModeWidth,
-            height: miniModeHeight
-        )
-
-        miniMode = true
-        animateWindowFrame(window, to: targetFrame)
-    }
-
-    private func exitMiniMode() {
-        guard let window = NSApp.windows.first else { return }
-
-        let targetFrame = previousWindowFrame ?? defaultWindowFrame()
-        previousWindowFrame = nil
-        miniMode = false
-        animateWindowFrame(window, to: targetFrame)
-    }
-
-    private func defaultWindowFrame() -> NSRect {
-        let width: CGFloat = 1200
-        let height: CGFloat = 800
-
-        guard let screen = NSScreen.main ?? NSScreen.screens.first else {
-            // Fallback if no screens available (edge case)
-            return NSRect(x: 0, y: 0, width: width, height: height)
-        }
-
-        return NSRect(
-            x: (screen.frame.width - width) / 2,
-            y: (screen.frame.height - height) / 2,
-            width: width,
-            height: height
-        )
-    }
-
-    private func animateWindowFrame(_ window: NSWindow, to frame: NSRect) {
-        DispatchQueue.main.async {
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.35
-                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                window.animator().setFrame(frame, display: true)
-            }
-        }
     }
 }
