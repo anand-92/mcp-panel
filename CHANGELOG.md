@@ -17,6 +17,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Server tags (UI, Backend, Creativity, Dev Ops, Advanced) with per-server tagging and bulk enable by tag.
 
 ### Changed
+- **Header & Toolbar Redesign** - Modern unified navigation with cleaner visual hierarchy. New app logo, prominent config switcher with Claude and Gemini brand icons, expandable search field with keyboard hints, and hover states throughout.
+- **Config Switcher** - Replaced SF Symbols with official Claude and Gemini logos. Pill-style toggle with smooth matched geometry animations.
+- **Toolbar Improvements** - View mode and filter toggles now show server counts. Filter labels always visible (never collapse). Better visual separation with dividers.
+- **Quick Actions Menu** - Card-based design with staggered animations, two-line items (title + subtitle), and improved hover states.
 - **Settings Modal Redesign** - Complete overhaul with macOS-native sidebar navigation. Four organized tabs (General, Appearance, Privacy, Advanced), visual theme picker grid with color swatches, improved section cards, and polished UX throughout.
 - **App Entitlements** - Added App Groups entitlement for main app to widget communication (`group.com.anand-92.mcp-panel`).
 
