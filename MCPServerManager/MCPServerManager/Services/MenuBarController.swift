@@ -1,16 +1,58 @@
 import AppKit
 import SwiftUI
 
-/// Manages the menu bar status item and popover for quick server access
+// MARK: - Custom Menu Bar Panel
+
+/// A custom NSPanel that supports transparency and vibrancy for menu bar dropdowns
+class MenuBarPanel: NSPanel {
+    override init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool) {
+        super.init(contentRect: contentRect, styleMask: [.nonactivatingPanel, .fullSizeContentView], backing: backingStoreType, defer: flag)
+
+        // Hide title bar completely
+        titlebarAppearsTransparent = true
+        titleVisibility = .hidden
+
+        // Make window background transparent for vibrancy
+        isOpaque = false
+        backgroundColor = .clear
+
+        // Float above other windows like a popover
+        level = .popUpMenu
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+
+        // Don't show in dock or app switcher
+        hidesOnDeactivate = false
+
+        // IMPORTANT: Don't ignore mouse events - capture them for scrolling
+        ignoresMouseEvents = false
+    }
+
+    // Allow the panel to become key without activating the app
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+
+    // Accept mouse moved events for proper hover/scroll handling
+    override var acceptsMouseMovedEvents: Bool {
+        get { true }
+        set { }
+    }
+}
+
+// MARK: - Menu Bar Controller
+
+/// Manages the menu bar status item and panel for quick server access
 @MainActor
 class MenuBarController: NSObject {
     private var statusItem: NSStatusItem?
-    private var popover: NSPopover?
+    private var panel: MenuBarPanel?
     private weak var viewModel: ServerViewModel?
     private var eventMonitor: Any?
-    
+    private var localEventMonitor: Any?
+
     // Public property to check status
     var hasStatusItem: Bool { statusItem != nil }
+
+    private let panelSize = NSSize(width: 280, height: 400)
 
     override init() {
         super.init()
@@ -18,7 +60,7 @@ class MenuBarController: NSObject {
 
     /// Clean up resources - called manually before releasing
     func cleanup() {
-        removeEventMonitor()
+        removeEventMonitors()
     }
 
     // MARK: - Setup
@@ -26,25 +68,25 @@ class MenuBarController: NSObject {
     /// Initialize the menu bar controller with a view model
     func setup(with viewModel: ServerViewModel) {
         self.viewModel = viewModel
-        
-        // If we already have a status item but no popover, set it up now
-        if statusItem != nil && popover == nil {
-            setupPopover()
+
+        // If we already have a status item but no panel, set it up now
+        if statusItem != nil && panel == nil {
+            setupPanel()
         }
-        
-        // If we have a popover, update its content with the new view model
-        if popover != nil {
-            updatePopoverContent()
+
+        // If we have a panel, update its content with the new view model
+        if panel != nil {
+            updatePanelContent()
         }
-        
+
         print("MenuBarController setup with viewModel containing \(viewModel.servers.count) servers")
     }
 
     /// Show the menu bar icon
     func showMenuBarIcon() {
-        guard statusItem == nil else { 
+        guard statusItem == nil else {
             print("📍 MenuBar: Status item already exists, skipping creation")
-            return 
+            return
         }
 
         print("📍 MenuBar: Creating status item...")
@@ -54,15 +96,15 @@ class MenuBarController: NSObject {
             print("📍 MenuBar: Setting up button with server.rack icon...")
             button.image = NSImage(systemSymbolName: "server.rack", accessibilityDescription: "MCP Servers")
             button.image?.isTemplate = true
-            button.action = #selector(togglePopover)
+            button.action = #selector(togglePanel)
             button.target = self
             print("📍 MenuBar: Button setup complete")
         } else {
             print("❌ MenuBar: Failed to get button from status item")
         }
 
-        print("📍 MenuBar: Setting up popover...")
-        setupPopover()
+        print("📍 MenuBar: Setting up panel...")
+        setupPanel()
         print("✅ MenuBar: Show menu bar icon complete")
     }
 
@@ -72,9 +114,8 @@ class MenuBarController: NSObject {
             NSStatusBar.system.removeStatusItem(item)
             statusItem = nil
         }
-        popover?.close()
-        popover = nil
-        removeEventMonitor()
+        closePanel()
+        panel = nil
     }
 
     /// Update visibility based on settings
@@ -85,32 +126,34 @@ class MenuBarController: NSObject {
             hideMenuBarIcon()
         }
     }
-    
-    /// Refresh the popover content (useful when servers change)
+
+    /// Refresh the panel content (useful when servers change)
     func refreshPopoverContent() {
-        guard viewModel != nil, popover != nil else { return }
-        updatePopoverContent()
+        guard viewModel != nil, panel != nil else { return }
+        updatePanelContent()
     }
 
-    // MARK: - Popover Management
+    // MARK: - Panel Management
 
-    private func setupPopover() {
-        popover = NSPopover()
-        popover?.behavior = .transient
-        popover?.animates = true
-        popover?.contentSize = NSSize(width: 280, height: 400)
-        updatePopoverContent()
+    private func setupPanel() {
+        panel = MenuBarPanel(
+            contentRect: NSRect(origin: .zero, size: panelSize),
+            styleMask: [],
+            backing: .buffered,
+            defer: false
+        )
+        updatePanelContent()
     }
 
-    private func updatePopoverContent() {
-        guard let viewModel = viewModel else {
-            print("MenuBar: Cannot update popover content - no view model")
+    private func updatePanelContent() {
+        guard let viewModel = viewModel, let panel = panel else {
+            print("MenuBar: Cannot update panel content - no view model or panel")
             return
         }
 
-        print("MenuBar: Updating popover content with \(viewModel.servers.count) servers")
+        print("MenuBar: Updating panel content with \(viewModel.servers.count) servers")
 
-        let popoverView = MenuBarPopoverView(
+        let panelView = MenuBarPopoverView(
             viewModel: viewModel,
             onOpenApp: { [weak self] in self?.openMainApp() },
             onRefresh: { [weak self] in self?.refreshServers() }
@@ -118,10 +161,12 @@ class MenuBarController: NSObject {
         .environment(\.themeColors, viewModel.themeColors)
         .environment(\.currentTheme, viewModel.currentTheme)
 
-        popover?.contentViewController = NSHostingController(rootView: popoverView)
+        let hostingView = NSHostingView(rootView: panelView)
+        hostingView.autoresizingMask = [.width, .height]
+        panel.contentView = hostingView
     }
 
-    @objc private func togglePopover() {
+    @objc private func togglePanel() {
         guard let button = statusItem?.button else { return }
 
         // If no viewModel yet, just open the main app
@@ -131,69 +176,103 @@ class MenuBarController: NSObject {
             return
         }
 
-        // Ensure popover exists and is properly configured
-        if popover == nil {
-            setupPopover()
+        // Ensure panel exists and is properly configured
+        if panel == nil {
+            setupPanel()
         }
 
-        guard let popover = popover else {
-            print("Failed to create popover")
+        guard let panel = panel else {
+            print("Failed to create panel")
             return
         }
 
-        if popover.isShown {
-            closePopover()
+        if panel.isVisible {
+            closePanel()
         } else {
             // Refresh data before showing
             viewModel.loadServers()
-            updatePopoverContent()
-            
-            // Show the popover
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            addEventMonitor()
-            
-            print("Popover shown with \(viewModel.servers.count) servers")
+            updatePanelContent()
+
+            // Calculate position below the status item
+            if let buttonWindow = button.window {
+                let buttonRect = button.convert(button.bounds, to: nil)
+                let screenRect = buttonWindow.convertToScreen(buttonRect)
+
+                // Position panel centered below the button
+                let x = screenRect.midX - (panelSize.width / 2)
+                let y = screenRect.minY - panelSize.height - 4 // 4px gap
+
+                panel.setFrameOrigin(NSPoint(x: x, y: y))
+            }
+
+            // Show the panel
+            panel.makeKeyAndOrderFront(nil)
+            addEventMonitors()
+
+            print("Panel shown with \(viewModel.servers.count) servers")
         }
     }
 
-    private func closePopover() {
-        popover?.performClose(nil)
-        removeEventMonitor()
+    private func closePanel() {
+        panel?.orderOut(nil)
+        removeEventMonitors()
     }
 
     // MARK: - Event Monitoring
 
-    private func addEventMonitor() {
+    private func addEventMonitors() {
+        // Global monitor for clicks outside the app
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            if self?.popover?.isShown == true {
-                self?.closePopover()
+            self?.closePanel()
+        }
+
+        // Local monitor for clicks inside the app but outside the panel
+        localEventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            guard let self = self, let panel = self.panel else { return event }
+
+            // If click is on the status item button, let togglePanel handle it
+            if let button = self.statusItem?.button,
+               let buttonWindow = button.window,
+               event.window == buttonWindow {
+                return event
             }
+
+            // If click is outside the panel, close it
+            if event.window != panel {
+                self.closePanel()
+            }
+
+            return event
         }
     }
 
-    private func removeEventMonitor() {
+    private func removeEventMonitors() {
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
             eventMonitor = nil
+        }
+        if let monitor = localEventMonitor {
+            NSEvent.removeMonitor(monitor)
+            localEventMonitor = nil
         }
     }
 
     // MARK: - Actions
 
     private func openMainApp() {
-        closePopover()
-        
+        closePanel()
+
         // Temporarily change activation policy to .regular so window can become key
         NSApp.setActivationPolicy(.regular)
-        
+
         // Activate the app and bring window to front
         NSApp.activate(ignoringOtherApps: true)
-        
+
         // Find and show the main window (excluding menu bar windows)
         if let window = NSApp.windows.first(where: { window in
-            // Skip status bar windows and other system windows
-            return window.className != "NSStatusBarWindow" && 
-                   window.className != "_NSPopoverWindow"
+            // Skip status bar windows and panel windows
+            return window.className != "NSStatusBarWindow" &&
+                   !(window is MenuBarPanel)
         }) {
             window.makeKeyAndOrderFront(nil)
             window.orderFrontRegardless()
@@ -201,7 +280,7 @@ class MenuBarController: NSObject {
             // Fallback: just use the first available window
             NSApp.windows.first?.makeKeyAndOrderFront(nil)
         }
-        
+
         print("📱 Opened main app window")
     }
 

@@ -1,4 +1,25 @@
 import SwiftUI
+import AppKit
+
+// MARK: - Visual Effect Blur (NSVisualEffectView wrapper)
+
+struct VisualEffectBlur: NSViewRepresentable {
+    var material: NSVisualEffectView.Material
+    var blendingMode: NSVisualEffectView.BlendingMode
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = .active
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
+    }
+}
 
 /// Menu bar popover view for quick server access
 struct MenuBarPopoverView: View {
@@ -27,7 +48,13 @@ struct MenuBarPopoverView: View {
             popoverFooter
         }
         .frame(width: 280, height: 400)
-        .background(themeColors.sidebarBackground)
+        // Invisible hit area to capture scroll/mouse events on transparent background
+        .contentShape(Rectangle())
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(themeColors.sidebarBackground.opacity(0.2))
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Header
@@ -40,7 +67,7 @@ struct MenuBarPopoverView: View {
 
             Text("MCP Servers")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(themeColors.primaryText)
+                .foregroundColor(themeColors.primaryAccent)
 
             Spacer()
 
@@ -48,7 +75,7 @@ struct MenuBarPopoverView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(themeColors.sidebarBackground.opacity(0.8))
+        .background(Color.clear)
     }
 
     private var configSwitchButton: some View {
@@ -75,12 +102,12 @@ struct MenuBarPopoverView: View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 11))
-                .foregroundColor(themeColors.mutedText)
+                .foregroundColor(themeColors.primaryAccent.opacity(0.7))
 
             TextField("Search servers...", text: $searchText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12))
-                .foregroundColor(themeColors.primaryText)
+                .foregroundColor(themeColors.primaryAccent)
 
             if !searchText.isEmpty {
                 Button {
@@ -88,7 +115,7 @@ struct MenuBarPopoverView: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 11))
-                        .foregroundColor(themeColors.mutedText)
+                        .foregroundColor(themeColors.primaryAccent.opacity(0.7))
                 }
                 .buttonStyle(.plain)
             }
@@ -97,8 +124,8 @@ struct MenuBarPopoverView: View {
         .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: 6)
-                .fill(themeColors.glassBackground)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(themeColors.borderColor, lineWidth: 0.5))
+                .fill(themeColors.primaryAccent.opacity(0.1))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(themeColors.primaryAccent.opacity(0.3), lineWidth: 0.5))
         )
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
@@ -130,11 +157,11 @@ struct MenuBarPopoverView: View {
         VStack(spacing: 8) {
             Image(systemName: "server.rack")
                 .font(.system(size: 24))
-                .foregroundColor(themeColors.mutedText)
+                .foregroundColor(themeColors.primaryAccent.opacity(0.5))
 
             Text(searchText.isEmpty ? "No servers configured" : "No matching servers")
                 .font(.system(size: 12))
-                .foregroundColor(themeColors.mutedText)
+                .foregroundColor(themeColors.primaryAccent.opacity(0.7))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
@@ -151,7 +178,7 @@ struct MenuBarPopoverView: View {
                     .font(.system(size: 12, weight: .medium))
             }
             .buttonStyle(.plain)
-            .foregroundColor(themeColors.primaryText)
+            .foregroundColor(themeColors.primaryAccent)
             .help("Refresh servers")
 
             Spacer()
@@ -171,7 +198,7 @@ struct MenuBarPopoverView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(themeColors.sidebarBackground.opacity(0.8))
+        .background(Color.clear)
     }
 }
 
@@ -194,7 +221,7 @@ struct PopoverServerRow: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(RoundedRectangle(cornerRadius: 6).fill(isHovering ? themeColors.glassBackground : Color.clear))
+        .background(RoundedRectangle(cornerRadius: 6).fill(isHovering ? themeColors.primaryAccent.opacity(0.15) : Color.clear))
         .onHover { hover in
             withAnimation(.easeInOut(duration: 0.15)) {
                 isHovering = hover
@@ -204,14 +231,14 @@ struct PopoverServerRow: View {
 
     private var statusDot: some View {
         Circle()
-            .fill(isEnabled ? themeColors.successColor : themeColors.mutedText.opacity(0.5))
+            .fill(isEnabled ? themeColors.successColor : themeColors.primaryAccent.opacity(0.4))
             .frame(width: 6, height: 6)
     }
 
     private var serverNameLabel: some View {
         Text(server.name)
             .font(.system(size: 12, weight: isEnabled ? .medium : .regular))
-            .foregroundColor(isEnabled ? themeColors.primaryText : themeColors.mutedText)
+            .foregroundColor(isEnabled ? themeColors.primaryAccent : themeColors.primaryAccent.opacity(0.6))
             .lineLimit(1)
             .truncationMode(.tail)
     }
@@ -220,9 +247,9 @@ struct PopoverServerRow: View {
         Button(action: onToggle) {
             ZStack {
                 Capsule()
-                    .fill(isEnabled ? themeColors.successColor : themeColors.glassBackground)
+                    .fill(isEnabled ? themeColors.successColor : themeColors.primaryAccent.opacity(0.2))
                     .frame(width: 32, height: 18)
-                    .overlay(Capsule().stroke(isEnabled ? Color.clear : themeColors.borderColor, lineWidth: 0.5))
+                    .overlay(Capsule().stroke(isEnabled ? Color.clear : themeColors.primaryAccent.opacity(0.3), lineWidth: 0.5))
 
                 Circle()
                     .fill(Color.white)
