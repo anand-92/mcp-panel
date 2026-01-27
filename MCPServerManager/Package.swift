@@ -24,7 +24,8 @@ let package = Package(
             path: "MCPServerManager",
             exclude: ["Info.plist"],
             resources: [
-                .process("Resources")
+                .process("Resources"),
+                .process("Assets.xcassets")
             ]
         )
     ]

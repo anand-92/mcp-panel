@@ -72,8 +72,17 @@ extension NSTextField {
 // MARK: - App Icon Helper
 
 enum AppIcon {
-    /// Get the app icon (from asset catalog via NSApp.applicationIconImage)
+    /// Get the app icon - tries bundle first (for swift run), then NSApp fallback
     static var image: NSImage {
-        NSApp.applicationIconImage ?? NSImage()
+        // Try loading from SPM bundle (for swift run)
+        if let bundleURL = Bundle.main.url(forResource: "MCPServerManager_MCPServerManager", withExtension: "bundle"),
+           let bundle = Bundle(url: bundleURL),
+           let iconURL = bundle.url(forResource: "icon_512x512@2x", withExtension: "png", subdirectory: "Assets.xcassets/AppIcon.appiconset"),
+           let image = NSImage(contentsOf: iconURL) {
+            return image
+        }
+
+        // Fallback to NSApp (works in release builds)
+        return NSApp.applicationIconImage ?? NSImage()
     }
 }

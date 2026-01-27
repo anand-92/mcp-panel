@@ -93,17 +93,34 @@ class MenuBarController: NSObject {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
 
         if let button = statusItem?.button {
-            print("📍 MenuBar: Setting up button with app icon...")
-            // Use app icon resized for menu bar
-            let appIcon = AppIcon.image
-            let resizedIcon = NSImage(size: NSSize(width: 18, height: 18))
-            resizedIcon.lockFocus()
-            appIcon.draw(in: NSRect(x: 0, y: 0, width: 18, height: 18),
-                        from: NSRect(origin: .zero, size: appIcon.size),
-                        operation: .sourceOver,
-                        fraction: 1.0)
-            resizedIcon.unlockFocus()
-            button.image = resizedIcon
+            print("📍 MenuBar: Setting up button with menu bar icon...")
+            // Load menu bar icon from bundle resources
+            var menuBarIcon: NSImage?
+
+            // Try to load from bundle (SPM copies assets here)
+            if let bundleURL = Bundle.main.url(forResource: "MCPServerManager_MCPServerManager", withExtension: "bundle"),
+               let bundle = Bundle(url: bundleURL),
+               let iconURL = bundle.url(forResource: "MenuBarIcon@2x", withExtension: "png", subdirectory: "Assets.xcassets/MenuBarIcon.imageset"),
+               let image = NSImage(contentsOf: iconURL) {
+                menuBarIcon = image
+                print("📍 MenuBar: Loaded icon from bundle")
+            }
+
+            // Fallback: try NSImage(named:) for compiled asset catalog
+            if menuBarIcon == nil, let image = NSImage(named: "MenuBarIcon") {
+                menuBarIcon = image
+                print("📍 MenuBar: Loaded icon from asset catalog")
+            }
+
+            if let icon = menuBarIcon {
+                icon.isTemplate = true
+                icon.size = NSSize(width: 22, height: 22)  // Standard menu bar icon size
+                button.image = icon
+            } else {
+                // Final fallback to SF Symbol
+                print("⚠️ MenuBar: Using fallback SF Symbol")
+                button.image = NSImage(systemSymbolName: "server.rack", accessibilityDescription: "MCP Servers")
+            }
             button.action = #selector(togglePanel)
             button.target = self
             print("📍 MenuBar: Button setup complete")
