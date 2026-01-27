@@ -1,11 +1,43 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+// MARK: - Settings Tab Enum
+
+enum SettingsTab: String, CaseIterable, Identifiable {
+    case general = "General"
+    case appearance = "Appearance"
+    case privacy = "Privacy"
+    case advanced = "Advanced"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .general: return "gearshape.fill"
+        case .appearance: return "paintbrush.fill"
+        case .privacy: return "lock.shield.fill"
+        case .advanced: return "wrench.and.screwdriver.fill"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .general: return "Configs & startup"
+        case .appearance: return "Themes & display"
+        case .privacy: return "Security options"
+        case .advanced: return "Network & debug"
+        }
+    }
+}
+
+// MARK: - Settings Modal
+
 struct SettingsModal: View {
     @Binding var isPresented: Bool
     @ObservedObject var viewModel: ServerViewModel
     @Environment(\.themeColors) private var themeColors
 
+    @State private var selectedTab: SettingsTab = .general
     @State private var config1Path: String = ""
     @State private var config2Path: String = ""
     @State private var confirmDelete: Bool = true
@@ -16,23 +48,40 @@ struct SettingsModal: View {
     @State private var testResult: String = ""
     @State private var showBookmarkAlert: Bool = false
     @State private var bookmarkAlertMessage: String = ""
-
-    // Startup settings
     @State private var launchAtLogin: Bool = false
     @State private var launchAtLoginRequiresApproval: Bool = false
 
+    // Animation states
+    @State private var appearAnimation: Bool = false
+
     var body: some View {
-        VStack(spacing: 0) {
-            headerView
-            Divider()
-            contentScrollView
-            Divider()
-            footerView
+        HStack(spacing: 0) {
+            // Sidebar Navigation
+            sidebarView
+
+            // Divider
+            Rectangle()
+                .fill(themeColors.borderColor.opacity(0.5))
+                .frame(width: 1)
+
+            // Content Area
+            VStack(spacing: 0) {
+                contentHeader
+                Divider().opacity(0.5)
+                contentBody
+                Divider().opacity(0.5)
+                footerView
+            }
         }
-        .frame(width: 600, height: 700)
-        .modifier(LiquidGlassModifier(shape: RoundedRectangle(cornerRadius: 20)))
-        .shadow(radius: 30)
-        .onAppear(perform: loadSettings)
+        .frame(width: 720, height: 560)
+        .modifier(LiquidGlassModifier(shape: RoundedRectangle(cornerRadius: 16)))
+        .shadow(color: .black.opacity(0.4), radius: 40, x: 0, y: 20)
+        .onAppear {
+            loadSettings()
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                appearAnimation = true
+            }
+        }
         .alert("Bookmark Storage Failed", isPresented: $showBookmarkAlert) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -40,211 +89,307 @@ struct SettingsModal: View {
         }
     }
 
-    // MARK: - Header
+    // MARK: - Sidebar
 
-    private var headerView: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("PREFERENCES")
-                    .font(DesignTokens.Typography.labelSmall)
-                    .foregroundColor(.secondary)
-                    .tracking(1.5)
+    private var sidebarView: some View {
+        VStack(spacing: 8) {
+            // App Icon & Title
+            VStack(spacing: 8) {
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .frame(width: 48, height: 48)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
 
                 Text("Settings")
+                    .font(DesignTokens.Typography.title3)
+                    .foregroundColor(themeColors.primaryText)
+            }
+            .padding(.top, 24)
+            .padding(.bottom, 16)
+
+            // Tab Items
+            VStack(spacing: 4) {
+                ForEach(SettingsTab.allCases) { tab in
+                    SidebarTabButton(
+                        tab: tab,
+                        isSelected: selectedTab == tab,
+                        action: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                selectedTab = tab
+                            }
+                        }
+                    )
+                }
+            }
+            .padding(.horizontal, 12)
+
+            Spacer()
+
+            // Version info
+            Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+                .font(DesignTokens.Typography.caption)
+                .foregroundColor(themeColors.mutedText)
+                .padding(.bottom, 16)
+        }
+        .frame(width: 190)
+        .background(themeColors.sidebarBackground.opacity(0.5))
+    }
+
+    // MARK: - Content Header
+
+    private var contentHeader: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(selectedTab.rawValue)
                     .font(DesignTokens.Typography.title2)
+                    .foregroundColor(themeColors.primaryText)
+
+                Text(selectedTab.description)
+                    .font(DesignTokens.Typography.bodySmall)
+                    .foregroundColor(themeColors.secondaryText)
             }
 
             Spacer()
 
             Button(action: { isPresented = false }) {
-                Image(systemName: "xmark")
-                    .font(DesignTokens.Typography.title3)
-                    .foregroundColor(.secondary)
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(themeColors.mutedText)
             }
             .buttonStyle(.plain)
+            .contentShape(Circle())
         }
-        .padding(24)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 16)
     }
 
-    // MARK: - Content
+    // MARK: - Content Body
 
-    private var contentScrollView: some View {
+    private var contentBody: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                configurationFilesSection
-                launchAtLoginSection
-                appearanceSection
-                privacySecuritySection
-                networkSection
+            VStack(alignment: .leading, spacing: 24) {
+                switch selectedTab {
+                case .general:
+                    generalTabContent
+                case .appearance:
+                    appearanceTabContent
+                case .privacy:
+                    privacyTabContent
+                case .advanced:
+                    advancedTabContent
+                }
             }
             .padding(24)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var configurationFilesSection: some View {
-        SettingsSection(
-            icon: "doc.text.fill",
-            title: "Configuration Files",
-            description: "Manage MCP server config files"
-        ) {
-            VStack(spacing: 16) {
-                ConfigPathRow(
-                    number: 1,
-                    placeholder: "~/.claude.json",
-                    path: $config1Path,
-                    onBrowse: { selectConfigFile { config1Path = $0 } }
-                )
+    // MARK: - General Tab
 
-                ConfigPathRow(
-                    number: 2,
-                    placeholder: "~/.settings.json",
-                    path: $config2Path,
-                    onBrowse: { selectConfigFile { config2Path = $0 } }
-                )
+    private var generalTabContent: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            // Config Files Section
+            SettingsSectionCard(title: "Configuration Files", icon: "doc.text.fill") {
+                VStack(spacing: 16) {
+                    ConfigPathEditor(
+                        label: "Claude Code",
+                        icon: "1.circle.fill",
+                        placeholder: "~/.claude.json",
+                        path: $config1Path,
+                        onBrowse: { selectConfigFile { config1Path = $0 } }
+                    )
+
+                    Divider().opacity(0.3)
+
+                    ConfigPathEditor(
+                        label: "Gemini CLI",
+                        icon: "2.circle.fill",
+                        placeholder: "~/.settings.json",
+                        path: $config2Path,
+                        onBrowse: { selectConfigFile { config2Path = $0 } }
+                    )
+                }
             }
-        }
-    }
 
-    private var launchAtLoginSection: some View {
-        SettingsSection(
-            icon: "power.circle.fill",
-            title: "Startup",
-            description: "Control app startup behavior"
-        ) {
-            VStack(spacing: 16) {
-                SettingsToggleRow(
-                    isOn: $launchAtLogin,
-                    icon: "power.circle.fill",
-                    label: "Launch at Login",
-                    description: "Start MCP Server Manager when you log in"
-                )
+            // Startup Section
+            SettingsSectionCard(title: "Startup", icon: "power.circle.fill") {
+                VStack(spacing: 12) {
+                    SettingsToggleRow(
+                        isOn: $launchAtLogin,
+                        icon: "power.circle.fill",
+                        label: "Launch at Login",
+                        description: "Start MCP Server Manager when you log in"
+                    )
 
-                HStack(spacing: 12) {
-                    Text(launchAtLogin && launchAtLoginRequiresApproval
-                         ? "Approval required in System Settings > Login Items."
-                         : "Manage startup behavior in System Settings.")
-                        .font(DesignTokens.Typography.bodySmall)
-                        .foregroundColor(.secondary)
+                    if launchAtLogin && launchAtLoginRequiresApproval {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(themeColors.warningColor)
+                                .font(.system(size: 12))
 
-                    Spacer()
+                            Text("Approval required in System Settings")
+                                .font(DesignTokens.Typography.caption)
+                                .foregroundColor(themeColors.warningColor)
 
-                    Button(action: openLoginItemsSettings) {
-                        HStack(spacing: 4) {
-                            Text("Open Settings")
-                            Image(systemName: "arrow.up.forward.square")
+                            Spacer()
+
+                            Button(action: openLoginItemsSettings) {
+                                Text("Open Settings")
+                                    .font(DesignTokens.Typography.caption)
+                            }
+                            .buttonStyle(.link)
                         }
-                        .font(DesignTokens.Typography.labelSmall)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
+                        .padding(10)
                         .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color.white.opacity(0.1))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                                )
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(themeColors.warningColor.opacity(0.1))
                         )
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
     }
 
-    private var appearanceSection: some View {
-        SettingsSection(
-            icon: "paintbrush.fill",
-            title: "Appearance",
-            description: "Customize the app's look and feel"
-        ) {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Theme")
-                    .font(DesignTokens.Typography.label)
+    // MARK: - Appearance Tab
 
-                Picker("", selection: $selectedTheme) {
-                    ForEach(AppTheme.allCases, id: \.self) { theme in
-                        Text(theme.rawValue).tag(theme)
+    private var appearanceTabContent: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            // Theme Selection
+            SettingsSectionCard(title: "Theme", icon: "paintpalette.fill") {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Auto mode toggle
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Auto-detect from Config")
+                                .font(DesignTokens.Typography.label)
+                                .foregroundColor(themeColors.primaryText)
+
+                            Text("Uses Claude Code or Gemini CLI theme based on active config")
+                                .font(DesignTokens.Typography.caption)
+                                .foregroundColor(themeColors.mutedText)
+                        }
+
+                        Spacer()
+
+                        Toggle("", isOn: Binding(
+                            get: { selectedTheme == .auto },
+                            set: { newValue in
+                                if newValue {
+                                    selectedTheme = .auto
+                                } else {
+                                    // Default to first non-auto theme when disabling auto
+                                    selectedTheme = .claudeCode
+                                }
+                            }
+                        ))
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                    }
+
+                    if selectedTheme != .auto {
+                        Divider().opacity(0.3)
+
+                        // Theme Grid
+                        Text("Select Theme")
+                            .font(DesignTokens.Typography.labelSmall)
+                            .foregroundColor(themeColors.mutedText)
+                            .textCase(.uppercase)
+                            .tracking(0.5)
+
+                        ThemePickerGrid(
+                            selectedTheme: $selectedTheme,
+                            onThemeSelected: { theme in
+                                selectedTheme = theme
+                                viewModel.settings.overrideTheme = theme == .auto ? nil : theme.rawValue
+                                viewModel.saveSettings()
+                            }
+                        )
                     }
                 }
-                .pickerStyle(.menu)
-                .onChange(of: selectedTheme) { newTheme in
-                    viewModel.settings.overrideTheme = newTheme == .auto ? nil : newTheme.rawValue
-                    viewModel.saveSettings()
-                }
-
-                Text("'Auto' detects theme based on active config (Claude Code or Gemini CLI)")
-                    .font(DesignTokens.Typography.bodySmall)
-                    .foregroundColor(.secondary)
             }
         }
     }
 
-    private var privacySecuritySection: some View {
-        SettingsSection(
-            icon: "lock.shield.fill",
-            title: "Privacy & Security",
-            description: "Control data visibility and confirmations"
-        ) {
-            VStack(spacing: 16) {
+    // MARK: - Privacy Tab
+
+    private var privacyTabContent: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            SettingsSectionCard(title: "Confirmations", icon: "checkmark.shield.fill") {
                 SettingsToggleRow(
                     isOn: $confirmDelete,
                     icon: "trash.circle.fill",
                     label: "Confirm before deleting",
                     description: "Show confirmation dialog when deleting servers"
                 )
+            }
 
+            SettingsSectionCard(title: "Data Visibility", icon: "eye.slash.fill") {
                 SettingsToggleRow(
                     isOn: $blurJSONPreviews,
-                    icon: "eye.slash.fill",
+                    icon: "rectangle.badge.xmark",
                     label: "Blur JSON previews",
-                    description: "Apply blur to code previews (removed when editing)"
+                    description: "Hide sensitive data in code previews until you interact"
                 )
             }
         }
     }
 
-    private var networkSection: some View {
-        SettingsSection(
-            icon: "network",
-            title: "Network",
-            description: "Configure internet-based features"
-        ) {
-            VStack(spacing: 16) {
-                SettingsToggleRow(
-                    isOn: $fetchServerLogos,
-                    icon: "photo.circle.fill",
-                    label: "Fetch server logos",
-                    description: "Download logos from internet (no tracking)"
-                )
+    // MARK: - Advanced Tab
 
-                Divider()
+    private var advancedTabContent: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            SettingsSectionCard(title: "Network", icon: "network") {
+                VStack(spacing: 16) {
+                    SettingsToggleRow(
+                        isOn: $fetchServerLogos,
+                        icon: "photo.circle.fill",
+                        label: "Fetch server logos",
+                        description: "Download logos from internet (no tracking)"
+                    )
 
-                testConnectionView
-            }
-        }
-    }
+                    Divider().opacity(0.3)
 
-    private var testConnectionView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Button(action: testConnection) {
-                HStack {
-                    Image(systemName: testingConnection ? "arrow.triangle.2.circlepath" : "network.badge.shield.half.filled")
-                    if testingConnection {
-                        ProgressView()
-                            .scaleEffect(0.7)
+                    // Connection Test
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Connectivity")
+                            .font(DesignTokens.Typography.labelSmall)
+                            .foregroundColor(themeColors.mutedText)
+                            .textCase(.uppercase)
+                            .tracking(0.5)
+
+                        HStack {
+                            Button(action: testConnection) {
+                                HStack(spacing: 8) {
+                                    if testingConnection {
+                                        ProgressView()
+                                            .scaleEffect(0.6)
+                                            .frame(width: 16, height: 16)
+                                    } else {
+                                        Image(systemName: "network.badge.shield.half.filled")
+                                    }
+                                    Text(testingConnection ? "Testing..." : "Test Connection")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(testingConnection)
+                        }
+
+                        if !testResult.isEmpty {
+                            HStack(spacing: 6) {
+                                Image(systemName: testResult.contains("Error") ? "xmark.circle.fill" : "checkmark.circle.fill")
+                                    .foregroundColor(testResult.contains("Error") ? themeColors.errorColor : themeColors.successColor)
+                                    .font(.system(size: 12))
+
+                                Text(testResult)
+                                    .font(DesignTokens.Typography.caption)
+                                    .foregroundColor(themeColors.secondaryText)
+                            }
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
                     }
-                    Text(testingConnection ? "Testing..." : "Test Connection")
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-            }
-            .buttonStyle(.bordered)
-            .disabled(testingConnection)
-
-            if !testResult.isEmpty {
-                Text(testResult)
-                    .font(DesignTokens.Typography.bodySmall)
-                    .foregroundColor(.secondary)
             }
         }
     }
@@ -253,29 +398,37 @@ struct SettingsModal: View {
 
     private var footerView: some View {
         HStack(spacing: 12) {
-            Spacer()
-
-            GlassButton(label: "Cancel") {
-                isPresented = false
-            }
-
-            Button(action: saveSettings) {
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("Save Settings")
-                }
-                .foregroundColor(Color(hex: "#1a1a1a"))
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(themeColors.accentGradient)
-                )
-                .shadow(color: themeColors.primaryAccent.opacity(0.3), radius: 8, x: 0, y: 4)
+            // Reset to defaults (subtle)
+            Button(action: resetToDefaults) {
+                Text("Reset to Defaults")
+                    .font(DesignTokens.Typography.bodySmall)
+                    .foregroundColor(themeColors.mutedText)
             }
             .buttonStyle(.plain)
+
+            Spacer()
+
+            // Cancel
+            Button("Cancel") {
+                isPresented = false
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.regular)
+
+            // Save
+            Button(action: saveSettings) {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Save")
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(themeColors.primaryAccent)
+            .controlSize(.regular)
         }
-        .padding(24)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 16)
     }
 
     // MARK: - Actions
@@ -286,8 +439,6 @@ struct SettingsModal: View {
         confirmDelete = viewModel.settings.confirmDelete
         fetchServerLogos = UserDefaults.standard.object(forKey: "fetchServerLogos") as? Bool ?? true
         blurJSONPreviews = viewModel.settings.blurJSONPreviews
-
-        // Startup settings (menu bar is always enabled now)
         launchAtLogin = viewModel.settings.launchAtLogin
         let requiresApproval = (NSApp.delegate as? AppDelegate)?.launchAtLoginRequiresApproval() ?? false
         launchAtLoginRequiresApproval = launchAtLogin && requiresApproval
@@ -340,16 +491,28 @@ struct SettingsModal: View {
             let result = await viewModel.testConnection(to: config1Path)
 
             await MainActor.run {
-                testingConnection = false
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    testingConnection = false
 
-                switch result {
-                case .success(let count):
-                    testResult = "Found \(count) server(s) in config"
-                case .failure(let error):
-                    testResult = "Error: \(error.localizedDescription)"
+                    switch result {
+                    case .success(let count):
+                        testResult = "Found \(count) server(s) in config"
+                    case .failure(let error):
+                        testResult = "Error: \(error.localizedDescription)"
+                    }
                 }
             }
         }
+    }
+
+    private func resetToDefaults() {
+        config1Path = "~/.claude.json"
+        config2Path = "~/.settings.json"
+        confirmDelete = true
+        fetchServerLogos = true
+        blurJSONPreviews = false
+        selectedTheme = .auto
+        launchAtLogin = false
     }
 
     private func saveSettings() {
@@ -358,15 +521,13 @@ struct SettingsModal: View {
         viewModel.settings.blurJSONPreviews = blurJSONPreviews
         UserDefaults.standard.set(fetchServerLogos, forKey: "fetchServerLogos")
 
-        // Menu Bar is always enabled now - just save launch at login
+        viewModel.settings.overrideTheme = selectedTheme == .auto ? nil : selectedTheme.rawValue
         viewModel.settings.launchAtLogin = launchAtLogin
         viewModel.saveSettings()
-        
-        // Ensure menu bar is set up (always enabled now)
+
         if let appDelegate = NSApp.delegate as? AppDelegate {
             appDelegate.setupMenuBar(with: viewModel)
 
-            // Update launch at login
             let launchUpdated = appDelegate.updateLaunchAtLogin(enabled: launchAtLogin)
             launchAtLoginRequiresApproval = launchAtLogin && appDelegate.launchAtLoginRequiresApproval()
             if !launchUpdated {
@@ -380,10 +541,88 @@ struct SettingsModal: View {
     }
 }
 
-// MARK: - Config Path Row Component
+// MARK: - Sidebar Tab Button
 
-private struct ConfigPathRow: View {
-    let number: Int
+private struct SidebarTabButton: View {
+    let tab: SettingsTab
+    let isSelected: Bool
+    let action: () -> Void
+
+    @Environment(\.themeColors) private var themeColors
+    @State private var isHovered: Bool = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: tab.icon)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(isSelected ? themeColors.primaryAccent : themeColors.secondaryText)
+                    .frame(width: 20)
+
+                Text(tab.rawValue)
+                    .font(DesignTokens.Typography.label)
+                    .foregroundColor(isSelected ? themeColors.primaryText : themeColors.secondaryText)
+
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isSelected ? themeColors.selectionColor : (isHovered ? themeColors.glassBackground : Color.clear))
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+}
+
+// MARK: - Settings Section Card
+
+private struct SettingsSectionCard<Content: View>: View {
+    let title: String
+    let icon: String
+    @ViewBuilder let content: () -> Content
+
+    @Environment(\.themeColors) private var themeColors
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Section Header
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(themeColors.primaryAccent)
+
+                Text(title)
+                    .font(DesignTokens.Typography.label)
+                    .foregroundColor(themeColors.primaryText)
+            }
+
+            // Section Content
+            content()
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(themeColors.glassBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(themeColors.glassBorder, lineWidth: 1)
+                )
+        )
+    }
+}
+
+// MARK: - Config Path Editor
+
+private struct ConfigPathEditor: View {
+    let label: String
+    let icon: String
     let placeholder: String
     @Binding var path: String
     let onBrowse: () -> Void
@@ -392,55 +631,175 @@ private struct ConfigPathRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: "\(number).circle.fill")
+            HStack(spacing: 6) {
+                Image(systemName: icon)
                     .foregroundColor(themeColors.primaryAccent)
-                Text("Config Path \(number)")
-                    .font(DesignTokens.Typography.label)
+                    .font(.system(size: 12))
+
+                Text(label)
+                    .font(DesignTokens.Typography.labelSmall)
+                    .foregroundColor(themeColors.secondaryText)
             }
 
-            HStack {
+            HStack(spacing: 8) {
                 TextField(placeholder, text: $path)
                     .textFieldStyle(.roundedBorder)
-                    .focusable(true)
+                    .font(DesignTokens.Typography.code)
 
-                GlassButton(icon: "folder", label: "Browse", action: onBrowse)
+                Button(action: onBrowse) {
+                    Image(systemName: "folder")
+                        .font(.system(size: 14))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
         }
     }
 }
 
-// MARK: - Glass Button Component
+// MARK: - Settings Toggle Row
 
-private struct GlassButton: View {
-    var icon: String?
+struct SettingsToggleRow: View {
+    @Binding var isOn: Bool
+    let icon: String
     let label: String
+    let description: String
+
+    @Environment(\.themeColors) private var themeColors
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16))
+                .foregroundColor(themeColors.primaryAccent.opacity(0.8))
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(DesignTokens.Typography.label)
+                    .foregroundColor(themeColors.primaryText)
+
+                Text(description)
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundColor(themeColors.mutedText)
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            Toggle("", isOn: $isOn)
+                .toggleStyle(.switch)
+                .labelsHidden()
+        }
+    }
+}
+
+// MARK: - Theme Picker Grid
+
+private struct ThemePickerGrid: View {
+    @Binding var selectedTheme: AppTheme
+    let onThemeSelected: (AppTheme) -> Void
+
+    @Environment(\.themeColors) private var themeColors
+
+    // All themes except .auto (handled separately)
+    private let themes: [AppTheme] = AppTheme.allCases.filter { $0 != .auto }
+
+    private let columns = [
+        GridItem(.adaptive(minimum: 100, maximum: 120), spacing: 10)
+    ]
+
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 10) {
+            ForEach(themes, id: \.self) { theme in
+                ThemeSwatchButton(
+                    theme: theme,
+                    isSelected: selectedTheme == theme,
+                    action: { onThemeSelected(theme) }
+                )
+            }
+        }
+    }
+}
+
+// MARK: - Theme Swatch Button
+
+private struct ThemeSwatchButton: View {
+    let theme: AppTheme
+    let isSelected: Bool
     let action: () -> Void
+
+    @Environment(\.themeColors) private var currentThemeColors
+    @State private var isHovered: Bool = false
+
+    private var themeColors: ThemeColors {
+        ThemeColors.forTheme(theme)
+    }
+
+    // Extract short display name
+    private var displayName: String {
+        switch theme {
+        case .claudeCode: return "Claude"
+        case .geminiCLI: return "Gemini"
+        case .default: return "Cyberpunk"
+        case .solarizedDark: return "Sol Dark"
+        case .solarizedLight: return "Sol Light"
+        case .monokai: return "Monokai"
+        case .oneDark: return "One Dark"
+        case .githubDark: return "GitHub"
+        case .tokyoNight: return "Tokyo"
+        case .catppuccin: return "Catppuccin"
+        default: return theme.rawValue.replacingOccurrences(of: " ", with: "\n").components(separatedBy: "\n").first ?? theme.rawValue
+        }
+    }
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
-                if let icon {
-                    Image(systemName: icon)
-                }
-                Text(label)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(
+            VStack(spacing: 6) {
+                // Color swatch preview
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.white.opacity(0.1))
+                    .fill(themeColors.mainBackground)
+                    .frame(height: 44)
+                    .overlay(
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(themeColors.primaryAccent)
+                                .frame(width: 12, height: 12)
+                            Circle()
+                                .fill(themeColors.secondaryAccent)
+                                .frame(width: 12, height: 12)
+                            Circle()
+                                .fill(themeColors.successColor)
+                                .frame(width: 12, height: 12)
+                        }
+                    )
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            .stroke(isSelected ? currentThemeColors.primaryAccent : currentThemeColors.glassBorder, lineWidth: isSelected ? 2 : 1)
                     )
+
+                // Theme name
+                Text(displayName)
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundColor(isSelected ? currentThemeColors.primaryText : currentThemeColors.secondaryText)
+                    .lineLimit(1)
+            }
+            .padding(6)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isSelected ? currentThemeColors.selectionColor.opacity(0.5) : (isHovered ? currentThemeColors.glassBackground : Color.clear))
             )
+            .scaleEffect(isHovered ? 1.02 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: isHovered)
         }
         .buttonStyle(.plain)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
 
-// MARK: - Settings Section Component
+// MARK: - Settings Section (Legacy - kept for compatibility)
 
 struct SettingsSection<Content: View>: View {
     let icon: String
@@ -479,39 +838,6 @@ struct SettingsSection<Content: View>: View {
                             .stroke(Color.white.opacity(0.1), lineWidth: 1)
                     )
             )
-        }
-    }
-}
-
-// MARK: - Settings Toggle Row Component
-
-struct SettingsToggleRow: View {
-    @Binding var isOn: Bool
-    let icon: String
-    let label: String
-    let description: String
-
-    @Environment(\.themeColors) private var themeColors
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundColor(themeColors.primaryAccent.opacity(0.8))
-                .frame(width: 24)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(label)
-                    .font(DesignTokens.Typography.label)
-
-                Text(description)
-                    .font(DesignTokens.Typography.bodySmall)
-                    .foregroundColor(.secondary)
-            }
-
-            Spacer()
-
-            CheckboxToggle(isOn: $isOn, label: "")
         }
     }
 }

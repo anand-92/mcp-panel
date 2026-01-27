@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Server tags (UI, Backend, Creativity, Dev Ops, Advanced) with per-server tagging and bulk enable by tag.
 
 ### Changed
+- **Settings Modal Redesign** - Complete overhaul with macOS-native sidebar navigation. Four organized tabs (General, Appearance, Privacy, Advanced), visual theme picker grid with color swatches, improved section cards, and polished UX throughout.
 - **App Entitlements** - Added App Groups entitlement for main app to widget communication (`group.com.anand-92.mcp-panel`).
 
 ### Removed
