@@ -26,8 +26,10 @@ struct MenuBarPopoverView: View {
     @ObservedObject var viewModel: ServerViewModel
     let onOpenApp: () -> Void
     let onRefresh: () -> Void
-    @Environment(\.themeColors) private var themeColors
     @State private var searchText = ""
+
+    // Use viewModel.themeColors directly for live updates when switching configs
+    private var themeColors: ThemeColors { viewModel.themeColors }
 
     private var filteredServers: [ServerModel] {
         if searchText.isEmpty {
@@ -52,7 +54,7 @@ struct MenuBarPopoverView: View {
         .contentShape(Rectangle())
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(themeColors.sidebarBackground.opacity(0.2))
+                .fill(themeColors.sidebarBackground.opacity(0.3))
         )
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
@@ -143,6 +145,7 @@ struct MenuBarPopoverView: View {
                         PopoverServerRow(
                             server: server,
                             isEnabled: server.inConfigs[safe: viewModel.settings.activeConfigIndex] ?? false,
+                            themeColors: themeColors,
                             onToggle: { viewModel.toggleServer(server) }
                         )
                     }
@@ -207,9 +210,9 @@ struct MenuBarPopoverView: View {
 struct PopoverServerRow: View {
     let server: ServerModel
     let isEnabled: Bool
+    let themeColors: ThemeColors
     let onToggle: () -> Void
 
-    @Environment(\.themeColors) private var themeColors
     @State private var isHovering = false
 
     var body: some View {
