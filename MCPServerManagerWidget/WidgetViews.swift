@@ -198,7 +198,7 @@ struct SmallWidgetView: View {
             Spacer()
         }
         .padding(12)
-        .background(themeColors.background.opacity(0.3))
+        .background(themeColors.background)
     }
 
     private var headerView: some View {
@@ -273,7 +273,7 @@ struct MediumWidgetView: View {
             Spacer()
         }
         .padding(12)
-        .background(themeColors.background.opacity(0.3))
+        .background(themeColors.background)
     }
 
     private var headerView: some View {
@@ -352,7 +352,7 @@ struct LargeWidgetView: View {
             Spacer()
         }
         .padding(16)
-        .background(themeColors.background.opacity(0.3))
+        .background(themeColors.background)
     }
 
     private var headerView: some View {
