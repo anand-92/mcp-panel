@@ -20,8 +20,8 @@ echo ""
 # Configuration
 APP_NAME="MCP Server Manager"
 BUNDLE_ID="com.mcpmanager.app"
-VERSION="3.0"
-BUILD_NUMBER="100"
+VERSION="3.3"
+BUILD_NUMBER="140"
 
 # Build directory
 BUILD_DIR="MCPServerManager/build-appstore"
