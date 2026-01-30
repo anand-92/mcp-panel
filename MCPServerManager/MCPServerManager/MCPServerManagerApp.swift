@@ -45,6 +45,20 @@ struct MCPServerManagerApp: App {
                     .keyboardShortcut("U", modifiers: [.command])
                 }
             }
+
+            // Window menu to reopen the main window (Apple Review requirement)
+            CommandGroup(after: .windowArrangement) {
+                Button("MCP Server Manager") {
+                    // Bring existing window to front or create new one
+                    if let window = NSApp.windows.first(where: { $0.title.isEmpty || $0.title == "MCP Server Manager" }) {
+                        window.makeKeyAndOrderFront(nil)
+                    } else {
+                        // If no window exists, create one by activating the app
+                        NSApp.activate(ignoringOtherApps: true)
+                    }
+                }
+                .keyboardShortcut("0", modifiers: [.command])
+            }
         }
     }
 }
@@ -229,5 +243,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 "newState": newState
             ]
         )
+    }
+
+    // Handle reopening when user clicks dock icon with no windows open
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag {
+            // No visible windows, activate to create one
+            NSApp.activate(ignoringOtherApps: true)
+        }
+        return true
     }
 }
