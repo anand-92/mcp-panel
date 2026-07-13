@@ -114,6 +114,21 @@ class ServerViewModel: ObservableObject {
             }
         }
 
+        if filterMode == .all {
+            return filtered.sorted {
+                switch ($0.lastToggledAt, $1.lastToggledAt) {
+                case let (first?, second?) where first != second:
+                    return first > second
+                case (_?, nil):
+                    return true
+                case (nil, _?):
+                    return false
+                default:
+                    return $0.name < $1.name
+                }
+            }
+        }
+
         // Sorting is a view-only concern; the stored `servers` order stays stable.
         return sortMode.sorted(filtered)
     }
@@ -587,24 +602,6 @@ class ServerViewModel: ObservableObject {
         showToast(message: "Server deleted", type: .success)
     }
 
-    func toggleServer(_ server: ServerModel) {
-        setServer(server, enabled: !server.enabled)
-    }
-
-    func setServer(_ server: ServerModel, enabled: Bool) {
-        guard let index = servers.firstIndex(where: { $0.id == server.id }) else { return }
-
-        guard servers[index].enabled != enabled else { return }
-
-        servers[index].enabled = enabled
-        servers[index].updatedAt = Date()
-
-        syncToConfigs()
-
-        let status = enabled ? "enabled" : "disabled"
-        showToast(message: "\(server.name) \(status)", type: .success)
-    }
-
     func updateCustomIcon(for server: ServerModel, result: Result<String, Error>) {
         guard let index = servers.firstIndex(where: { $0.id == server.id }) else { return }
 
@@ -631,21 +628,6 @@ class ServerViewModel: ObservableObject {
             let errorMessage = error.localizedDescription
             showToast(message: errorMessage, type: .error)
         }
-    }
-
-    func toggleAllServers(_ enable: Bool) {
-        let now = Date()
-
-        for index in 0..<servers.count {
-            servers[index].enabled = enable
-            servers[index].updatedAt = now
-        }
-
-        objectWillChange.send()
-        syncToConfigs()
-
-        let status = enable ? "enabled" : "disabled"
-        showToast(message: "All servers \(status)", type: .success)
     }
 
     // MARK: - Toast
@@ -736,6 +718,7 @@ extension ServerViewModel {
         for index in indicesToEnable {
             servers[index].enabled = true
             servers[index].updatedAt = now
+            servers[index].lastToggledAt = now
         }
 
         objectWillChange.send()

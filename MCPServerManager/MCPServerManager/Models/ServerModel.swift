@@ -6,6 +6,7 @@ struct ServerModel: Identifiable, Codable, Equatable {
     var config: ServerConfig
     var enabled: Bool
     var updatedAt: Date
+    var lastToggledAt: Date?
     var registryImageUrl: String? // Image URL from MCP registry (takes precedence over fetched icons)
     var customIconPath: String? // User-selected custom icon path (takes highest precedence)
     var tags: [ServerTag]
@@ -15,6 +16,7 @@ struct ServerModel: Identifiable, Codable, Equatable {
          config: ServerConfig,
          enabled: Bool = false,
          updatedAt: Date = Date(),
+         lastToggledAt: Date? = nil,
          registryImageUrl: String? = nil,
          customIconPath: String? = nil,
          tags: [ServerTag] = []) {
@@ -23,6 +25,7 @@ struct ServerModel: Identifiable, Codable, Equatable {
         self.config = config
         self.enabled = enabled
         self.updatedAt = updatedAt
+        self.lastToggledAt = lastToggledAt
         self.registryImageUrl = registryImageUrl
         self.customIconPath = customIconPath
         self.tags = tags
@@ -34,6 +37,7 @@ struct ServerModel: Identifiable, Codable, Equatable {
         case config
         case enabled
         case updatedAt
+        case lastToggledAt
         case inConfigs // legacy key (pre single-config migration)
         case registryImageUrl
         case customIconPath
@@ -54,6 +58,7 @@ struct ServerModel: Identifiable, Codable, Equatable {
             enabled = false
         }
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        lastToggledAt = try container.decodeIfPresent(Date.self, forKey: .lastToggledAt)
         registryImageUrl = try container.decodeIfPresent(String.self, forKey: .registryImageUrl)
         customIconPath = try container.decodeIfPresent(String.self, forKey: .customIconPath)
         tags = try container.decodeIfPresent([ServerTag].self, forKey: .tags) ?? []
@@ -66,6 +71,7 @@ struct ServerModel: Identifiable, Codable, Equatable {
         try container.encode(config, forKey: .config)
         try container.encode(enabled, forKey: .enabled)
         try container.encode(updatedAt, forKey: .updatedAt)
+        try container.encodeIfPresent(lastToggledAt, forKey: .lastToggledAt)
         try container.encodeIfPresent(registryImageUrl, forKey: .registryImageUrl)
         try container.encodeIfPresent(customIconPath, forKey: .customIconPath)
         try container.encode(tags, forKey: .tags)

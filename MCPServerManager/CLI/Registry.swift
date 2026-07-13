@@ -115,7 +115,9 @@ struct ServerRegistry {
             return (entry, false)
         }
         entry["enabled"] = desired
-        entry["updatedAt"] = Date().timeIntervalSinceReferenceDate
+        let now = Date().timeIntervalSinceReferenceDate
+        entry["updatedAt"] = now
+        entry["lastToggledAt"] = now
         entries[name] = entry
         try persist()
         return (entry, true)
