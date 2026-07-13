@@ -16,13 +16,25 @@ class ConfigManager {
         return URL(fileURLWithPath: expanded)
     }
 
-    private func resolveURL(for path: String) -> URL {
-        BookmarkManager.shared.resolveBookmark(for: path) ?? expandPath(path)
+    func resolveURL(for path: String) -> URL {
+        let expandedURL = expandPath(path)
+        guard BookmarkManager.shared.hasDirectoryBookmark(for: path),
+              let directoryURL = BookmarkManager.shared.resolveBookmark(for: path, isDirectory: true) else {
+            return BookmarkManager.shared.resolveBookmark(for: path) ?? expandedURL
+        }
+        return directoryURL.appendingPathComponent(expandedURL.lastPathComponent)
     }
 
     private func withConfigAccess<T>(_ path: String, _ operation: (URL) throws -> T) throws -> T {
         let trimmedPath = path.trimmingCharacters(in: .whitespacesAndNewlines)
         let url = resolveURL(for: trimmedPath)
+
+        if BookmarkManager.shared.hasDirectoryBookmark(for: trimmedPath),
+           let directoryURL = BookmarkManager.shared.resolveBookmark(for: trimmedPath, isDirectory: true) {
+            return try directoryURL.withSecurityScopedAccess { _ in
+                try operation(url)
+            }
+        }
 
         if BookmarkManager.shared.hasBookmark(for: trimmedPath) {
             return try url.withSecurityScopedAccess(operation)
@@ -158,6 +170,17 @@ class ConfigManager {
         }
 
         try BookmarkManager.shared.storeBookmark(for: url)
+    }
+
+    func storeBookmarkForConfigDirectory(url: URL, configPath: String) throws {
+        let didStartAccess = url.startAccessingSecurityScopedResource()
+        defer {
+            if didStartAccess {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        try BookmarkManager.shared.storeBookmark(for: url, at: configPath, isDirectory: true)
     }
 
     // MARK: - Server Operations

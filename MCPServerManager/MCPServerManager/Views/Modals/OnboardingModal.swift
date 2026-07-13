@@ -8,6 +8,7 @@ struct OnboardingModal: View {
     @State private var selectedPath: String = ""
     @State private var showBookmarkAlert: Bool = false
     @State private var bookmarkAlertMessage: String = ""
+    @State private var selectionError: String = ""
 
     var body: some View {
         ZStack {
@@ -26,7 +27,7 @@ struct OnboardingModal: View {
                     Text("Welcome to MCP Panel")
                         .font(DesignTokens.Typography.title1)
 
-                    Text("Manage your Claude Code MCP servers with ease")
+                    Text("Manage MCP servers for Claude Code, Factory Droid, and compatible apps")
                         .font(DesignTokens.Typography.body)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -34,12 +35,15 @@ struct OnboardingModal: View {
 
                 // Info panel
                 VStack(spacing: 12) {
-                    Text("Your Claude Code config is typically located at:")
+                    Text("Choose the configuration you want MCP Panel to manage:")
                         .font(DesignTokens.Typography.body)
                         .multilineTextAlignment(.center)
 
-                    Text("~/.claude.json")
-                        .font(DesignTokens.Typography.codeLarge)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Claude Code: ~/.claude.json")
+                        Text("Standard MCP: folder containing mcp.json")
+                    }
+                    .font(DesignTokens.Typography.codeLarge)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(
@@ -85,10 +89,29 @@ struct OnboardingModal: View {
                     )
                 }
 
+                if !selectionError.isEmpty {
+                    Text(selectionError)
+                        .font(DesignTokens.Typography.bodySmall)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                }
+
                 // Buttons
                 VStack(spacing: 12) {
                     Button(action: selectFile) {
-                        Text("Select Config File")
+                        Text("Select Claude Code Config File")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(themeColors.accentGradient)
+                            )
+                            .foregroundColor(Color(hex: "#0b0e14"))
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: selectMCPConfigFolder) {
+                        Text("Select mcp.json Folder")
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                             .background(
@@ -148,12 +171,11 @@ struct OnboardingModal: View {
         panel.message = "Select your Claude Code config file (usually ~/.claude.json)"
 
         if panel.runModal() == .OK, let url = panel.url {
-            // Store security-scoped bookmark for this file
             do {
                 try ConfigManager.shared.storeBookmarkForConfigFile(url: url, path: url.path)
                 selectedPath = url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
+                selectionError = ""
             } catch {
-                // Show alert - this is critical for onboarding
                 bookmarkAlertMessage = """
                     Failed to create persistent access to the selected file. \
                     The app may not be able to access this file after restart.
@@ -164,6 +186,43 @@ struct OnboardingModal: View {
                     """
                 showBookmarkAlert = true
             }
+        }
+    }
+
+    private func selectMCPConfigFolder() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.showsHiddenFiles = true
+        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
+        panel.message = "Select the folder containing mcp.json"
+
+        guard panel.runModal() == .OK, let directoryURL = panel.url else { return }
+
+        let configURL = directoryURL.appendingPathComponent("mcp.json")
+        guard FileManager.default.fileExists(atPath: configURL.path) else {
+            selectionError = "The selected folder does not contain an mcp.json file."
+            return
+        }
+
+        do {
+            try ConfigManager.shared.storeBookmarkForConfigDirectory(
+                url: directoryURL,
+                configPath: configURL.path
+            )
+            selectedPath = configURL.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
+            selectionError = ""
+        } catch {
+            bookmarkAlertMessage = """
+                Failed to create persistent access to the selected folder. \
+                The app may not be able to access mcp.json after restart.
+
+                Error: \(error.localizedDescription)
+
+                Please try selecting the folder again.
+                """
+            showBookmarkAlert = true
         }
     }
 }

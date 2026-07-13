@@ -192,7 +192,7 @@ struct SettingsModal: View {
             SettingsSectionCard(title: "Configuration Files", icon: "doc.text.fill") {
                 VStack(spacing: 16) {
                     ConfigPathEditor(
-                        label: "Claude Code",
+                        label: "Active MCP Config",
                         icon: "1.circle.fill",
                         placeholder: "~/.claude.json",
                         path: $config1Path,

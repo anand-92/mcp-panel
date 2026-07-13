@@ -66,8 +66,7 @@ final class ConfigFileWatcher {
     /// Resolve the on-disk URL for the current path inside the security-scoped bookmark.
     private func resolvedConfigURL() -> URL {
         let trimmedPath = path.trimmingCharacters(in: .whitespacesAndNewlines)
-        return BookmarkManager.shared.resolveBookmark(for: trimmedPath)
-            ?? ConfigManager.shared.expandPath(trimmedPath)
+        return ConfigManager.shared.resolveURL(for: trimmedPath)
     }
 
     /// Watch the file if it exists, otherwise watch its parent directory until it appears.
@@ -86,8 +85,12 @@ final class ConfigFileWatcher {
         let resolvedURL = resolvedConfigURL()
 
         // Open the watch inside the security-scoped bookmark access.
-        if BookmarkManager.shared.hasBookmark(for: trimmedPath),
-           resolvedURL.startAccessingSecurityScopedResource() {
+        if BookmarkManager.shared.hasDirectoryBookmark(for: trimmedPath),
+           let directoryURL = BookmarkManager.shared.resolveBookmark(for: trimmedPath, isDirectory: true),
+           directoryURL.startAccessingSecurityScopedResource() {
+            securityScopedURL = directoryURL
+        } else if BookmarkManager.shared.hasBookmark(for: trimmedPath),
+                  resolvedURL.startAccessingSecurityScopedResource() {
             securityScopedURL = resolvedURL
         }
 

@@ -12,27 +12,46 @@ class BookmarkManager {
         static func bookmarkKey(for path: String) -> String {
             return "bookmark_\(path.replacingOccurrences(of: "~", with: "home"))"
         }
+
+        static func directoryBookmarkKey(for path: String) -> String {
+            return "directory_bookmark_\(path.replacingOccurrences(of: "~", with: "home"))"
+        }
     }
 
     // MARK: - Bookmark Operations
 
     /// Stores a security-scoped bookmark for the given URL
     func storeBookmark(for url: URL) throws {
+        try storeBookmark(for: url, at: url.path, isDirectory: false)
+    }
+
+    /// Stores a security-scoped bookmark for a config file or its parent directory.
+    func storeBookmark(for url: URL, at path: String, isDirectory: Bool) throws {
         let bookmarkData = try url.bookmarkData(
             options: .withSecurityScope,
             includingResourceValuesForKeys: nil,
             relativeTo: nil
         )
 
-        let key = Keys.bookmarkKey(for: url.path)
+        let expandedPath = NSString(string: path).expandingTildeInPath
+        let key = isDirectory
+            ? Keys.directoryBookmarkKey(for: expandedPath)
+            : Keys.bookmarkKey(for: expandedPath)
         UserDefaults.standard.set(bookmarkData, forKey: key)
     }
 
     /// Resolves a bookmark for the given path and returns the URL
     /// Returns nil if no bookmark exists or resolution fails
     func resolveBookmark(for path: String) -> URL? {
+        resolveBookmark(for: path, isDirectory: false)
+    }
+
+    /// Resolves a config file or parent-directory bookmark for the given path.
+    func resolveBookmark(for path: String, isDirectory: Bool) -> URL? {
         let expandedPath = NSString(string: path).expandingTildeInPath
-        let key = Keys.bookmarkKey(for: expandedPath)
+        let key = isDirectory
+            ? Keys.directoryBookmarkKey(for: expandedPath)
+            : Keys.bookmarkKey(for: expandedPath)
 
         guard let bookmarkData = UserDefaults.standard.data(forKey: key) else {
             return nil
@@ -49,7 +68,7 @@ class BookmarkManager {
 
             if isStale {
                 try? url.withSecurityScopedAccess { url in
-                    try storeBookmark(for: url)
+                    try storeBookmark(for: url, at: expandedPath, isDirectory: isDirectory)
                 }
             }
 
@@ -65,12 +84,23 @@ class BookmarkManager {
         let expandedPath = NSString(string: path).expandingTildeInPath
         let key = Keys.bookmarkKey(for: expandedPath)
         UserDefaults.standard.removeObject(forKey: key)
+        let directoryKey = Keys.directoryBookmarkKey(for: expandedPath)
+        UserDefaults.standard.removeObject(forKey: directoryKey)
     }
 
     /// Checks if a bookmark exists for the given path
     func hasBookmark(for path: String) -> Bool {
         let expandedPath = NSString(string: path).expandingTildeInPath
         let key = Keys.bookmarkKey(for: expandedPath)
+        let directoryKey = Keys.directoryBookmarkKey(for: expandedPath)
+        return UserDefaults.standard.data(forKey: key) != nil ||
+            UserDefaults.standard.data(forKey: directoryKey) != nil
+    }
+
+    /// Returns whether the path's bookmark grants access through its parent directory.
+    func hasDirectoryBookmark(for path: String) -> Bool {
+        let expandedPath = NSString(string: path).expandingTildeInPath
+        let key = Keys.directoryBookmarkKey(for: expandedPath)
         return UserDefaults.standard.data(forKey: key) != nil
     }
 
@@ -79,7 +109,7 @@ class BookmarkManager {
         let standardDefaults = UserDefaults.standard
         let standardKeys = standardDefaults.dictionaryRepresentation().keys
 
-        for key in standardKeys where key.hasPrefix("bookmark_") {
+        for key in standardKeys where key.hasPrefix("bookmark_") || key.hasPrefix("directory_bookmark_") {
             standardDefaults.removeObject(forKey: key)
         }
     }
