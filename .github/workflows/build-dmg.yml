@@ -30,12 +30,21 @@ jobs:
       if: runner.environment == 'self-hosted'
       run: |
         set -euo pipefail
-        XCODE_APP="/Volumes/NVMe/Xcode.app"
-        if [ ! -d "$XCODE_APP/Contents/Developer" ]; then
-          echo "::error::Xcode not found at $XCODE_APP — is the NVMe volume mounted?"
+        # Package.swift requires swift-tools-version 6.4, which only ships with
+        # Xcode 27. Prefer it and fall back to the stable install.
+        XCODE_APP=""
+        for candidate in /Volumes/NVMe/Xcode-beta.app /Volumes/NVMe/Xcode.app; do
+          if [ -d "$candidate/Contents/Developer" ]; then
+            XCODE_APP="$candidate"
+            break
+          fi
+        done
+        if [ -z "$XCODE_APP" ]; then
+          echo "::error::No Xcode found on /Volumes/NVMe — is the NVMe volume mounted?"
           ls -la /Volumes || true
           exit 1
         fi
+        echo "Selected $XCODE_APP"
         echo "DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >> "$GITHUB_ENV"
         echo "$XCODE_APP/Contents/Developer/usr/bin" >> "$GITHUB_PATH"
         # generate_appcast is installed here; /usr/local/bin needs sudo on the Mini.
