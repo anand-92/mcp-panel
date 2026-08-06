@@ -66,6 +66,10 @@ jobs:
         LOGIN="$HOME/Library/Keychains/login.keychain-db"
         security list-keychains -d user -s "$LOGIN"
         security default-keychain -d user -s "$LOGIN"
+        # A locked keychain makes codesign fail with errSecInternalComponent even
+        # though find-identity still lists the certs. The Mini auto-logs in with
+        # an empty keychain password.
+        security unlock-keychain -p "" "$LOGIN" 2>/dev/null || true
         echo "Available signing identities:"
         security find-identity -v -p codesigning "$LOGIN"
         for ID in "3rd Party Mac Developer Application" "3rd Party Mac Developer Installer"; do

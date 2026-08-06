@@ -64,6 +64,10 @@ jobs:
         LOGIN="$HOME/Library/Keychains/login.keychain-db"
         security list-keychains -d user -s "$LOGIN"
         security default-keychain -d user -s "$LOGIN"
+        # A locked keychain makes codesign fail with errSecInternalComponent even
+        # though find-identity still lists the certs. The Mini auto-logs in with
+        # an empty keychain password.
+        security unlock-keychain -p "" "$LOGIN" 2>/dev/null || true
         echo "Available signing identities:"
         security find-identity -v -p codesigning "$LOGIN"
         if ! security find-identity -v -p codesigning "$LOGIN" | grep -q "Developer ID Application"; then
@@ -197,8 +201,15 @@ jobs:
         echo "Available signing identities:"
         security find-identity -v -p codesigning
 
-        # Get the first valid Developer ID or Mac App Store certificate
-        IDENTITY=$(security find-identity -v -p codesigning | grep -E "Developer ID Application|Apple Distribution|3rd Party Mac Developer Application" | head -1 | awk -F'"' '{print $2}')
+        # A notarized DMG must be signed with Developer ID Application. Prefer it
+        # explicitly rather than taking whichever identity the keychain lists
+        # first, which on the Mini is Apple Distribution (App Store only, and
+        # rejected by notarization).
+        IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | awk -F'"' '{print $2}')
+        if [ -z "$IDENTITY" ]; then
+          echo "⚠️  No Developer ID Application identity; falling back to any distribution cert"
+          IDENTITY=$(security find-identity -v -p codesigning | grep -E "Apple Distribution|3rd Party Mac Developer Application" | head -1 | awk -F'"' '{print $2}')
+        fi
 
         if [ -z "$IDENTITY" ]; then
           echo "❌ No valid signing identity found"
