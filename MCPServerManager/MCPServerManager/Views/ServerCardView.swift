@@ -106,7 +106,7 @@ struct ServerCardView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 HStack(spacing: 6) {
-                    TransportBadge(label: transportLabel, themeColors: themeColors)
+                    TransportBadge(label: server.config.transportLabel, themeColors: themeColors)
                     HealthStatusIndicator(status: healthStatus, themeColors: themeColors)
                 }
             }
@@ -311,27 +311,6 @@ struct ServerCardView: View {
         }
     }
 
-    // MARK: - Transport Badge
-
-    private var transportLabel: String {
-        let config = server.config
-        if let type = config.type?.lowercased() {
-            switch type {
-            case "stdio": return "stdio"
-            case "http": return "HTTP"
-            case "sse": return "SSE"
-            default: break
-            }
-        }
-        if config.command != nil { return "stdio" }
-        if config.httpUrl != nil { return "HTTP" }
-        if let transport = config.transport {
-            return transport.type.uppercased()
-        }
-        if config.url != nil { return "HTTP" }
-        return "Custom"
-    }
-
     // MARK: - Actions
 
     private func startEditing() {
@@ -390,150 +369,6 @@ private struct PreviewBlur: ViewModifier {
             content.blur(radius: DesignTokens.jsonPreviewBlurRadius)
         } else {
             content
-        }
-    }
-}
-
-// MARK: - Health Status
-
-private struct HealthStatusIndicator: View {
-    let status: ServerHealthStatus
-    let themeColors: ThemeColors
-
-    var body: some View {
-        HStack(spacing: 5) {
-            if status == .checking {
-                ProgressView()
-                    .controlSize(.small)
-                    .scaleEffect(0.55)
-                    .frame(width: 10, height: 10)
-            } else {
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 8, height: 8)
-            }
-
-            Text(statusLabel)
-                .font(DesignTokens.Typography.captionSmall)
-                .foregroundColor(themeColors.secondaryText)
-                .lineLimit(1)
-        }
-        .help(status.message)
-        .accessibilityLabel("Health status: \(status.message)")
-    }
-
-    private var statusLabel: String {
-        switch status {
-        case .unchecked:
-            return "Not checked"
-        case .checking:
-            return "Checking"
-        case .reachable:
-            return "Reachable"
-        case .authRequired:
-            return "Auth required"
-        case .unreachable:
-            return "Unreachable"
-        case .unsupported:
-            return "Unsupported"
-        }
-    }
-
-    private var statusColor: Color {
-        switch status {
-        case .unchecked:
-            return themeColors.mutedText.opacity(0.7)
-        case .checking:
-            return themeColors.primaryAccent
-        case .reachable:
-            return themeColors.successColor
-        case .authRequired:
-            return themeColors.warningColor
-        case .unreachable, .unsupported:
-            return themeColors.errorColor
-        }
-    }
-}
-
-// MARK: - Transport Badge
-
-private struct TransportBadge: View {
-    let label: String
-    let themeColors: ThemeColors
-
-    var body: some View {
-        Text(label)
-            .font(DesignTokens.Typography.captionSmall)
-            .foregroundColor(themeColors.primaryAccent)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(
-                Capsule()
-                    .fill(themeColors.primaryAccent.opacity(0.15))
-                    .overlay(
-                        Capsule()
-                            .stroke(themeColors.primaryAccent.opacity(0.3), lineWidth: 1)
-                    )
-            )
-            .accessibilityLabel("Transport: \(label)")
-    }
-}
-
-// MARK: - Editor Button
-
-private struct EditorButton: View {
-    enum Style {
-        case primary
-        case secondary
-    }
-
-    let title: String
-    var icon: String?
-    let style: Style
-    let themeColors: ThemeColors
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                if let icon = icon {
-                    Image(systemName: icon)
-                        .font(.system(size: 12))
-                }
-                Text(title)
-                    .font(DesignTokens.Typography.labelSmall)
-            }
-            .foregroundColor(foregroundColor)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(background)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var foregroundColor: Color {
-        switch style {
-        case .primary:
-            return themeColors.textOnAccent
-        case .secondary:
-            return themeColors.primaryText
-        }
-    }
-
-    @ViewBuilder
-    private var background: some View {
-        switch style {
-        case .primary:
-            RoundedRectangle(cornerRadius: 8)
-                .fill(themeColors.accentGradient)
-                .shadow(color: themeColors.primaryAccent.opacity(0.3), radius: 6, x: 0, y: 2)
-        case .secondary:
-            RoundedRectangle(cornerRadius: 8)
-                .fill(themeColors.glassBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(themeColors.borderColor, lineWidth: 1)
-                )
         }
     }
 }

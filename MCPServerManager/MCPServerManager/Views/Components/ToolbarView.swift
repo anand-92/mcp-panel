@@ -64,6 +64,8 @@ struct ToolbarView: View {
         )
     }
 
+    /// Icon-only pills: three labeled modes would push the toolbar past the window's
+    /// 900 pt minimum width, so the name lives in the tooltip and accessibility label.
     @ViewBuilder
     private func viewModeButton(mode: ViewMode) -> some View {
         let isSelected = viewModel.viewMode == mode
@@ -73,29 +75,24 @@ struct ToolbarView: View {
                 viewModel.viewMode = mode
             }
         } label: {
-            HStack(spacing: 6) {
-                Image(systemName: mode.icon)
-                    .font(.system(size: 13, weight: .medium))
-                Text(mode.displayName)
-                    .font(DesignTokens.Typography.labelSmall)
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-            }
-            .fixedSize(horizontal: true, vertical: false)
-            .foregroundColor(isSelected ? themeColors.textOnAccent : themeColors.mutedText)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 6)
-            .background {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(themeColors.accentGradient)
-                        .shadow(color: themeColors.primaryAccent.opacity(0.3), radius: 4, x: 0, y: 2)
-                        .matchedGeometryEffect(id: "viewModePill", in: namespace)
+            Image(systemName: mode.icon)
+                .font(.system(size: 13, weight: .medium))
+                .frame(width: 30, height: 22)
+                .foregroundColor(isSelected ? themeColors.textOnAccent : themeColors.mutedText)
+                .background {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(themeColors.accentGradient)
+                            .shadow(color: themeColors.primaryAccent.opacity(0.3), radius: 4, x: 0, y: 2)
+                            .matchedGeometryEffect(id: "viewModePill", in: namespace)
+                    }
                 }
-            }
-            .contentShape(Rectangle())
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .help(mode.helpText)
+        .accessibilityLabel(mode.displayName)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
     // MARK: - Filter Pills

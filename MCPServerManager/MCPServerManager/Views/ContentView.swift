@@ -129,6 +129,8 @@ struct ContentView: View {
         switch viewModel.viewMode {
         case .grid:
             ServerGridView(viewModel: viewModel, showAddServer: $showAddServer)
+        case .inspector:
+            ServerInspectorView(viewModel: viewModel, showAddServer: $showAddServer)
         case .rawJSON:
             RawJSONView(viewModel: viewModel)
         }

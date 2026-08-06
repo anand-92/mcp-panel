@@ -97,11 +97,13 @@ private extension String {
 
 enum ViewMode: String, Codable, CaseIterable {
     case grid = "grid"
+    case inspector = "inspector"
     case rawJSON = "json"
 
     var displayName: String {
         switch self {
         case .grid: return "Grid"
+        case .inspector: return "Inspector"
         case .rawJSON: return "JSON"
         }
     }
@@ -109,7 +111,16 @@ enum ViewMode: String, Codable, CaseIterable {
     var icon: String {
         switch self {
         case .grid: return "square.grid.2x2"
+        case .inspector: return "sidebar.left"
         case .rawJSON: return "curlybraces"
+        }
+    }
+
+    var helpText: String {
+        switch self {
+        case .grid: return "Grid view — every server as a card"
+        case .inspector: return "Inspector view — server list with a detail pane"
+        case .rawJSON: return "Raw JSON editor"
         }
     }
 }

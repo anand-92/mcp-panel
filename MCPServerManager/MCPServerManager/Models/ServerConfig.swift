@@ -403,6 +403,25 @@ struct ServerConfig: Codable, Equatable {
         return url.host ?? urlString
     }
 
+    // MARK: - Transport
+
+    /// Short transport label ("stdio" / "HTTP" / "SSE") for badges.
+    var transportLabel: String {
+        if let type = type?.lowercased() {
+            switch type {
+            case "stdio": return "stdio"
+            case "http": return "HTTP"
+            case "sse": return "SSE"
+            default: break
+            }
+        }
+        if command != nil { return "stdio" }
+        if httpUrl != nil { return "HTTP" }
+        if let transport = transport { return transport.type.uppercased() }
+        if url != nil { return "HTTP" }
+        return "Custom"
+    }
+
     // MARK: - JSON
 
     /// Pretty-printed JSON representation of this config.
