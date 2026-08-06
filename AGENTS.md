@@ -37,6 +37,23 @@ swiftlint --fix                                                 # autocorrect fi
 - CI runs `swiftlint lint --strict` on every push/PR via `.github/workflows/lint.yml`; the repo is expected to stay at **zero** violations.
 - The `.githooks/pre-commit` hook also runs strict SwiftLint on commits when it is installed and SwiftLint is on PATH.
 
+## Continuous Integration
+
+All macOS jobs run on the **self-hosted Mac Mini** runner (`mac-mini-nikships-mcp-panel`, labels `self-hosted` + `mac-mini` + `nikships-mcp-panel`). Linux jobs (Droid, Junie) stay on `ubuntu-latest`.
+
+| Workflow | Runner |
+| --- | --- |
+| `lint.yml`, `build-dmg.yml` | Mini; **fork PRs fall back to `macos-latest`** |
+| `build-appstore.yml` | Mini (push/tag/dispatch only, never fork PRs) |
+| `droid*.yml`, `junie*.yml` | `ubuntu-latest` |
+
+- **Public repo, so fork PRs must never run on the Mini.** `lint.yml` and `build-dmg.yml` pick the runner via `github.event.pull_request.head.repo.fork && 'macos-latest' || fromJSON('[...]')`. Keep that guard on any new self-hosted job.
+- **Xcode lives on an external NVMe** at `/Volumes/NVMe/Xcode.app`. The "Select Xcode on NVMe" step sets `DEVELOPER_DIR` and fails loudly if the volume is unmounted. Use `/usr/bin/xcrun` (not bare `xcrun`) so `notarytool`/`stapler` resolve.
+- **Signing uses the Mini's login keychain**, which already holds all four identities. Do *not* import the P12 on self-hosted runs: a duplicate identity makes `codesign` fail with "ambiguous". The secrets-based temp-keychain import is kept behind `runner.environment == 'github-hosted'` for the fork fallback, and only that path deletes `build.keychain`.
+- **No passwordless `sudo`** on the Mini and `/usr/local/bin` is not writable; install CI tools into `~/.local/bin` (already on `PATH`) and resolve them by name.
+- One runner means one job at a time, so lint / DMG / App Store builds queue rather than run in parallel.
+- Ops: `~/actions-runner-nikships-mcp-panel/svc.sh {status,stop,start}` on the Mini, `gh api repos/nikships/mcp-panel/actions/runners`. The runner must stay a **user LaunchAgent** with `SessionCreate` + `LimitLoadToSessionType=Aqua`; a LaunchDaemon has no GUI session and silently breaks codesigning and Xcode tests.
+
 ## Coding Style & Naming Conventions
 
 - Swift, 4-space indentation. Types `UpperCamelCase`, members `lowerCamelCase`.

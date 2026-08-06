@@ -9,21 +9,70 @@ on:
 
 jobs:
   build-swift-app:
-    runs-on: macos-latest
+    # Self-hosted Mac Mini for our own branches/PRs; untrusted fork PRs stay on
+    # GitHub-hosted runners so their code never executes on the Mini.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'macos-latest' || fromJSON('["self-hosted", "mac-mini", "nikships-mcp-panel"]') }}
+    defaults:
+      run:
+        shell: bash
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Setup Xcode
+      if: runner.environment == 'github-hosted'
       uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: latest-stable
 
+    - name: Select Xcode on NVMe
+      if: runner.environment == 'self-hosted'
+      run: |
+        set -euo pipefail
+        XCODE_APP="/Volumes/NVMe/Xcode.app"
+        if [ ! -d "$XCODE_APP/Contents/Developer" ]; then
+          echo "::error::Xcode not found at $XCODE_APP — is the NVMe volume mounted?"
+          ls -la /Volumes || true
+          exit 1
+        fi
+        echo "DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >> "$GITHUB_ENV"
+        echo "$XCODE_APP/Contents/Developer/usr/bin" >> "$GITHUB_PATH"
+        # generate_appcast is installed here; /usr/local/bin needs sudo on the Mini.
+        mkdir -p "$HOME/.local/bin"
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        xcodebuild -version
+        # System xcrun honors DEVELOPER_DIR even when the NVMe tree lacks a shim.
+        /usr/bin/xcrun --find notarytool
+        /usr/bin/xcrun --find stapler
+
     - name: Install xcodegen
-      run: brew install xcodegen
+      run: |
+        set -euo pipefail
+        command -v xcodegen >/dev/null 2>&1 || brew install xcodegen
+        xcodegen --version
+
+    - name: Use Mini login keychain for signing
+      if: runner.environment == 'self-hosted'
+      run: |
+        set -euo pipefail
+        # The Mini's login keychain already holds the Developer ID. Importing the
+        # same P12 again would produce a duplicate identity and make codesign
+        # fail with "ambiguous". Drop any leftover CI keychain from a prior run
+        # and pin the search list to login only.
+        security delete-keychain build.keychain 2>/dev/null || true
+        LOGIN="$HOME/Library/Keychains/login.keychain-db"
+        security list-keychains -d user -s "$LOGIN"
+        security default-keychain -d user -s "$LOGIN"
+        echo "Available signing identities:"
+        security find-identity -v -p codesigning "$LOGIN"
+        if ! security find-identity -v -p codesigning "$LOGIN" | grep -q "Developer ID Application"; then
+          echo "::error::No Developer ID Application identity in the Mini login keychain."
+          exit 1
+        fi
 
     - name: Import certificates
+      if: runner.environment == 'github-hosted'
       env:
         MAC_APP_STORE_CERT: ${{ secrets.MAC_APP_STORE_CERT }}
         MAC_INSTALLER_CERT: ${{ secrets.MAC_INSTALLER_CERT }}
@@ -208,7 +257,9 @@ jobs:
         echo "✅ App bundle signed successfully"
 
     - name: Install create-dmg tool
-      run: brew install create-dmg
+      run: |
+        set -euo pipefail
+        command -v create-dmg >/dev/null 2>&1 || brew install create-dmg
 
     - name: Install Sparkle tools
       run: |
@@ -218,7 +269,16 @@ jobs:
         curl -L "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" -o sparkle.tar.xz
         tar -xf sparkle.tar.xz
         chmod +x bin/generate_appcast
-        sudo cp bin/generate_appcast /usr/local/bin/
+        # Install without sudo: the Mac Mini runner has no passwordless sudo and
+        # /usr/local/bin isn't writable there. ~/.local/bin is on PATH for
+        # self-hosted runs; GitHub-hosted runners can still write /usr/local/bin.
+        if [ -w /usr/local/bin ]; then
+          cp bin/generate_appcast /usr/local/bin/
+        else
+          mkdir -p "$HOME/.local/bin"
+          cp bin/generate_appcast "$HOME/.local/bin/"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        fi
 
     - name: Create DMG
       working-directory: MCPServerManager
@@ -349,8 +409,9 @@ jobs:
           else
             echo "✅ Private key file created ($(wc -c < sparkle_private_key.txt) bytes)"
 
-            # Use generate_appcast with the archives directory
-            /usr/local/bin/generate_appcast \
+            # Resolve from PATH: the tool lands in ~/.local/bin on the Mini,
+            # where /usr/local/bin isn't writable without sudo.
+            generate_appcast \
               --ed-key-file sparkle_private_key.txt \
               --download-url-prefix "https://github.com/${REPO}/releases/download/latest/" \
               --release-notes-url-prefix "https://github.com/${REPO}/releases/download/latest/" \
@@ -461,6 +522,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Cleanup keychain
-      if: always()
+      # Only the GitHub-hosted path creates build.keychain. Self-hosted runs use
+      # the Mini's login keychain, which must never be deleted.
+      if: always() && runner.environment == 'github-hosted'
       run: |
         security delete-keychain build.keychain || true

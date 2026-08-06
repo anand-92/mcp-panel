@@ -8,14 +8,27 @@ on:
 
 jobs:
   swiftlint:
-    runs-on: macos-latest
+    # Self-hosted Mac Mini for our own branches/PRs; untrusted fork PRs stay on
+    # GitHub-hosted runners so their code never executes on the Mini.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'macos-latest' || fromJSON('["self-hosted", "mac-mini", "nikships-mcp-panel"]') }}
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Install SwiftLint
-        run: brew install swiftlint
+        run: |
+          set -euo pipefail
+          # The Mini already has SwiftLint; only install when it's missing so
+          # self-hosted runs skip a slow no-op brew invocation.
+          if command -v swiftlint >/dev/null 2>&1; then
+            swiftlint version
+          else
+            brew install swiftlint
+          fi
 
       - name: Run SwiftLint
         # --strict promotes warnings to errors so the build fails on any
