@@ -12,19 +12,16 @@
     <key>com.apple.security.app-sandbox</key>
     <true/>
 
-    <!-- File access - needed to read/write user-selected config files -->
+    <!-- File access - needed to read/write user-selected config files.
+         read-write implies read-only, so the latter is not declared. -->
     <key>com.apple.security.files.user-selected.read-write</key>
-    <true/>
-
-    <!-- Allow reading user-selected files (for config files) -->
-    <key>com.apple.security.files.user-selected.read-only</key>
     <true/>
 
     <!-- Security-scoped bookmarks for persistent file access -->
     <key>com.apple.security.files.bookmarks.app-scope</key>
     <true/>
 
-    <!-- Network client - if app needs internet (MCP servers might) -->
+    <!-- Network client for MCP registry lookups and server health checks -->
     <key>com.apple.security.network.client</key>
     <true/>
 </dict>

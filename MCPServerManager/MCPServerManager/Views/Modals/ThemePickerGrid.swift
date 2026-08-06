@@ -86,7 +86,7 @@ private struct ThemeSwatchButton: View {
                 // Theme name
                 Text(displayName)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(isSelected ? currentThemeColors.primaryText : currentThemeColors.secondaryText)
+                    .foregroundStyle(isSelected ? currentThemeColors.primaryText : currentThemeColors.secondaryText)
                     .lineLimit(1)
             }
             .padding(6)

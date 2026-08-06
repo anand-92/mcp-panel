@@ -69,7 +69,7 @@ struct EmptyStateView: View {
 
             Text("Add your first MCP server to MCP Panel to get started")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             Button(action: onCreateServer) {
                 Text("Add Server")
@@ -79,7 +79,7 @@ struct EmptyStateView: View {
                         RoundedRectangle(cornerRadius: 20)
                             .fill(themeColors.accentGradient)
                     )
-                    .foregroundColor(Color(hex: "#0b0e14"))
+                    .foregroundStyle(Color(hex: "#0b0e14"))
             }
             .buttonStyle(.plain)
         }

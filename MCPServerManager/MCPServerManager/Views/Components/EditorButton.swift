@@ -24,7 +24,7 @@ struct EditorButton: View {
                 Text(title)
                     .font(DesignTokens.Typography.labelSmall)
             }
-            .foregroundColor(foregroundColor)
+            .foregroundStyle(foregroundColor)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(background)

@@ -78,7 +78,7 @@ struct ToolbarView: View {
             Image(systemName: mode.icon)
                 .font(.system(size: 13, weight: .medium))
                 .frame(width: 30, height: 22)
-                .foregroundColor(isSelected ? themeColors.textOnAccent : themeColors.mutedText)
+                .foregroundStyle(isSelected ? themeColors.textOnAccent : themeColors.mutedText)
                 .background {
                     if isSelected {
                         RoundedRectangle(cornerRadius: 8)
@@ -130,7 +130,7 @@ struct ToolbarView: View {
                 if count > 0 {
                     Text("\(count)")
                         .font(DesignTokens.Typography.captionSmall)
-                        .foregroundColor(isSelected ? themeColors.primaryAccent : themeColors.mutedText)
+                        .foregroundStyle(isSelected ? themeColors.primaryAccent : themeColors.mutedText)
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
                         .padding(.horizontal, 6)
@@ -142,7 +142,7 @@ struct ToolbarView: View {
                 }
             }
             .fixedSize(horizontal: true, vertical: false)
-            .foregroundColor(isSelected ? themeColors.primaryText : themeColors.secondaryText)
+            .foregroundStyle(isSelected ? themeColors.primaryText : themeColors.secondaryText)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background {
@@ -316,7 +316,7 @@ private struct ToolbarButtonStyle: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .foregroundColor(isHovered ? themeColors.primaryAccent : themeColors.primaryText)
+            .foregroundStyle(isHovered ? themeColors.primaryAccent : themeColors.primaryText)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(
@@ -342,7 +342,7 @@ private struct ToolbarIconButtonStyle: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .foregroundColor(isHovered ? themeColors.primaryAccent : themeColors.secondaryText)
+            .foregroundStyle(isHovered ? themeColors.primaryAccent : themeColors.secondaryText)
             .frame(width: 32, height: 32)
             .background(
                 RoundedRectangle(cornerRadius: 8)

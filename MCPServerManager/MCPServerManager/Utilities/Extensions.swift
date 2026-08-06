@@ -94,6 +94,7 @@ extension NSTextField {
 
 enum AppIcon {
     /// Get the app icon - tries bundle first (for swift run), then NSApp fallback
+    @MainActor
     static var image: NSImage {
         // Try loading from SPM bundle (for swift run)
         if let bundleURL = Bundle.main.url(forResource: "MCPServerManager_MCPServerManager", withExtension: "bundle"),

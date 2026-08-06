@@ -33,14 +33,10 @@ struct MCPServerManagerApp: App {
                 .task {
                     // Apply Liquid Glass to window background (with slight delay to ensure window is ready)
                     try? await Task.sleep(for: .milliseconds(100))
-                    await MainActor.run {
-                        if let window = NSApp.windows.first {
-                            if #available(macOS 26.0, *) {
-                                window.isOpaque = false
-                                window.backgroundColor = .clear
-                                window.titlebarAppearsTransparent = true
-                            }
-                        }
+                    if let window = NSApp.windows.first {
+                        window.isOpaque = false
+                        window.backgroundColor = .clear
+                        window.titlebarAppearsTransparent = true
                     }
                 }
         }
@@ -106,7 +102,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         }
 
         // Safety net only applies when the window already existed but failed to come
-        // forward (e.g. activation was suppressed on macOS 14+). When it didn't exist
+        // forward (e.g. activation was suppressed by the system). When it didn't exist
         // we've already asked SwiftUI to create it; openWindow(id:) is async, so
         // re-checking on the next run loop would just fire a redundant reopen.
         guard existingWindow != nil else { return }
@@ -138,17 +134,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         return window
     }
 
-    /// Activate the app (and show the Dock icon), using the cooperative activation
-    /// API on macOS 14+ and the legacy call on macOS 13. The two-step activation
-    /// is what brings a previously-closed, borderless window back to the front.
+    /// Activate the app (and show the Dock icon) using the cooperative activation
+    /// API. The two-step activation is what brings a previously-closed,
+    /// borderless window back to the front.
     @MainActor
     private func activateApp() {
         NSApp.setActivationPolicy(.regular)
-        if #available(macOS 14.0, *) {
-            NSApp.activate()
-        } else {
-            NSApp.activate(ignoringOtherApps: true)
-        }
+        NSApp.activate()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {

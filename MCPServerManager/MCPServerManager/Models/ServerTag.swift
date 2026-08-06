@@ -1,6 +1,6 @@
 import Foundation
 
-enum ServerTag: String, Codable, CaseIterable, Identifiable {
+enum ServerTag: String, Codable, CaseIterable, Identifiable, Sendable {
     case ui = "UI"
     case backend = "Backend"
     case creativity = "Creativity"

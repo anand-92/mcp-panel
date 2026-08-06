@@ -39,12 +39,12 @@ struct ContentView: View {
         .onDrop(of: [.fileURL, .text], isTargeted: $isDropTargeted) { providers in
             handleDrop(providers: providers)
         }
-        .onChange(of: showAddServer) { isShowing in
+        .onChange(of: showAddServer) { _, isShowing in
             if !isShowing {
                 droppedJSON = nil
             }
         }
-        .onChange(of: scenePhase) { phase in
+        .onChange(of: scenePhase) { _, phase in
             // The descriptor-based file watcher can miss an external atomic
             // replace of the sandboxed config (e.g. a CLI write), so also reload
             // when the app returns to the foreground. Honors the self-write guard.
@@ -100,13 +100,9 @@ struct ContentView: View {
 
     // MARK: - View Components
 
-    @ViewBuilder
     private var backgroundView: some View {
-        if #available(macOS 26.0, *) {
-            Color.clear.ignoresSafeArea()
-        } else {
-            viewModel.themeColors.backgroundGradient.ignoresSafeArea()
-        }
+        // Transparent so the window's Liquid Glass material shows through.
+        Color.clear.ignoresSafeArea()
     }
 
     @ViewBuilder
@@ -234,7 +230,7 @@ struct ContentView: View {
                 VStack(spacing: 16) {
                     Image(systemName: "arrow.down.doc.fill")
                         .font(.system(size: 48))
-                        .foregroundColor(viewModel.themeColors.primaryAccent)
+                        .foregroundStyle(viewModel.themeColors.primaryAccent)
                     Text("Drop JSON to add servers")
                         .font(DesignTokens.Typography.bodyLarge)
                 }
@@ -307,71 +303,19 @@ struct ContentView: View {
 
     /// Read a dropped file's contents and present the Add Server modal.
     private func loadDroppedFile(from provider: NSItemProvider) {
-        provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { (item: NSSecureCoding?, _: Error?) in
-            guard let url = fileURL(from: item) else {
+        Task {
+            guard let jsonString = await DroppedItemLoader.readFile(from: provider) else {
                 reportDropFailure()
                 return
             }
-            let accessing = url.startAccessingSecurityScopedResource()
-            defer {
-                if accessing {
-                    url.stopAccessingSecurityScopedResource()
-                }
-            }
-            guard let data = try? Data(contentsOf: url),
-                  let jsonString = String(data: data, encoding: .utf8) else {
-                reportDropFailure()
-                return
-            }
-            DispatchQueue.main.async {
-                presentAddServer(with: jsonString)
-            }
+            presentAddServer(with: jsonString)
         }
     }
 
-    /// Decode the file URL handed back by `loadItem`, which arrives as raw
-    /// URL bytes (`Data`), an `NSURL`, or a string depending on the source.
-    private func fileURL(from item: NSSecureCoding?) -> URL? {
-        if let data = item as? Data {
-            return URL(dataRepresentation: data, relativeTo: nil)
-        }
-        if let url = item as? URL {
-            return url
-        }
-        if let string = item as? String {
-            return URL(string: string)
-        }
-        return nil
-    }
-
-    /// Load dropped text, preferring a raw plain-text data representation
-    /// (reliable across drag sources) and falling back to `NSString`.
+    /// Load dropped text and present the Add Server modal.
     private func loadDroppedText(from provider: NSItemProvider) {
-        let plainTextType = provider.registeredTypeIdentifiers.first {
-            UTType($0)?.conforms(to: .plainText) == true
-        }
-        guard let plainTextType else {
-            loadDroppedTextObject(from: provider)
-            return
-        }
-        _ = provider.loadDataRepresentation(forTypeIdentifier: plainTextType) { data, _ in
-            if let data, let text = String(data: data, encoding: .utf8) {
-                presentDroppedText(text)
-            } else {
-                loadDroppedTextObject(from: provider)
-            }
-        }
-    }
-
-    /// Fallback text path: let Foundation coerce whatever the provider has
-    /// into a string.
-    private func loadDroppedTextObject(from provider: NSItemProvider) {
-        guard provider.canLoadObject(ofClass: NSString.self) else {
-            reportDropFailure()
-            return
-        }
-        _ = provider.loadObject(ofClass: NSString.self) { text, _ in
-            guard let text = text as? String else {
+        Task {
+            guard let text = await DroppedItemLoader.readText(from: provider) else {
                 reportDropFailure()
                 return
             }
@@ -386,16 +330,12 @@ struct ContentView: View {
             reportDropFailure()
             return
         }
-        DispatchQueue.main.async {
-            presentAddServer(with: trimmed)
-        }
+        presentAddServer(with: trimmed)
     }
 
     /// Surface a toast instead of failing silently when a drop can't be read.
     private func reportDropFailure() {
-        DispatchQueue.main.async {
-            viewModel.showToast(message: "Couldn't read the dropped JSON", type: .error)
-        }
+        viewModel.showToast(message: "Couldn't read the dropped JSON", type: .error)
     }
 
     /// Pre-fill the Add Server modal with the given text and present it.

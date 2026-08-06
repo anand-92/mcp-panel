@@ -65,7 +65,7 @@ struct MenuBarPopoverView: View {
 
             Text("MCP Servers")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(themeColors.primaryAccent)
+                .foregroundStyle(themeColors.primaryAccent)
 
             Spacer()
         }
@@ -80,12 +80,12 @@ struct MenuBarPopoverView: View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 11))
-                .foregroundColor(themeColors.primaryAccent.opacity(0.7))
+                .foregroundStyle(themeColors.primaryAccent.opacity(0.7))
 
             TextField("Search servers...", text: $searchText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12))
-                .foregroundColor(themeColors.primaryAccent)
+                .foregroundStyle(themeColors.primaryAccent)
 
             if !searchText.isEmpty {
                 Button {
@@ -93,7 +93,7 @@ struct MenuBarPopoverView: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 11))
-                        .foregroundColor(themeColors.primaryAccent.opacity(0.7))
+                        .foregroundStyle(themeColors.primaryAccent.opacity(0.7))
                 }
                 .buttonStyle(.plain)
             }
@@ -142,7 +142,7 @@ struct MenuBarPopoverView: View {
 
             Text(searchText.isEmpty ? "No servers configured" : "No matching servers")
                 .font(.system(size: 12))
-                .foregroundColor(themeColors.primaryAccent.opacity(0.7))
+                .foregroundStyle(themeColors.primaryAccent.opacity(0.7))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
@@ -159,7 +159,7 @@ struct MenuBarPopoverView: View {
                     .font(.system(size: 12, weight: .medium))
             }
             .buttonStyle(.plain)
-            .foregroundColor(themeColors.primaryAccent)
+            .foregroundStyle(themeColors.primaryAccent)
             .help("Refresh servers")
         }
         .padding(.horizontal, 12)
@@ -204,7 +204,7 @@ struct PopoverServerRow: View {
     private var serverNameLabel: some View {
         Text(server.name)
             .font(.system(size: 12, weight: isEnabled ? .medium : .regular))
-            .foregroundColor(isEnabled ? themeColors.primaryAccent : themeColors.primaryAccent.opacity(0.6))
+            .foregroundStyle(isEnabled ? themeColors.primaryAccent : themeColors.primaryAccent.opacity(0.6))
             .lineLimit(1)
             .truncationMode(.tail)
     }

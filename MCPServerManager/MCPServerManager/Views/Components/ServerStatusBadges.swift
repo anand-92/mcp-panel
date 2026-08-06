@@ -10,7 +10,7 @@ struct TransportBadge: View {
     var body: some View {
         Text(label)
             .font(DesignTokens.Typography.captionSmall)
-            .foregroundColor(themeColors.primaryAccent)
+            .foregroundStyle(themeColors.primaryAccent)
             .lineLimit(1)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
@@ -50,7 +50,7 @@ struct HealthStatusIndicator: View {
             if showsLabel {
                 Text(statusLabel)
                     .font(DesignTokens.Typography.captionSmall)
-                    .foregroundColor(themeColors.secondaryText)
+                    .foregroundStyle(themeColors.secondaryText)
                     .lineLimit(1)
             }
         }

@@ -2,8 +2,8 @@ name: MCPServerManager
 options:
   bundleIdPrefix: com.anand-92
   deploymentTarget:
-    macOS: "13.0"
-  xcodeVersion: "15.0"
+    macOS: "26.0"
+  xcodeVersion: "27.0"
   generateEmptyDirectories: true
   groupSortPosition: top
 
@@ -11,8 +11,9 @@ settings:
   base:
     MARKETING_VERSION: "3.1.0"
     CURRENT_PROJECT_VERSION: "1"
-    SWIFT_VERSION: "5.9"
-    MACOSX_DEPLOYMENT_TARGET: "13.0"
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MACOSX_DEPLOYMENT_TARGET: "26.0"
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: NW6B3R27LQ
 
@@ -52,7 +53,7 @@ packages:
     # Pin an exact version so the framework the app is built against matches the
     # framework embedded in the DMG. A floating range let the two drift apart,
     # which crashed the app when the "update available" window was shown.
-    exactVersion: "2.9.2"
+    exactVersion: "2.9.5"
 
 schemes:
   MCPServerManager:

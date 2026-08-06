@@ -3,7 +3,10 @@ import AppKit
 
 /// Manages custom icon storage in Application Support directory
 /// Copies user-selected images to a sandboxed location for persistent access
-class CustomIconManager {
+///
+/// Only immutable configuration is stored; all state lives on disk, so instances
+/// are safe to share across concurrency domains.
+final class CustomIconManager: Sendable {
     static let shared = CustomIconManager()
 
     // MARK: - Directory Constants

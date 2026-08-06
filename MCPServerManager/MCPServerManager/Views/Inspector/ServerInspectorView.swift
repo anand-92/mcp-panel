@@ -59,7 +59,7 @@ struct ServerInspectorView: View {
             }
         }
         .onAppear(perform: syncSelection)
-        .onChange(of: viewModel.filteredServers.map(\.id)) { _ in
+        .onChange(of: viewModel.filteredServers.map(\.id)) {
             syncSelection()
         }
         .alert("Discard unsaved changes?", isPresented: $showDiscardAlert) {
@@ -114,7 +114,7 @@ struct ServerInspectorView: View {
             HStack(spacing: 6) {
                 Text(enabledSummary)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(themeColors.mutedText)
+                    .foregroundStyle(themeColors.mutedText)
                     .lineLimit(1)
 
                 Spacer(minLength: 4)
@@ -124,7 +124,7 @@ struct ServerInspectorView: View {
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(themeColors.primaryAccent)
+                        .foregroundStyle(themeColors.primaryAccent)
                 }
                 .buttonStyle(.plain)
                 .help("Add server (⌘N)")
@@ -157,10 +157,10 @@ struct ServerInspectorView: View {
             VStack(spacing: 10) {
                 Image(systemName: "sidebar.left")
                     .font(.system(size: 32))
-                    .foregroundColor(themeColors.mutedText)
+                    .foregroundStyle(themeColors.mutedText)
                 Text("Select a server")
                     .font(DesignTokens.Typography.body)
-                    .foregroundColor(themeColors.secondaryText)
+                    .foregroundStyle(themeColors.secondaryText)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -192,7 +192,7 @@ struct ServerInspectorView: View {
             } label: {
                 Image(systemName: "trash")
                     .font(.system(size: 12))
-                    .foregroundColor(themeColors.errorColor)
+                    .foregroundStyle(themeColors.errorColor)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Delete \(server.name)")
@@ -209,7 +209,7 @@ struct ServerInspectorView: View {
         } label: {
             Text(tab.title)
                 .font(DesignTokens.Typography.labelSmall)
-                .foregroundColor(isActive ? themeColors.textOnAccent : themeColors.mutedText)
+                .foregroundStyle(isActive ? themeColors.textOnAccent : themeColors.mutedText)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
                 .background(

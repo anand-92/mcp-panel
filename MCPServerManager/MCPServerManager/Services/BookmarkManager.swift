@@ -1,7 +1,10 @@
 import Foundation
 
-/// Manages security-scoped bookmarks for persistent file access under App Sandbox
-class BookmarkManager {
+/// Manages security-scoped bookmarks for persistent file access under App Sandbox.
+///
+/// Holds no stored state: bookmarks live in `UserDefaults`, which is itself
+/// thread-safe, so instances are safe to share across concurrency domains.
+final class BookmarkManager: Sendable {
     static let shared = BookmarkManager()
 
     private init() {}

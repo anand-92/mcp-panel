@@ -102,7 +102,7 @@ struct SettingsModal: View {
 
                 Text("MCP Panel")
                     .font(DesignTokens.Typography.title3)
-                    .foregroundColor(themeColors.primaryText)
+                    .foregroundStyle(themeColors.primaryText)
             }
             .padding(.top, 24)
             .padding(.bottom, 16)
@@ -128,7 +128,7 @@ struct SettingsModal: View {
             // Version info
             Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(themeColors.mutedText)
+                .foregroundStyle(themeColors.mutedText)
                 .padding(.bottom, 16)
         }
         .frame(width: 190)
@@ -142,11 +142,11 @@ struct SettingsModal: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(selectedTab.rawValue)
                     .font(DesignTokens.Typography.title2)
-                    .foregroundColor(themeColors.primaryText)
+                    .foregroundStyle(themeColors.primaryText)
 
                 Text(selectedTab.description)
                     .font(DesignTokens.Typography.bodySmall)
-                    .foregroundColor(themeColors.secondaryText)
+                    .foregroundStyle(themeColors.secondaryText)
             }
 
             Spacer()
@@ -154,7 +154,7 @@ struct SettingsModal: View {
             Button(action: { isPresented = false }, label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(themeColors.mutedText)
+                    .foregroundStyle(themeColors.mutedText)
             })
             .buttonStyle(.plain)
             .contentShape(Circle())
@@ -212,10 +212,10 @@ struct SettingsModal: View {
                     HStack(spacing: 8) {
                         Image(systemName: "info.circle")
                             .font(.system(size: 11))
-                            .foregroundColor(themeColors.mutedText)
+                            .foregroundStyle(themeColors.mutedText)
                         Text("Leave Droid path empty to keep Droid sync disabled.")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(themeColors.mutedText)
+                            .foregroundStyle(themeColors.mutedText)
                         Spacer()
                     }
                 }
@@ -234,12 +234,12 @@ struct SettingsModal: View {
                     if launchAtLogin && launchAtLoginRequiresApproval {
                         HStack(spacing: 8) {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(themeColors.warningColor)
+                                .foregroundStyle(themeColors.warningColor)
                                 .font(.system(size: 12))
 
                             Text("Approval required in System Settings")
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(themeColors.warningColor)
+                                .foregroundStyle(themeColors.warningColor)
 
                             Spacer()
 
@@ -269,7 +269,7 @@ struct SettingsModal: View {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Select Theme")
                         .font(DesignTokens.Typography.labelSmall)
-                        .foregroundColor(themeColors.mutedText)
+                        .foregroundStyle(themeColors.mutedText)
                         .textCase(.uppercase)
                         .tracking(0.5)
 
@@ -329,7 +329,7 @@ struct SettingsModal: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Connectivity")
                             .font(DesignTokens.Typography.labelSmall)
-                            .foregroundColor(themeColors.mutedText)
+                            .foregroundStyle(themeColors.mutedText)
                             .textCase(.uppercase)
                             .tracking(0.5)
 
@@ -355,12 +355,12 @@ struct SettingsModal: View {
                         if !testResult.isEmpty {
                             HStack(spacing: 6) {
                                 Image(systemName: testResult.contains("Error") ? "xmark.circle.fill" : "checkmark.circle.fill")
-                                    .foregroundColor(testResult.contains("Error") ? themeColors.errorColor : themeColors.successColor)
+                                    .foregroundStyle(testResult.contains("Error") ? themeColors.errorColor : themeColors.successColor)
                                     .font(.system(size: 12))
 
                                 Text(testResult)
                                     .font(DesignTokens.Typography.caption)
-                                    .foregroundColor(themeColors.secondaryText)
+                                    .foregroundStyle(themeColors.secondaryText)
                             }
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
@@ -378,7 +378,7 @@ struct SettingsModal: View {
             Button(action: resetToDefaults) {
                 Text("Reset to Defaults")
                     .font(DesignTokens.Typography.bodySmall)
-                    .foregroundColor(themeColors.mutedText)
+                    .foregroundStyle(themeColors.mutedText)
             }
             .buttonStyle(.plain)
 
@@ -538,12 +538,12 @@ private struct SidebarTabButton: View {
             HStack(spacing: 10) {
                 Image(systemName: tab.icon)
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(isSelected ? themeColors.primaryAccent : themeColors.secondaryText)
+                    .foregroundStyle(isSelected ? themeColors.primaryAccent : themeColors.secondaryText)
                     .frame(width: 20)
 
                 Text(tab.rawValue)
                     .font(DesignTokens.Typography.label)
-                    .foregroundColor(isSelected ? themeColors.primaryText : themeColors.secondaryText)
+                    .foregroundStyle(isSelected ? themeColors.primaryText : themeColors.secondaryText)
 
                 Spacer()
             }
@@ -577,11 +577,11 @@ private struct SettingsSectionCard<Content: View>: View {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(themeColors.primaryAccent)
+                    .foregroundStyle(themeColors.primaryAccent)
 
                 Text(title)
                     .font(DesignTokens.Typography.label)
-                    .foregroundColor(themeColors.primaryText)
+                    .foregroundStyle(themeColors.primaryText)
             }
 
             // Section Content
@@ -615,12 +615,12 @@ private struct ConfigPathEditor: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .foregroundColor(themeColors.primaryAccent)
+                    .foregroundStyle(themeColors.primaryAccent)
                     .font(.system(size: 12))
 
                 Text(label)
                     .font(DesignTokens.Typography.labelSmall)
-                    .foregroundColor(themeColors.secondaryText)
+                    .foregroundStyle(themeColors.secondaryText)
             }
 
             HStack(spacing: 8) {
@@ -653,17 +653,17 @@ struct SettingsToggleRow: View {
         HStack(alignment: .center, spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 16))
-                .foregroundColor(themeColors.primaryAccent.opacity(0.8))
+                .foregroundStyle(themeColors.primaryAccent.opacity(0.8))
                 .frame(width: 24)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(DesignTokens.Typography.label)
-                    .foregroundColor(themeColors.primaryText)
+                    .foregroundStyle(themeColors.primaryText)
 
                 Text(description)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(themeColors.mutedText)
+                    .foregroundStyle(themeColors.mutedText)
                     .lineLimit(2)
             }
 

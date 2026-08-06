@@ -1,6 +1,6 @@
 import Foundation
 
-struct ServerModel: Identifiable, Codable, Equatable {
+struct ServerModel: Identifiable, Codable, Equatable, Sendable {
     let id: UUID
     var name: String
     var config: ServerConfig

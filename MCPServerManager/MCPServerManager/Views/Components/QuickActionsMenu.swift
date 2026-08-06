@@ -49,7 +49,7 @@ struct QuickActionsMenu: View {
             // Header
             Text("Quick Actions")
                 .font(DesignTokens.Typography.caption)
-                .foregroundColor(themeColors.mutedText)
+                .foregroundStyle(themeColors.mutedText)
                 .textCase(.uppercase)
                 .tracking(1.2)
                 .padding(.leading, 4)
@@ -86,7 +86,7 @@ struct QuickActionsMenu: View {
             // Keyboard hint
             Text("Press ESC to close")
                 .font(DesignTokens.Typography.captionSmall)
-                .foregroundColor(themeColors.mutedText)
+                .foregroundStyle(themeColors.mutedText)
                 .padding(.leading, 4)
                 .opacity(animateIn ? 0.6 : 0)
                 .offset(y: animateIn ? 0 : 10)
@@ -147,7 +147,7 @@ struct QuickActionButton: View {
                 // Icon
                 Image(systemName: icon)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(isHovered ? themeColors.textOnAccent : color)
+                    .foregroundStyle(isHovered ? themeColors.textOnAccent : color)
                     .frame(width: 32, height: 32)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
@@ -158,11 +158,11 @@ struct QuickActionButton: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title)
                         .font(DesignTokens.Typography.label)
-                        .foregroundColor(themeColors.primaryText)
+                        .foregroundStyle(themeColors.primaryText)
 
                     Text(subtitle)
                         .font(DesignTokens.Typography.captionSmall)
-                        .foregroundColor(themeColors.mutedText)
+                        .foregroundStyle(themeColors.mutedText)
                 }
 
                 Spacer()
@@ -170,7 +170,7 @@ struct QuickActionButton: View {
                 // Arrow
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(themeColors.mutedText)
+                    .foregroundStyle(themeColors.mutedText)
                     .opacity(isHovered ? 1 : 0)
                     .offset(x: isHovered ? 0 : -4)
             }

@@ -124,7 +124,7 @@ struct ServerCardView: View {
     private var configSummary: some View {
         Text(server.config.summary)
             .font(DesignTokens.Typography.bodySmall)
-            .foregroundColor(.secondary)
+            .foregroundStyle(.secondary)
             .lineLimit(1)
     }
 
@@ -153,7 +153,7 @@ struct ServerCardView: View {
                     Text(server.tags.isEmpty ? "Add Tags" : "Edit")
                 }
                 .font(DesignTokens.Typography.captionSmall)
-                .foregroundColor(themeColors.secondaryText)
+                .foregroundStyle(themeColors.secondaryText)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(
@@ -240,7 +240,7 @@ struct ServerCardView: View {
                         .font(DesignTokens.Typography.labelSmall)
                         .padding(6)
                         .background(themeColors.primaryAccent.opacity(0.85))
-                        .foregroundColor(themeColors.textOnAccent)
+                        .foregroundStyle(themeColors.textOnAccent)
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
@@ -282,7 +282,7 @@ struct ServerCardView: View {
                     .labelStyle(.titleAndIcon)
             }
             .buttonStyle(.plain)
-            .foregroundColor(themeColors.primaryText)
+            .foregroundStyle(themeColors.primaryText)
             .padding(.horizontal, 9)
             .padding(.vertical, 6)
             .background(
@@ -296,7 +296,7 @@ struct ServerCardView: View {
 
             Button(action: handleDeleteTapped) {
                 Image(systemName: "trash")
-                    .foregroundColor(themeColors.errorColor)
+                    .foregroundStyle(themeColors.errorColor)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Delete \(server.name)")
@@ -388,7 +388,7 @@ struct TagChip: View {
                     .font(.system(size: 8, weight: .bold))
             }
             .font(DesignTokens.Typography.caption)
-            .foregroundColor(themeColors.textOnAccent)
+            .foregroundStyle(themeColors.textOnAccent)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(

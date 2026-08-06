@@ -117,8 +117,8 @@ jobs:
         options:
           bundleIdPrefix: com.mcpmanager
           deploymentTarget:
-            macOS: "13.0"
-          xcodeVersion: "15.0"
+            macOS: "26.0"
+          xcodeVersion: "27.0"
           generateEmptyDirectories: true
           groupSortPosition: top
 
@@ -126,8 +126,9 @@ jobs:
           base:
             MARKETING_VERSION: "3.1.0"
             CURRENT_PROJECT_VERSION: "1"
-            SWIFT_VERSION: "5.9"
-            MACOSX_DEPLOYMENT_TARGET: "13.0"
+            SWIFT_VERSION: "6.0"
+            SWIFT_STRICT_CONCURRENCY: complete
+            MACOSX_DEPLOYMENT_TARGET: "26.0"
             CODE_SIGN_STYLE: Manual
             DEVELOPMENT_TEAM: NW6B3R27LQ
 

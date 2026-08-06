@@ -1,6 +1,8 @@
 import Foundation
 
-class ConfigManager {
+/// Stateless file-I/O facade: it stores nothing, so concurrent use from the
+/// watcher queue and the main actor is safe without synchronization.
+final class ConfigManager: Sendable {
     static let shared = ConfigManager()
 
     struct ConfigFile: Codable {

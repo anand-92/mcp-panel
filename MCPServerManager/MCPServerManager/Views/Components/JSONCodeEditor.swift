@@ -86,6 +86,7 @@ struct JSONCodeEditor: NSViewRepresentable {
 
     // MARK: - Coordinator
 
+    @MainActor
     final class Coordinator: NSObject, NSTextViewDelegate {
         var parent: JSONCodeEditor
         weak var textView: NSTextView?
@@ -103,8 +104,10 @@ struct JSONCodeEditor: NSViewRepresentable {
             // Debounce re-highlighting while typing.
             debounceWorkItem?.cancel()
             let work = DispatchWorkItem { [weak self, weak textView] in
-                guard let self, let textView else { return }
-                self.applyHighlight(to: textView, text: textView.string, preserveSelection: true)
+                MainActor.assumeIsolated {
+                    guard let self, let textView else { return }
+                    self.applyHighlight(to: textView, text: textView.string, preserveSelection: true)
+                }
             }
             debounceWorkItem = work
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: work)

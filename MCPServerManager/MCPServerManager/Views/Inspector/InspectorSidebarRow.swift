@@ -24,14 +24,14 @@ struct InspectorSidebarRow: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(server.name)
                             .font(DesignTokens.Typography.labelSmall)
-                            .foregroundColor(isSelected ? themeColors.primaryText : themeColors.secondaryText)
+                            .foregroundStyle(isSelected ? themeColors.primaryText : themeColors.secondaryText)
                             .lineLimit(1)
                             .truncationMode(.middle)
 
                         HStack(spacing: 4) {
                             Text(server.config.transportLabel)
                                 .font(DesignTokens.Typography.caption)
-                                .foregroundColor(themeColors.mutedText)
+                                .foregroundStyle(themeColors.mutedText)
                                 .lineLimit(1)
 
                             HealthStatusIndicator(

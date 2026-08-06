@@ -19,12 +19,12 @@ struct HeaderView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("MCP Panel")
                         .font(DesignTokens.Typography.title3)
-                        .foregroundColor(themeColors.primaryText)
+                        .foregroundStyle(themeColors.primaryText)
                         .lineLimit(1)
 
                     Text(viewModel.servers.count == 1 ? "1 server" : "\(viewModel.servers.count) servers")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(themeColors.mutedText)
+                        .foregroundStyle(themeColors.mutedText)
                         .lineLimit(1)
                 }
                 .fixedSize(horizontal: true, vertical: false)
@@ -50,7 +50,7 @@ struct HeaderView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
-        .modifier(LiquidGlassModifier(shape: Rectangle(), fillColor: themeColors.sidebarBackground.opacity(0.8)))
+        .liquidGlass(shape: Rectangle())
     }
 }
 
@@ -85,7 +85,7 @@ private struct AppLogoView: View {
 
                     Image(systemName: showQuickActions ? "xmark" : "plus")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(themeColors.textOnAccent)
+                        .foregroundStyle(themeColors.textOnAccent)
                         .rotationEffect(.degrees(showQuickActions ? 0 : -90))
                 }
                 .opacity(isHovered || showQuickActions ? 1 : 0)
@@ -128,15 +128,15 @@ private struct ActiveConfigLabel: View {
                     .renderingMode(.template)
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 16, height: 16)
-                    .foregroundColor(themeColors.primaryAccent)
+                    .foregroundStyle(themeColors.primaryAccent)
             } else {
                 Image(systemName: "doc.text")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(themeColors.primaryAccent)
+                    .foregroundStyle(themeColors.primaryAccent)
 
                 Text(path.shortPath())
                     .font(DesignTokens.Typography.label)
-                    .foregroundColor(themeColors.secondaryText)
+                    .foregroundStyle(themeColors.secondaryText)
                     .lineLimit(1)
             }
         }
@@ -167,13 +167,13 @@ private struct SearchField: View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 13, weight: .medium))
-                .foregroundColor(isFocused ? themeColors.primaryAccent : themeColors.mutedText)
+                .foregroundStyle(isFocused ? themeColors.primaryAccent : themeColors.mutedText)
 
             TextField("Search...", text: $text)
                 .textFieldStyle(.plain)
                 .font(DesignTokens.Typography.body)
                 .focused($fieldFocused)
-                .onChange(of: fieldFocused) { newValue in
+                .onChange(of: fieldFocused) { _, newValue in
                     withAnimation(.easeInOut(duration: 0.2)) {
                         isFocused = newValue
                     }
@@ -185,7 +185,7 @@ private struct SearchField: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 12))
-                        .foregroundColor(themeColors.mutedText)
+                        .foregroundStyle(themeColors.mutedText)
                 }
                 .buttonStyle(.plain)
                 .transition(.scale.combined(with: .opacity))
@@ -232,7 +232,7 @@ private struct SettingsButton: View {
         Button { showSettings = true } label: {
             Image(systemName: "gearshape.fill")
                 .font(.system(size: 16, weight: .medium))
-                .foregroundColor(isHovered ? themeColors.primaryAccent : themeColors.secondaryText)
+                .foregroundStyle(isHovered ? themeColors.primaryAccent : themeColors.secondaryText)
                 .frame(width: 36, height: 36)
                 .background(
                     RoundedRectangle(cornerRadius: 10)

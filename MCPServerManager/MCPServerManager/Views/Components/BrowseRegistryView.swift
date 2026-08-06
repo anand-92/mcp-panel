@@ -32,7 +32,7 @@ struct BrowseRegistryView: View {
     private var searchBar: some View {
         HStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
 
             TextField("Search servers...", text: $searchText)
                 .font(DesignTokens.Typography.body)
@@ -41,7 +41,7 @@ struct BrowseRegistryView: View {
             if !searchText.isEmpty {
                 Button(action: { searchText = "" }, label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 })
                 .buttonStyle(.plain)
             }
@@ -79,7 +79,7 @@ struct BrowseRegistryView: View {
                 .scaleEffect(1.2)
             Text("Loading servers from registry...")
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -88,10 +88,10 @@ struct BrowseRegistryView: View {
         VStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 32))
-                .foregroundColor(.orange)
+                .foregroundStyle(.orange)
             Text(errorMessage)
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             Button("Retry") {
                 Task {
@@ -114,10 +114,10 @@ struct BrowseRegistryView: View {
         VStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 32))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Text(emptyStateMessage)
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -191,7 +191,7 @@ struct ServerRow: View {
 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12))
-                    .foregroundColor(.secondary.opacity(0.5))
+                    .foregroundStyle(.secondary.opacity(0.5))
             }
             .padding(12)
             .background(rowBackground)
@@ -238,7 +238,7 @@ struct ServerRow: View {
             .overlay(
                 Text(server.displayName.prefix(1).uppercased())
                     .font(DesignTokens.Typography.title3)
-                    .foregroundColor(themeColors.primaryAccent)
+                    .foregroundStyle(themeColors.primaryAccent)
             )
     }
 
@@ -246,11 +246,11 @@ struct ServerRow: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(server.displayName)
                 .font(DesignTokens.Typography.title3)
-                .foregroundColor(.primary)
+                .foregroundStyle(.primary)
 
             Text(server.description)
                 .font(DesignTokens.Typography.bodySmall)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .lineLimit(2)
 
             configInfo
@@ -266,7 +266,7 @@ struct ServerRow: View {
                 Text(commandPreview(command, args: server.config.args))
                     .font(DesignTokens.Typography.codeSmall)
             }
-            .foregroundColor(.secondary.opacity(0.7))
+            .foregroundStyle(.secondary.opacity(0.7))
             .padding(.top, 2)
         } else if let type = server.config.type, let url = server.config.url {
             HStack(spacing: 4) {
@@ -276,7 +276,7 @@ struct ServerRow: View {
                     .font(DesignTokens.Typography.codeSmall)
                     .lineLimit(1)
             }
-            .foregroundColor(.secondary.opacity(0.7))
+            .foregroundStyle(.secondary.opacity(0.7))
             .padding(.top, 2)
         }
     }

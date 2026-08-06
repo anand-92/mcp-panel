@@ -31,7 +31,7 @@ A native macOS app for managing Claude Code MCP server configurations, built wit
 
 ## Requirements
 
-- macOS 13.0 (Ventura) or later
+- macOS 26.0 (Tahoe) or later
 - Xcode 15.0+ (for building from source)
 - Swift 5.9+
 
@@ -193,7 +193,7 @@ MCPServerManager/
 
 **Servers not saving** — check file permissions (`chmod 644 ~/.claude.json`) and review Console.app filtered to "MCPServerManager" for errors.
 
-**App won't launch** — requires macOS 13.0+. If you downloaded the DMG, check System Settings → Privacy & Security.
+**App won't launch** — requires macOS 26.0+. If you downloaded the DMG, check System Settings → Privacy & Security.
 
 **Auto-updates not working** — auto-updates are DMG-only. Press **⌘U** to check manually. App Store builds update through the Mac App Store.
 

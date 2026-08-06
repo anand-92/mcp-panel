@@ -29,7 +29,7 @@ struct OnboardingModal: View {
 
                     Text("Manage MCP servers for Claude Code, Factory Droid, and compatible apps")
                         .font(DesignTokens.Typography.body)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
 
@@ -53,7 +53,7 @@ struct OnboardingModal: View {
 
                     Text("If you don't see hidden files, press ⌘⇧. (Command+Shift+Period)")
                         .font(DesignTokens.Typography.bodySmall)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
                 .padding(16)
@@ -70,7 +70,7 @@ struct OnboardingModal: View {
                 if !selectedPath.isEmpty {
                     HStack {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
+                            .foregroundStyle(.green)
 
                         Text(selectedPath)
                             .font(DesignTokens.Typography.body)
@@ -92,7 +92,7 @@ struct OnboardingModal: View {
                 if !selectionError.isEmpty {
                     Text(selectionError)
                         .font(DesignTokens.Typography.bodySmall)
-                        .foregroundColor(.red)
+                        .foregroundStyle(.red)
                         .multilineTextAlignment(.center)
                 }
 
@@ -106,7 +106,7 @@ struct OnboardingModal: View {
                                 RoundedRectangle(cornerRadius: 12)
                                     .fill(themeColors.accentGradient)
                             )
-                            .foregroundColor(Color(hex: "#0b0e14"))
+                            .foregroundStyle(Color(hex: "#0b0e14"))
                     }
                     .buttonStyle(.plain)
 
@@ -118,7 +118,7 @@ struct OnboardingModal: View {
                                 RoundedRectangle(cornerRadius: 12)
                                     .fill(themeColors.accentGradient)
                             )
-                            .foregroundColor(Color(hex: "#0b0e14"))
+                            .foregroundStyle(Color(hex: "#0b0e14"))
                     }
                     .buttonStyle(.plain)
 
@@ -133,7 +133,7 @@ struct OnboardingModal: View {
                                     RoundedRectangle(cornerRadius: 12)
                                         .fill(Color.green)
                                 )
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                         })
                         .buttonStyle(.plain)
                     }
@@ -142,7 +142,7 @@ struct OnboardingModal: View {
                 // Footer
                 Text("This app only reads and writes to your config files. No data is sent anywhere.")
                     .font(DesignTokens.Typography.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
             .padding(32)

@@ -1,10 +1,10 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.4
 import PackageDescription
 
 let package = Package(
     name: "MCPServerManager",
     platforms: [
-        .macOS(.v13)
+        .macOS(.v26)
     ],
     products: [
         .executable(
@@ -13,7 +13,7 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.5.0")
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.9.5")
     ],
     targets: [
         .executableTarget(
@@ -26,6 +26,9 @@ let package = Package(
             resources: [
                 .process("Resources"),
                 .process("Assets.xcassets")
+            ],
+            swiftSettings: [
+                .swiftLanguageMode(.v6)
             ]
         )
     ]

@@ -4,6 +4,7 @@ import Sparkle
 #endif
 
 /// Service for handling app updates via Sparkle framework
+@MainActor
 class UpdateChecker: ObservableObject {
     static let shared = UpdateChecker()
 
@@ -13,11 +14,13 @@ class UpdateChecker: ObservableObject {
 
     /// Check if this is an App Store build
     /// App Store builds have an actual receipt file that exists
+    ///
+    /// Probes the bundle's fixed receipt location rather than `appStoreReceiptURL`,
+    /// which macOS 15 deprecated in favour of StoreKit's `AppTransaction`. Only the
+    /// receipt's presence matters here, so pulling in StoreKit would be overkill.
     var isAppStoreBuild: Bool {
-        guard let receiptURL = Bundle.main.appStoreReceiptURL else {
-            return false
-        }
-        // Check if the receipt file actually exists (not just the URL structure)
+        let receiptURL = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/_MASReceipt/receipt")
         return FileManager.default.fileExists(atPath: receiptURL.path)
     }
 

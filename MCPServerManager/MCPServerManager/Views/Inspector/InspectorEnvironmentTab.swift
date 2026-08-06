@@ -40,7 +40,7 @@ struct InspectorEnvironmentTab: View {
                             .frame(width: 7, height: 7)
                         Text("Unsaved edits")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(themeColors.warningColor)
+                            .foregroundStyle(themeColors.warningColor)
                     }
                 }
 
@@ -152,7 +152,7 @@ private struct InspectorKeyValueSection: View {
                 } label: {
                     Label(addLabel, systemImage: "plus")
                         .font(DesignTokens.Typography.caption)
-                        .foregroundColor(themeColors.primaryAccent)
+                        .foregroundStyle(themeColors.primaryAccent)
                 }
                 .buttonStyle(.plain)
             }
@@ -160,7 +160,7 @@ private struct InspectorKeyValueSection: View {
             if entries.isEmpty {
                 Text("None configured")
                     .font(DesignTokens.Typography.labelSmall)
-                    .foregroundColor(themeColors.mutedText)
+                    .foregroundStyle(themeColors.mutedText)
                     .padding(.vertical, 4)
             } else {
                 ForEach($entries) { $entry in
@@ -186,7 +186,7 @@ private struct InspectorKeyValueRow: View {
             TextField("KEY", text: $entry.key)
                 .textFieldStyle(.plain)
                 .font(DesignTokens.Typography.codeSmall)
-                .foregroundColor(themeColors.primaryText)
+                .foregroundStyle(themeColors.primaryText)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .background(fieldBackground)
@@ -201,7 +201,7 @@ private struct InspectorKeyValueRow: View {
             }
             .textFieldStyle(.plain)
             .font(DesignTokens.Typography.codeSmall)
-            .foregroundColor(themeColors.primaryText)
+            .foregroundStyle(themeColors.primaryText)
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .background(fieldBackground)
@@ -211,7 +211,7 @@ private struct InspectorKeyValueRow: View {
             } label: {
                 Image(systemName: entry.isRevealed ? "eye.slash" : "eye")
                     .font(.system(size: 11))
-                    .foregroundColor(themeColors.mutedText)
+                    .foregroundStyle(themeColors.mutedText)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(entry.isRevealed ? "Hide value" : "Reveal value")
@@ -219,7 +219,7 @@ private struct InspectorKeyValueRow: View {
             Button(action: onDelete) {
                 Image(systemName: "trash")
                     .font(.system(size: 11))
-                    .foregroundColor(themeColors.errorColor.opacity(0.85))
+                    .foregroundStyle(themeColors.errorColor.opacity(0.85))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Remove \(entry.key.isEmpty ? "entry" : entry.key)")

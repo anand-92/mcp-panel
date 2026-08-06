@@ -19,12 +19,12 @@ struct RawJSONView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("RAW JSON EDITOR")
                         .font(DesignTokens.Typography.labelSmall)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .tracking(1.5)
 
                     Text("Edit the full configuration in JSON format. Changes will be applied to the active config.")
                         .font(DesignTokens.Typography.bodySmall)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                 }
 
                 Spacer()
@@ -36,7 +36,7 @@ struct RawJSONView: View {
                             .frame(width: 8, height: 8)
                         Text("Unsaved edits")
                             .font(DesignTokens.Typography.bodySmall)
-                            .foregroundColor(.orange)
+                            .foregroundStyle(.orange)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
@@ -54,7 +54,7 @@ struct RawJSONView: View {
                     Text(errorMessage)
                 }
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(.red)
+                .foregroundStyle(.red)
                 .padding()
                 .frame(maxWidth: .infinity)
                 .background(
@@ -78,7 +78,7 @@ struct RawJSONView: View {
             )
             .padding(20)
             .blur(radius: (viewModel.settings.blurJSONPreviews && !isDirty) ? DesignTokens.jsonPreviewBlurRadius : 0)
-            .onChange(of: jsonText) { newValue in
+            .onChange(of: jsonText) { _, newValue in
                 isDirty = newValue != serversToJSON()
             }
 
@@ -106,7 +106,7 @@ struct RawJSONView: View {
                         Text("Apply Changes")
                     }
                     .font(DesignTokens.Typography.label)
-                    .foregroundColor(isDirty ? Color(hex: "#1a1a1a") : themeColors.mutedText)
+                    .foregroundStyle(isDirty ? Color(hex: "#1a1a1a") : themeColors.mutedText)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
                     .background(
@@ -123,10 +123,10 @@ struct RawJSONView: View {
         .onAppear {
             jsonText = serversToJSON()
         }
-        .onChange(of: viewModel.filterMode) { _ in
+        .onChange(of: viewModel.filterMode) {
             refreshJSONIfClean()
         }
-        .onChange(of: viewModel.searchText) { _ in
+        .onChange(of: viewModel.searchText) {
             refreshJSONIfClean()
         }
         .alert("Invalid Server Configuration", isPresented: $showForceAlert) {
@@ -223,7 +223,7 @@ private struct RawJSONSecondaryButton: View {
                 Text(title)
             }
             .font(DesignTokens.Typography.label)
-            .foregroundColor(themeColors.primaryText)
+            .foregroundStyle(themeColors.primaryText)
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             .background(

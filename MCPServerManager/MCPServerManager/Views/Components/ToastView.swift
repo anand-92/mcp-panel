@@ -9,11 +9,11 @@ struct ToastView: View {
         HStack(spacing: 12) {
             Image(systemName: iconName)
                 .font(DesignTokens.Typography.title3)
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
 
             Text(message)
                 .font(DesignTokens.Typography.body)
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

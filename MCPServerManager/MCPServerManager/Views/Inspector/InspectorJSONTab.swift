@@ -44,7 +44,7 @@ struct InspectorJSONTab: View {
                             .frame(width: 7, height: 7)
                         Text("Unsaved edits")
                             .font(DesignTokens.Typography.caption)
-                            .foregroundColor(themeColors.warningColor)
+                            .foregroundStyle(themeColors.warningColor)
                     }
                     .padding(.leading, 4)
                 }
@@ -71,7 +71,7 @@ struct InspectorJSONTab: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
         }
-        .onChange(of: text) { newValue in
+        .onChange(of: text) { _, newValue in
             isDirty = newValue != server.namedConfigJSON
         }
     }

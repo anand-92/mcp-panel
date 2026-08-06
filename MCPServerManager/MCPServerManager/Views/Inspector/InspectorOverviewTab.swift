@@ -39,12 +39,12 @@ struct InspectorOverviewTab: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(server.name)
                     .font(DesignTokens.Typography.title2)
-                    .foregroundColor(themeColors.primaryText)
+                    .foregroundStyle(themeColors.primaryText)
                     .lineLimit(2)
 
                 Text(server.config.summary)
                     .font(DesignTokens.Typography.bodySmall)
-                    .foregroundColor(themeColors.secondaryText)
+                    .foregroundStyle(themeColors.secondaryText)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -90,7 +90,7 @@ struct InspectorOverviewTab: View {
             InspectorDetailRow(label: "Updated") {
                 Text(relativeUpdatedAt)
                     .font(DesignTokens.Typography.labelSmall)
-                    .foregroundColor(themeColors.secondaryText)
+                    .foregroundStyle(themeColors.secondaryText)
             }
         }
     }
@@ -142,7 +142,7 @@ struct InspectorOverviewTab: View {
 
                 Text(healthStatus.message)
                     .font(DesignTokens.Typography.labelSmall)
-                    .foregroundColor(themeColors.secondaryText)
+                    .foregroundStyle(themeColors.secondaryText)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -180,7 +180,7 @@ struct InspectorSectionLabel: View {
         Text(text.uppercased())
             .font(DesignTokens.Typography.captionSmall)
             .tracking(1.2)
-            .foregroundColor(themeColors.mutedText)
+            .foregroundStyle(themeColors.mutedText)
     }
 }
 
@@ -194,7 +194,7 @@ private struct InspectorDetailRow<Content: View>: View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             Text(label)
                 .font(DesignTokens.Typography.labelSmall)
-                .foregroundColor(themeColors.mutedText)
+                .foregroundStyle(themeColors.mutedText)
                 .frame(width: 78, alignment: .leading)
 
             content
@@ -211,7 +211,7 @@ private struct InspectorMonoText: View {
     var body: some View {
         Text(text)
             .font(DesignTokens.Typography.codeSmall)
-            .foregroundColor(themeColors.primaryText)
+            .foregroundStyle(themeColors.primaryText)
             .textSelection(.enabled)
             .lineLimit(3)
             .fixedSize(horizontal: false, vertical: true)
@@ -234,7 +234,7 @@ private struct InspectorTagToggle: View {
                     .font(DesignTokens.Typography.caption)
                     .lineLimit(1)
             }
-            .foregroundColor(isOn ? themeColors.textOnAccent : themeColors.secondaryText)
+            .foregroundStyle(isOn ? themeColors.textOnAccent : themeColors.secondaryText)
             .padding(.horizontal, 9)
             .padding(.vertical, 5)
             .frame(maxWidth: .infinity, alignment: .leading)

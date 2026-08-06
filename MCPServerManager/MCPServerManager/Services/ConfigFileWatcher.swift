@@ -8,11 +8,15 @@ import Foundation
 ///
 /// All file access happens inside the security-scoped bookmark window (mirrors
 /// `ConfigManager.withConfigAccess`).
-final class ConfigFileWatcher {
+///
+/// Every mutable property is read and written only on `queue` (a serial dispatch
+/// queue) or from `deinit`, when no other reference remains, so the type is safe
+/// to share across concurrency domains despite not being checkably `Sendable`.
+final class ConfigFileWatcher: @unchecked Sendable {
     /// The user-facing path (e.g. "~/.claude.json"). Used for bookmark resolution.
     private var path: String
     private let debounceInterval: TimeInterval
-    private let onChange: () -> Void
+    private let onChange: @MainActor @Sendable () -> Void
 
     private let queue = DispatchQueue(label: "com.anand-92.mcp-panel.config-watcher")
     private var source: DispatchSourceFileSystemObject?
@@ -23,7 +27,7 @@ final class ConfigFileWatcher {
     /// Tracks whether we currently hold security-scoped access we must release.
     private var securityScopedURL: URL?
 
-    init(path: String, debounceInterval: TimeInterval = 0.3, onChange: @escaping () -> Void) {
+    init(path: String, debounceInterval: TimeInterval = 0.3, onChange: @escaping @MainActor @Sendable () -> Void) {
         self.path = path
         self.debounceInterval = debounceInterval
         self.onChange = onChange
@@ -194,8 +198,9 @@ final class ConfigFileWatcher {
         debounceWorkItem?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
-            DispatchQueue.main.async {
-                self.onChange()
+            let notify = self.onChange
+            Task { @MainActor in
+                notify()
             }
         }
         debounceWorkItem = work

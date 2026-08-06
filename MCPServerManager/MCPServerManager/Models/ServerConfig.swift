@@ -3,7 +3,7 @@ import Foundation
 // MARK: - AnyCodable
 
 /// A type-erased Codable value to handle arbitrary JSON/TOML data
-enum AnyCodable: Codable, Equatable {
+enum AnyCodable: Codable, Equatable, Sendable {
     case string(String)
     case int(Int)
     case double(Double)
@@ -98,7 +98,7 @@ private extension String? {
 
 // MARK: - Server Configuration Models
 
-struct ServerTransportConfig: Codable, Equatable {
+struct ServerTransportConfig: Codable, Equatable, Sendable {
     var type: String
     var url: String?
     var headers: [String: String]?
@@ -170,7 +170,7 @@ struct ServerTransportConfig: Codable, Equatable {
     }
 }
 
-struct ServerRemoteConfig: Codable, Equatable {
+struct ServerRemoteConfig: Codable, Equatable, Sendable {
     var type: String
     var url: String
     var headers: [String: String]?
@@ -182,7 +182,7 @@ struct ServerRemoteConfig: Codable, Equatable {
     }
 }
 
-struct ServerConfig: Codable, Equatable {
+struct ServerConfig: Codable, Equatable, Sendable {
     // Standard MCP fields
     var command: String?
     var args: [String]?

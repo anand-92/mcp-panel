@@ -1,6 +1,6 @@
 import Foundation
 
-enum ServerHealthStatus: Equatable {
+enum ServerHealthStatus: Equatable, Sendable {
     case unchecked
     case checking
     case reachable(String)

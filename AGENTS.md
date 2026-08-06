@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-MCP Panel is a native macOS app (SwiftUI + Swift Package Manager, macOS 13.0+) for managing MCP server configs for **Claude Code**. It edits the user's config file directly — no backend, no Claude Desktop support.
+MCP Panel is a native macOS app (SwiftUI + Swift Package Manager, macOS 26.0+, Swift 6 language mode) for managing MCP server configs for **Claude Code**. It edits the user's config file directly — no backend, no Claude Desktop support.
 
 ## Project Structure & Module Organization
 
@@ -57,7 +57,7 @@ All macOS jobs run on the **self-hosted Mac Mini** runner (`mac-mini-nikships-mc
 ## Coding Style & Naming Conventions
 
 - Swift, 4-space indentation. Types `UpperCamelCase`, members `lowerCamelCase`.
-- Target macOS 13: avoid macOS 14+ APIs (two-parameter `.onChange`, `ContentUnavailableView`).
+- Target macOS 26 with the Swift 6 language mode: prefer modern APIs (two-parameter `.onChange`, `foregroundStyle`, `glassEffect`) and keep types `Sendable` or actor-isolated rather than reaching for `@unchecked`.
 - Use `Read`/`Edit`/`Create` tools for file changes, not shell.
 - Run SwiftLint before committing; keep the tree at zero violations (CI is strict).
 

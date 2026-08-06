@@ -59,7 +59,7 @@ struct AddServerModal: View {
                 validateInput()
             }
         }
-        .onChange(of: initialJSON) { newValue in
+        .onChange(of: initialJSON) { _, newValue in
             if let newValue, !newValue.isEmpty {
                 jsonText = newValue
                 validateInput()
@@ -91,7 +91,7 @@ struct AddServerModal: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("BULK ADD")
                     .font(DesignTokens.Typography.labelSmall)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .tracking(1.5)
 
                 Text("Add Servers")
@@ -103,7 +103,7 @@ struct AddServerModal: View {
             Button(action: { isPresented = false }, label: {
                 Image(systemName: "xmark")
                     .font(DesignTokens.Typography.title3)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
             })
             .buttonStyle(.plain)
         }
@@ -174,12 +174,12 @@ struct AddServerModal: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("SERVER JSON")
                     .font(DesignTokens.Typography.labelSmall)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .tracking(1.5)
 
                 Text("Paste server definitions in the format: {\"server-name\": {\"command\": \"...\"}} or just the config object")
                     .font(DesignTokens.Typography.bodySmall)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
 
                 JSONCodeEditor(
                     text: $jsonText,
@@ -193,7 +193,7 @@ struct AddServerModal: View {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color.white.opacity(0.1), lineWidth: 1)
                 )
-                .onChange(of: jsonText) { _ in
+                .onChange(of: jsonText) {
                     validateInput()
                 }
 
@@ -229,7 +229,7 @@ struct AddServerModal: View {
             Text(message)
         }
         .font(DesignTokens.Typography.bodySmall)
-        .foregroundColor(color)
+        .foregroundStyle(color)
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 8)
@@ -429,7 +429,7 @@ private struct PrimaryButton: View {
                 }
                 Text(title)
             }
-            .foregroundColor(themeColors.textOnAccent)
+            .foregroundStyle(themeColors.textOnAccent)
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
             .background(
@@ -459,7 +459,7 @@ private struct ModeButton: View {
                 Text(title)
                     .font(DesignTokens.Typography.body)
             }
-            .foregroundColor(isSelected ? themeColors.textOnAccent : .secondary)
+            .foregroundStyle(isSelected ? themeColors.textOnAccent : .secondary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
             .background(modeButtonBackground)

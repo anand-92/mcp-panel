@@ -71,7 +71,7 @@ struct ServerIconView: View {
 
                 Image(systemName: "photo.badge.plus")
                     .font(.system(size: size * 0.35))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
             }
         }
         .frame(width: size, height: size)
