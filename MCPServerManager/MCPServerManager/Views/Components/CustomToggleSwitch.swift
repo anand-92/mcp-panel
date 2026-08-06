@@ -4,8 +4,10 @@ struct CustomToggleSwitch: View {
     @Binding var isOn: Bool
     var label: String = ""
 
+    @Environment(\.appearance) private var appearance
+
     var body: some View {
-        Button(action: { withAnimation(.spring(response: 0.3)) { isOn.toggle() } }, label: {
+        Button(action: { withAnimation(appearance.motion(.spring(response: 0.3))) { isOn.toggle() } }, label: {
             HStack(spacing: 12) {
                 if !label.isEmpty {
                     Text(label)

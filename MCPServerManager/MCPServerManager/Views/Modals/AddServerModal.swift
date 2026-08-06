@@ -4,7 +4,7 @@ struct AddServerModal: View {
     @Binding var isPresented: Bool
     @ObservedObject var viewModel: ServerViewModel
     @Environment(\.themeColors) private var themeColors
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.appearance) private var appearance
 
     /// JSON to pre-fill the editor with (e.g. from a drag-and-drop), seeded on
     /// appear and whenever it changes while the modal is open.
@@ -73,8 +73,8 @@ struct AddServerModal: View {
             idealHeight: 750,
             maxHeight: 900
         )
-        .modifier(LiquidGlassModifier(shape: RoundedRectangle(cornerRadius: 20)))
-        .shadow(radius: 30)
+        .liquidGlass(shape: RoundedRectangle(cornerRadius: appearance.cornerRadius + 4))
+        .themedShadow(radius: 30)
         .alert("Invalid Server Configuration", isPresented: $showForceAlert) {
             Button("Cancel", role: .cancel) { clearPendingState() }
             Button("Force Save", action: forceSave)
@@ -118,7 +118,7 @@ struct AddServerModal: View {
                 isSelected: entryMode == .manual,
                 themeColors: themeColors
             ) {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(appearance.motion(.easeInOut(duration: 0.2))) {
                     entryMode = .manual
                 }
             }
@@ -129,7 +129,7 @@ struct AddServerModal: View {
                 isSelected: entryMode == .browse,
                 themeColors: themeColors
             ) {
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(appearance.motion(.easeInOut(duration: 0.2))) {
                     entryMode = .browse
                 }
             }
@@ -184,8 +184,8 @@ struct AddServerModal: View {
                 JSONCodeEditor(
                     text: $jsonText,
                     themeColors: themeColors,
-                    fontSize: 15,
-                    reduceTransparency: reduceTransparency
+                    appearance: appearance,
+                    fontSizeOffset: 2
                 )
                 .frame(minHeight: 350, idealHeight: 450, maxHeight: 600)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -357,7 +357,7 @@ struct AddServerModal: View {
         let wrappedConfig = [server.displayName: server.config]
         jsonText = encodeAsPrettyJSON(wrappedConfig) ?? server.configJSON
 
-        withAnimation(.easeInOut(duration: 0.2)) {
+        withAnimation(appearance.motion(.easeInOut(duration: 0.2))) {
             entryMode = .manual
         }
         validateInput()
@@ -436,7 +436,7 @@ private struct PrimaryButton: View {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(themeColors.accentGradient)
             )
-            .shadow(color: themeColors.primaryAccent.opacity(0.3), radius: 8, x: 0, y: 4)
+            .themedShadow(color: themeColors.primaryAccent.opacity(0.3), radius: 8, y: 4)
         }
         .buttonStyle(.plain)
     }

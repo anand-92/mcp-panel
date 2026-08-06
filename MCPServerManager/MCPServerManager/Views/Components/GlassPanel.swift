@@ -3,6 +3,8 @@ import SwiftUI
 struct GlassPanel<Content: View>: View {
     let content: Content
 
+    @Environment(\.appearance) private var appearance
+
     init(@ViewBuilder content: () -> Content) {
         self.content = content()
     }
@@ -10,6 +12,9 @@ struct GlassPanel<Content: View>: View {
     var body: some View {
         // Let glassEffect provide everything - no custom overlays or effects
         content
-            .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: DesignTokens.cornerRadius))
+            .liquidGlass(
+                shape: RoundedRectangle(cornerRadius: appearance.cornerRadius),
+                interactive: true
+            )
     }
 }

@@ -20,7 +20,7 @@ struct ToastView: View {
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(backgroundColor)
-                .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
+                .themedShadow(color: .black.opacity(0.3), radius: 10, y: 5)
         )
         .padding()
     }

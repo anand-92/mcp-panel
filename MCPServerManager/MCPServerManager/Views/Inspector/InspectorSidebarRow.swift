@@ -89,6 +89,7 @@ private struct InspectorRowSwitch: View {
     let action: () -> Void
 
     @Environment(\.themeColors) private var themeColors
+    @Environment(\.appearance) private var appearance
 
     var body: some View {
         Button(action: action) {
@@ -103,7 +104,7 @@ private struct InspectorRowSwitch: View {
                     .shadow(color: .black.opacity(0.25), radius: 1.5, x: 0, y: 1)
                     .offset(x: isOn ? 6.5 : -6.5)
             }
-            .animation(.spring(response: 0.28, dampingFraction: 0.8), value: isOn)
+            .animation(appearance.motion(.spring(response: 0.28, dampingFraction: 0.8)), value: isOn)
         }
         .buttonStyle(.plain)
     }

@@ -178,10 +178,13 @@ class MenuBarController: NSObject {
         )
         .environment(\.themeColors, viewModel.themeColors)
         .environment(\.currentTheme, viewModel.currentTheme)
+        .environment(\.appearance, viewModel.resolvedAppearance)
+        .preferredColorScheme(viewModel.resolvedAppearance.appearanceMode.colorScheme)
 
         let hostingView = NSHostingView(rootView: panelView)
         hostingView.autoresizingMask = [.width, .height]
         panel.contentView = hostingView
+        panel.appearance = viewModel.resolvedAppearance.appearanceMode.nsAppearance
     }
 
     @objc private func togglePanel() {

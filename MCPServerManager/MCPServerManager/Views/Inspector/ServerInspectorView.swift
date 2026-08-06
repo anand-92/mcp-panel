@@ -10,6 +10,7 @@ struct ServerInspectorView: View {
     @Binding var showAddServer: Bool
 
     @Environment(\.themeColors) private var themeColors
+    @Environment(\.appearance) private var appearance
 
     @State private var selectedID: UUID?
     @State private var activeTab: InspectorTab = .overview
@@ -134,7 +135,7 @@ struct ServerInspectorView: View {
             .padding(.vertical, 8)
         }
         .frame(width: 240)
-        .background(themeColors.mainBackground.opacity(0.3))
+        .background(appearance.surface(themeColors.mainBackground, base: 0.3))
     }
 
     private var enabledSummary: String {

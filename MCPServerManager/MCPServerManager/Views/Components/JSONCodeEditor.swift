@@ -8,9 +8,17 @@ import AppKit
 struct JSONCodeEditor: NSViewRepresentable {
     @Binding var text: String
     let themeColors: ThemeColors
-    var fontSize: CGFloat = 13
+    /// Appearance is passed in rather than read from `@Environment`: `updateNSView` must
+    /// see the change to repaint the AppKit text view, and representable bodies don't
+    /// re-run on environment-only updates the same way SwiftUI views do.
+    var appearance: AppearanceSettings = .default
+    /// Added to the user's code font size, for the full-height editors that render
+    /// slightly larger than the inline card editor.
+    var fontSizeOffset: CGFloat = 0
     var isEditable: Bool = true
-    var reduceTransparency: Bool = false
+
+    private var fontSize: CGFloat { max(7, appearance.codeFontSize + fontSizeOffset) }
+    private var reduceTransparency: Bool { !appearance.isGlassEnabled }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -81,7 +89,7 @@ struct JSONCodeEditor: NSViewRepresentable {
             return NSColor(themeColors.panelBackground)
         }
         // Subtle theme-aware translucent surface.
-        return NSColor(themeColors.mainBackground).withAlphaComponent(0.55)
+        return NSColor(themeColors.mainBackground).withAlphaComponent(appearance.surfaceAlpha(base: 0.55))
     }
 
     // MARK: - Coordinator

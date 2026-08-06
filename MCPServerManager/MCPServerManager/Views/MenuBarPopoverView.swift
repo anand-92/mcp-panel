@@ -29,6 +29,7 @@ struct MenuBarPopoverView: View {
 
     // Use viewModel.themeColors directly for live updates when switching configs
     private var themeColors: ThemeColors { viewModel.themeColors }
+    private var appearance: AppearanceSettings { viewModel.resolvedAppearance }
 
     private var filteredServers: [ServerModel] {
         if searchText.isEmpty {
@@ -49,7 +50,7 @@ struct MenuBarPopoverView: View {
         .contentShape(Rectangle())
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(themeColors.sidebarBackground.opacity(0.3))
+                .fill(appearance.surface(themeColors.sidebarBackground, base: 0.3))
         )
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
@@ -176,7 +177,10 @@ struct PopoverServerRow: View {
     let themeColors: ThemeColors
     let onToggle: () -> Void
 
-    @State private var isHovering = false
+    @Environment(\.appearance) private var appearance
+    @State private var hovering = false
+
+    private var isHovering: Bool { appearance.hoverEffects && hovering }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -189,8 +193,8 @@ struct PopoverServerRow: View {
         .padding(.vertical, 6)
         .background(RoundedRectangle(cornerRadius: 6).fill(isHovering ? themeColors.primaryAccent.opacity(0.15) : Color.clear))
         .onHover { hover in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isHovering = hover
+            withAnimation(appearance.motion(.easeInOut(duration: 0.15))) {
+                hovering = hover
             }
         }
     }

@@ -52,6 +52,10 @@ enum DesignTokens {
         static let serif = "Crimson Pro"
     }
 
+    /// The live appearance settings backing every scaled token below.
+    @MainActor
+    private static var appearance: AppearanceSettings { AppearanceRuntime.current }
+
     // Font Weights
     enum FontWeight {
         case regular
@@ -67,71 +71,103 @@ enum DesignTokens {
             case .bold: return "-Bold"
             }
         }
+
+        var systemWeight: Font.Weight {
+            switch self {
+            case .regular: return .regular
+            case .medium: return .medium
+            case .semibold: return .semibold
+            case .bold: return .bold
+            }
+        }
     }
 
-    // Sans-serif fonts (Poppins) - for UI elements
+    /// Rounds a scaled point size to a whole number: fractional font sizes make custom
+    /// fonts render with uneven metrics next to the AppKit controls beside them.
+    @MainActor
+    private static func scaled(_ size: CGFloat) -> CGFloat {
+        max(6, (size * appearance.textSize.scale).rounded())
+    }
+
+    // UI font honoring the user's typeface and text-size preferences.
+    @MainActor
     static func sans(size: CGFloat, weight: FontWeight = .regular) -> Font {
-        return Font.custom(FontFamily.sans + weight.suffix, size: size)
+        let pointSize = scaled(size)
+        switch appearance.uiFont {
+        case .poppins:
+            return Font.custom(FontFamily.sans + weight.suffix, size: pointSize)
+        case .system:
+            return Font.system(size: pointSize, weight: weight.systemWeight)
+        case .serif:
+            return Font.custom(FontFamily.serif + weight.suffix, size: pointSize)
+        }
     }
 
     // Serif fonts (Crimson Pro) - for body text and reading
+    @MainActor
     static func serif(size: CGFloat, weight: FontWeight = .regular) -> Font {
-        return Font.custom(FontFamily.serif + weight.suffix, size: size)
+        return Font.custom(FontFamily.serif + weight.suffix, size: scaled(size))
     }
 
     // Monospace font for code/JSON
     static let monoFont = Font.system(.body, design: .monospaced)
 
-    // Semantic Typography System
+    /// Monospaced font at the user's configured code size, offset for the smaller and
+    /// larger code styles so their relative sizes are preserved.
+    @MainActor
+    static func mono(offset: CGFloat = 0) -> Font {
+        Font.system(size: max(7, appearance.codeFontSize + offset), design: .monospaced)
+    }
+
+    // Semantic Typography System. These are computed (not stored) so changing the
+    // text-size or UI-font preference re-renders every label that uses them.
+    @MainActor
     enum Typography {
-        // Display & Titles (Poppins - Sans)
-        static let hero = sans(size: 60, weight: .bold)           // Onboarding emoji-like text
-        static let display = sans(size: 40, weight: .bold)        // Empty state icons
-        static let title1 = sans(size: 28, weight: .bold)         // Main titles
-        static let title2 = sans(size: 22, weight: .semibold)     // Modal titles, server names
-        static let title3 = sans(size: 20, weight: .semibold)     // Section headers
+        // Display & Titles (Sans)
+        static var hero: Font { sans(size: 60, weight: .bold) }        // Onboarding emoji-like text
+        static var display: Font { sans(size: 40, weight: .bold) }    // Empty state icons
+        static var title1: Font { sans(size: 28, weight: .bold) }     // Main titles
+        static var title2: Font { sans(size: 22, weight: .semibold) } // Modal titles, server names
+        static var title3: Font { sans(size: 20, weight: .semibold) } // Section headers
 
-        // Body Text (Poppins - Sans for readability)
-        static let bodyLarge = sans(size: 17, weight: .regular)  // Main body text
-        static let body = sans(size: 14, weight: .regular)       // Standard body text
-        static let bodySmall = sans(size: 12, weight: .regular)  // Secondary text
+        // Body Text
+        static var bodyLarge: Font { sans(size: 17, weight: .regular) }  // Main body text
+        static var body: Font { sans(size: 14, weight: .regular) }       // Standard body text
+        static var bodySmall: Font { sans(size: 12, weight: .regular) }  // Secondary text
 
-        // UI Elements (Poppins - Sans for clarity)
-        static let buttonLarge = sans(size: 16, weight: .semibold)
-        static let button = sans(size: 14, weight: .medium)
-        static let label = sans(size: 14, weight: .regular)
-        static let labelSmall = sans(size: 12, weight: .regular)
-        static let caption = sans(size: 11, weight: .regular)
-        static let captionSmall = sans(size: 10, weight: .bold)
+        // UI Elements
+        static var buttonLarge: Font { sans(size: 16, weight: .semibold) }
+        static var button: Font { sans(size: 14, weight: .medium) }
+        static var label: Font { sans(size: 14, weight: .regular) }
+        static var labelSmall: Font { sans(size: 12, weight: .regular) }
+        static var caption: Font { sans(size: 11, weight: .regular) }
+        static var captionSmall: Font { sans(size: 10, weight: .bold) }
 
         // Code & Technical (Monospace)
-        static let codeLarge = Font.system(size: 15, design: .monospaced)
-        static let code = Font.system(size: 13, design: .monospaced)
-        static let codeSmall = Font.system(size: 11, design: .monospaced)
+        static var codeLarge: Font { mono(offset: 2) }
+        static var code: Font { mono() }
+        static var codeSmall: Font { mono(offset: -2) }
     }
 
     // MARK: - Spacing
 
-    static let cornerRadius: CGFloat = 16
-    static let cardPadding: CGFloat = 16
-    static let gridSpacing: CGFloat = 16
+    @MainActor static var cornerRadius: CGFloat { appearance.cornerRadius }
+    @MainActor static var cardPadding: CGFloat { appearance.cardPadding }
+    @MainActor static var gridSpacing: CGFloat { appearance.gridSpacing }
 
     // MARK: - Effects
 
-    static let jsonPreviewBlurRadius: CGFloat = 8
-
-    // MARK: - Shadows
-
-    static func glassCardShadow() -> some View {
-        EmptyView()
-            .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
-    }
+    @MainActor static var jsonPreviewBlurRadius: CGFloat { appearance.jsonBlurStrength }
 }
 
 // MARK: - Grid Configuration
 
+@MainActor
 enum GridConfiguration {
-    static let columns = [
-        GridItem(.adaptive(minimum: 400, maximum: 600), spacing: 16)
-    ]
+    static var columns: [GridItem] {
+        let minimum = AppearanceRuntime.current.minCardWidth
+        return [
+            GridItem(.adaptive(minimum: minimum, maximum: minimum * 1.5), spacing: DesignTokens.gridSpacing)
+        ]
+    }
 }

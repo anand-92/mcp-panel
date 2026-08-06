@@ -8,6 +8,7 @@ struct QuickActionsMenu: View {
     @Binding var showExporter: Bool
     @Binding var isExpanded: Bool
     @Environment(\.themeColors) private var themeColors
+    @Environment(\.appearance) private var appearance
     @State private var animateIn = false
 
     private enum QuickAction: CaseIterable {
@@ -63,7 +64,7 @@ struct QuickActionsMenu: View {
                         title: action.title,
                         subtitle: action.subtitle,
                         color: color(for: action),
-                        delay: Double(index) * 0.05,
+                        delay: appearance.motionLevel.isEnabled ? Double(index) * 0.05 : 0,
                         animateIn: animateIn
                     ) {
                         handleAction(action)
@@ -78,7 +79,12 @@ struct QuickActionsMenu: View {
                         RoundedRectangle(cornerRadius: 16)
                             .stroke(themeColors.borderColor, lineWidth: 1)
                     )
-                    .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+                    .shadow(
+                        color: .black.opacity(appearance.shadowOpacity(0.3)),
+                        radius: appearance.shadowRadius(20),
+                        x: 0,
+                        y: 10
+                    )
             )
             .opacity(animateIn ? 1 : 0)
             .scaleEffect(animateIn ? 1 : 0.9, anchor: .topLeading)
@@ -95,7 +101,7 @@ struct QuickActionsMenu: View {
         .padding(.top, 70)
         .padding(.leading, 20)
         .onAppear {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            withAnimation(appearance.motion(.spring(response: 0.4, dampingFraction: 0.8))) {
                 animateIn = true
             }
         }
@@ -111,7 +117,7 @@ struct QuickActionsMenu: View {
     }
 
     private func handleAction(_ action: QuickAction) {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        withAnimation(appearance.motion(.spring(response: 0.3, dampingFraction: 0.7))) {
             isExpanded = false
         }
 
@@ -139,7 +145,10 @@ struct QuickActionButton: View {
     let animateIn: Bool
     let action: () -> Void
     @Environment(\.themeColors) private var themeColors
-    @State private var isHovered = false
+    @Environment(\.appearance) private var appearance
+    @State private var hovering = false
+
+    private var isHovered: Bool { appearance.hoverEffects && hovering }
 
     var body: some View {
         Button(action: action) {
@@ -183,13 +192,13 @@ struct QuickActionButton: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isHovered = hovering
+        .onHover { isHovering in
+            withAnimation(appearance.motion(.easeInOut(duration: 0.15))) {
+                hovering = isHovering
             }
         }
         .opacity(animateIn ? 1 : 0)
         .offset(x: animateIn ? 0 : -20)
-        .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(delay), value: animateIn)
+        .animation(appearance.motion(.spring(response: 0.4, dampingFraction: 0.8).delay(delay)), value: animateIn)
     }
 }

@@ -33,7 +33,10 @@ private struct ThemeSwatchButton: View {
     let action: () -> Void
 
     @Environment(\.themeColors) private var currentThemeColors
-    @State private var isHovered: Bool = false
+    @Environment(\.appearance) private var appearance
+    @State private var hovering: Bool = false
+
+    private var isHovered: Bool { appearance.hoverEffects && hovering }
 
     private var themeColors: ThemeColors {
         ThemeColors.forTheme(theme)
@@ -99,11 +102,11 @@ private struct ThemeSwatchButton: View {
                     )
             )
             .scaleEffect(isHovered ? 1.02 : 1.0)
-            .animation(.easeInOut(duration: 0.15), value: isHovered)
+            .animation(appearance.motion(.easeInOut(duration: 0.15)), value: isHovered)
         }
         .buttonStyle(.plain)
-        .onHover { hovering in
-            isHovered = hovering
+        .onHover { isHovering in
+            hovering = isHovering
         }
     }
 }

@@ -180,6 +180,7 @@ private struct InspectorKeyValueRow: View {
     let onDelete: () -> Void
 
     @Environment(\.themeColors) private var themeColors
+    @Environment(\.appearance) private var appearance
 
     var body: some View {
         HStack(spacing: 8) {
@@ -228,7 +229,7 @@ private struct InspectorKeyValueRow: View {
 
     private var fieldBackground: some View {
         RoundedRectangle(cornerRadius: 6)
-            .fill(themeColors.mainBackground.opacity(0.5))
+            .fill(appearance.surface(themeColors.mainBackground, base: 0.5))
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
                     .stroke(themeColors.borderColor, lineWidth: 1)

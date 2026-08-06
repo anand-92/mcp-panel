@@ -151,7 +151,7 @@ struct OnboardingModal: View {
                 RoundedRectangle(cornerRadius: 24)
                     .fill(Color(nsColor: .windowBackgroundColor))
             )
-            .shadow(radius: 40)
+            .themedShadow(radius: 40)
         }
         .alert("Bookmark Storage Failed", isPresented: $showBookmarkAlert) {
             Button("OK", role: .cancel) {}

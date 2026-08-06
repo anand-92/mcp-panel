@@ -19,7 +19,6 @@ struct MCPServerManagerApp: App {
         Window("MCP Panel", id: MCPServerManagerApp.mainWindowID) {
             ContentView()
                 .environmentObject(appDelegate)
-                .preferredColorScheme(.dark)
                 .background(WindowAccessor { window in
                     // Capture the real main window so it can be re-focused/reopened reliably.
                     appDelegate.registerMainWindow(window)
@@ -31,13 +30,10 @@ struct MCPServerManagerApp: App {
                     NSApp.activate(ignoringOtherApps: true)
                 }
                 .task {
-                    // Apply Liquid Glass to window background (with slight delay to ensure window is ready)
+                    // The window's AppKit backing isn't ready on the first render pass;
+                    // ContentView re-applies on every appearance change after this.
                     try? await Task.sleep(for: .milliseconds(100))
-                    if let window = NSApp.windows.first {
-                        window.isOpaque = false
-                        window.backgroundColor = .clear
-                        window.titlebarAppearsTransparent = true
-                    }
+                    appDelegate.reapplyWindowAppearance()
                 }
         }
         .windowStyle(.hiddenTitleBar)
@@ -85,6 +81,37 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         guard mainWindow !== window else { return }
         window.identifier = NSUserInterfaceItemIdentifier(MCPServerManagerApp.mainWindowID)
         mainWindow = window
+        reapplyWindowAppearance()
+    }
+
+    // MARK: - Window Appearance
+
+    /// The last appearance applied to the window, replayed when the window is
+    /// re-created (closing the window releases it, so the new one starts opaque).
+    private var lastWindowAppearance: (settings: AppearanceSettings, colors: ThemeColors)?
+
+    /// Paint the window chrome for the current transparency and color-scheme settings.
+    /// A fully transparent window lets the Liquid Glass material show the desktop
+    /// through; raising `windowBackgroundOpacity` fades in a solid theme backing.
+    @MainActor
+    func applyWindowAppearance(_ appearance: AppearanceSettings, themeColors: ThemeColors) {
+        lastWindowAppearance = (appearance, themeColors)
+        guard let window = locateMainWindow() else { return }
+
+        let opacity = appearance.windowBackgroundOpacity
+        window.isOpaque = opacity >= 1
+        window.backgroundColor = opacity <= 0
+            ? .clear
+            : NSColor(themeColors.mainBackground).withAlphaComponent(opacity)
+        window.titlebarAppearsTransparent = true
+        window.appearance = appearance.appearanceMode.nsAppearance
+    }
+
+    /// Re-apply the most recent appearance, for a window that has just been created.
+    @MainActor
+    func reapplyWindowAppearance() {
+        guard let last = lastWindowAppearance else { return }
+        applyWindowAppearance(last.settings, themeColors: last.colors)
     }
 
     /// Bring the main window to front, re-creating it if it was closed.

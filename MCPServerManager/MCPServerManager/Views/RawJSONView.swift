@@ -3,7 +3,7 @@ import SwiftUI
 struct RawJSONView: View {
     @ObservedObject var viewModel: ServerViewModel
     @Environment(\.themeColors) private var themeColors
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.appearance) private var appearance
     @State private var jsonText: String = ""
     @State private var isDirty: Bool = false
     @State private var errorMessage: String = ""
@@ -68,8 +68,8 @@ struct RawJSONView: View {
             JSONCodeEditor(
                 text: $jsonText,
                 themeColors: themeColors,
-                fontSize: 15,
-                reduceTransparency: reduceTransparency
+                appearance: appearance,
+                fontSizeOffset: 2
             )
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(
@@ -113,7 +113,7 @@ struct RawJSONView: View {
                         RoundedRectangle(cornerRadius: 10)
                             .fill(isDirty ? AnyShapeStyle(themeColors.accentGradient) : AnyShapeStyle(themeColors.glassBackground))
                     )
-                    .shadow(color: isDirty ? themeColors.primaryAccent.opacity(0.3) : .clear, radius: 8, x: 0, y: 4)
+                    .themedShadow(color: isDirty ? themeColors.primaryAccent.opacity(0.3) : .clear, radius: 8, y: 4)
                 }
                 .buttonStyle(.plain)
                 .disabled(!isDirty)

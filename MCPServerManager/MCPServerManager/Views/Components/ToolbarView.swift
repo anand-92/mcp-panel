@@ -4,6 +4,7 @@ struct ToolbarView: View {
     @ObservedObject var viewModel: ServerViewModel
     @Namespace private var namespace
     @Environment(\.themeColors) private var themeColors
+    @Environment(\.appearance) private var appearance
 
     var body: some View {
         HStack(spacing: 16) {
@@ -27,7 +28,7 @@ struct ToolbarView: View {
         .padding(.vertical, 10)
         .background(
             Rectangle()
-                .fill(themeColors.mainBackground.opacity(0.5))
+                .fill(appearance.surface(themeColors.mainBackground, base: 0.5))
                 .overlay(
                     Rectangle()
                         .fill(
@@ -71,7 +72,7 @@ struct ToolbarView: View {
         let isSelected = viewModel.viewMode == mode
 
         Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+            withAnimation(appearance.motion(.spring(response: 0.3, dampingFraction: 0.75))) {
                 viewModel.viewMode = mode
             }
         } label: {
@@ -83,7 +84,7 @@ struct ToolbarView: View {
                     if isSelected {
                         RoundedRectangle(cornerRadius: 8)
                             .fill(themeColors.accentGradient)
-                            .shadow(color: themeColors.primaryAccent.opacity(0.3), radius: 4, x: 0, y: 2)
+                            .themedShadow(color: themeColors.primaryAccent.opacity(0.3), radius: 4, y: 2)
                             .matchedGeometryEffect(id: "viewModePill", in: namespace)
                     }
                 }
@@ -113,7 +114,7 @@ struct ToolbarView: View {
         let count = filterCount(for: mode)
 
         Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+            withAnimation(appearance.motion(.spring(response: 0.3, dampingFraction: 0.75))) {
                 viewModel.filterMode = mode
             }
         } label: {
@@ -202,7 +203,7 @@ struct ToolbarView: View {
         Menu {
             ForEach(SortMode.allCases, id: \.self) { mode in
                 Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                    withAnimation(appearance.motion(.spring(response: 0.3, dampingFraction: 0.75))) {
                         viewModel.sortMode = mode
                     }
                 } label: {
@@ -270,7 +271,7 @@ struct ToolbarView: View {
     @ViewBuilder
     private func allOffButton() -> some View {
         Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+            withAnimation(appearance.motion(.spring(response: 0.3, dampingFraction: 0.75))) {
                 viewModel.toggleAllServers(false)
             }
         } label: {
@@ -293,7 +294,7 @@ struct ToolbarView: View {
     @ViewBuilder
     private func refreshButton() -> some View {
         Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+            withAnimation(appearance.motion(.spring(response: 0.3, dampingFraction: 0.75))) {
                 viewModel.loadServers()
             }
         } label: {
@@ -312,7 +313,10 @@ struct ToolbarView: View {
 
 private struct ToolbarButtonStyle: ViewModifier {
     @Environment(\.themeColors) private var themeColors
-    @State private var isHovered = false
+    @Environment(\.appearance) private var appearance
+    @State private var hovering = false
+
+    private var isHovered: Bool { appearance.hoverEffects && hovering }
 
     func body(content: Content) -> some View {
         content
@@ -328,9 +332,9 @@ private struct ToolbarButtonStyle: ViewModifier {
                     )
             )
             .scaleEffect(isHovered ? 1.02 : 1.0)
-            .onHover { hovering in
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    isHovered = hovering
+            .onHover { isHovering in
+                withAnimation(appearance.motion(.easeInOut(duration: 0.15))) {
+                    hovering = isHovering
                 }
             }
     }
@@ -338,7 +342,10 @@ private struct ToolbarButtonStyle: ViewModifier {
 
 private struct ToolbarIconButtonStyle: ViewModifier {
     @Environment(\.themeColors) private var themeColors
-    @State private var isHovered = false
+    @Environment(\.appearance) private var appearance
+    @State private var hovering = false
+
+    private var isHovered: Bool { appearance.hoverEffects && hovering }
 
     func body(content: Content) -> some View {
         content
@@ -353,9 +360,9 @@ private struct ToolbarIconButtonStyle: ViewModifier {
                     )
             )
             .scaleEffect(isHovered ? 1.05 : 1.0)
-            .onHover { hovering in
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    isHovered = hovering
+            .onHover { isHovering in
+                withAnimation(appearance.motion(.easeInOut(duration: 0.15))) {
+                    hovering = isHovering
                 }
             }
     }

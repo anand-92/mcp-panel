@@ -49,7 +49,7 @@ struct EditorButton: View {
         case .primary:
             RoundedRectangle(cornerRadius: 8)
                 .fill(themeColors.accentGradient)
-                .shadow(color: themeColors.primaryAccent.opacity(0.3), radius: 6, x: 0, y: 2)
+                .themedShadow(color: themeColors.primaryAccent.opacity(0.3), radius: 6, y: 2)
         case .secondary:
             RoundedRectangle(cornerRadius: 8)
                 .fill(themeColors.glassBackground)

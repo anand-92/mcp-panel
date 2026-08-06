@@ -60,10 +60,14 @@ private struct AppLogoView: View {
     let themeColors: ThemeColors
     @Binding var showQuickActions: Bool
     @State private var isHovered = false
+    @Environment(\.appearance) private var appearance
+
+    /// Hover state gated by the setting, so a single flag drives every hover visual.
+    private var isActive: Bool { appearance.hoverEffects && isHovered }
 
     var body: some View {
         Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            withAnimation(appearance.motion(.spring(response: 0.3, dampingFraction: 0.7))) {
                 showQuickActions.toggle()
             }
         } label: {
@@ -74,8 +78,8 @@ private struct AppLogoView: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 36, height: 36)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .opacity(isHovered || showQuickActions ? 0 : 1)
-                    .scaleEffect(isHovered || showQuickActions ? 0.5 : 1)
+                    .opacity(isActive || showQuickActions ? 0 : 1)
+                    .scaleEffect(isActive || showQuickActions ? 0.5 : 1)
 
                 // Plus/X icon background + icon (visible when hovered or quick actions open)
                 ZStack {
@@ -88,20 +92,22 @@ private struct AppLogoView: View {
                         .foregroundStyle(themeColors.textOnAccent)
                         .rotationEffect(.degrees(showQuickActions ? 0 : -90))
                 }
-                .opacity(isHovered || showQuickActions ? 1 : 0)
-                .scaleEffect(isHovered || showQuickActions ? 1 : 0.5)
+                .opacity(isActive || showQuickActions ? 1 : 0)
+                .scaleEffect(isActive || showQuickActions ? 1 : 0.5)
             }
             .shadow(
-                color: themeColors.primaryAccent.opacity(isHovered || showQuickActions ? 0.5 : 0.2),
-                radius: isHovered ? 12 : 6,
+                color: themeColors.primaryAccent.opacity(
+                    appearance.shadowOpacity(isActive || showQuickActions ? 0.5 : 0.2)
+                ),
+                radius: appearance.shadowRadius(isActive ? 12 : 6),
                 x: 0,
                 y: 4
             )
-            .scaleEffect(isHovered ? 1.08 : 1.0)
+            .scaleEffect(isActive ? 1.08 : 1.0)
         }
         .buttonStyle(.plain)
         .onHover { hovering in
-            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+            withAnimation(appearance.motion(.spring(response: 0.25, dampingFraction: 0.7))) {
                 isHovered = hovering
             }
         }
@@ -161,6 +167,7 @@ private struct SearchField: View {
     @Binding var text: String
     @Binding var isFocused: Bool
     @Environment(\.themeColors) private var themeColors
+    @Environment(\.appearance) private var appearance
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
@@ -174,7 +181,7 @@ private struct SearchField: View {
                 .font(DesignTokens.Typography.body)
                 .focused($fieldFocused)
                 .onChange(of: fieldFocused) { _, newValue in
-                    withAnimation(.easeInOut(duration: 0.2)) {
+                    withAnimation(appearance.motion(.easeInOut(duration: 0.2))) {
                         isFocused = newValue
                     }
                 }
@@ -203,8 +210,8 @@ private struct SearchField: View {
                         .stroke(isFocused ? themeColors.primaryAccent.opacity(0.5) : themeColors.borderColor, lineWidth: 1)
                 )
         )
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isFocused)
-        .animation(.easeInOut(duration: 0.15), value: text.isEmpty)
+        .animation(appearance.motion(.spring(response: 0.3, dampingFraction: 0.8)), value: isFocused)
+        .animation(appearance.motion(.easeInOut(duration: 0.15)), value: text.isEmpty)
         .background(
             // Hidden button that wires ⌘F to focus the search field.
             Button {
@@ -227,26 +234,29 @@ private struct SettingsButton: View {
     @Binding var showSettings: Bool
     let themeColors: ThemeColors
     @State private var isHovered = false
+    @Environment(\.appearance) private var appearance
+
+    private var isActive: Bool { appearance.hoverEffects && isHovered }
 
     var body: some View {
         Button { showSettings = true } label: {
             Image(systemName: "gearshape.fill")
                 .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(isHovered ? themeColors.primaryAccent : themeColors.secondaryText)
+                .foregroundStyle(isActive ? themeColors.primaryAccent : themeColors.secondaryText)
                 .frame(width: 36, height: 36)
                 .background(
                     RoundedRectangle(cornerRadius: 10)
                         .fill(themeColors.glassBackground)
                         .overlay(
                             RoundedRectangle(cornerRadius: 10)
-                                .stroke(isHovered ? themeColors.primaryAccent.opacity(0.4) : themeColors.borderColor, lineWidth: 1)
+                                .stroke(isActive ? themeColors.primaryAccent.opacity(0.4) : themeColors.borderColor, lineWidth: 1)
                         )
                 )
-                .scaleEffect(isHovered ? 1.05 : 1.0)
+                .scaleEffect(isActive ? 1.05 : 1.0)
         }
         .buttonStyle(.plain)
         .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
+            withAnimation(appearance.motion(.easeInOut(duration: 0.15))) {
                 isHovered = hovering
             }
         }

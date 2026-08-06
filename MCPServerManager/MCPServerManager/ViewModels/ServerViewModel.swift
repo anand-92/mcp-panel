@@ -30,6 +30,10 @@ class ServerViewModel: ObservableObject {
     @Published var toastMessage: String = ""
     @Published var toastType: ToastType = .success
     @Published var healthStatuses: [UUID: ServerHealthStatus] = [:]
+    /// Appearance settings with the accessibility preferences already folded in.
+    /// `ContentView` owns resolution (only a SwiftUI view can read those environment
+    /// values); AppKit-hosted surfaces like the menu bar popover observe this instead.
+    @Published var resolvedAppearance: AppearanceSettings = .default
 
     private let configManager = ConfigManager.shared
     private let healthChecker = ServerHealthChecker()
@@ -144,6 +148,13 @@ class ServerViewModel: ObservableObject {
         // Restart the watcher on the (possibly new) config path
         startWatchingConfig()
         showToast(message: "Settings saved", type: .success)
+    }
+
+    /// Persist without a toast or a watcher restart. Settings apply live, so this runs
+    /// on every appearance tweak (including each step of a slider drag); a toast per
+    /// step would be noise and the config path is unaffected.
+    func persistSettings() {
+        UserDefaults.standard.appSettings = settings
     }
 
     func completeOnboarding(configPath: String) {

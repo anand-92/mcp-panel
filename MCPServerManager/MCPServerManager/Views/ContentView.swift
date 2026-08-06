@@ -15,6 +15,17 @@ struct ContentView: View {
     @State private var pendingImportServers: [String: ServerConfig]?
     @State private var droppedJSON: String?
     @State private var isDropTargeted = false
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The stored preferences with the accessibility settings folded in. Everything
+    /// downstream reads this, so no view has to re-check Reduce Transparency or Motion.
+    private var appearance: AppearanceSettings {
+        viewModel.settings.appearance.resolved(
+            reduceTransparency: reduceTransparency,
+            reduceMotion: reduceMotion
+        )
+    }
 
     var body: some View {
         ZStack {
@@ -35,7 +46,13 @@ struct ContentView: View {
         }
         .environment(\.themeColors, viewModel.themeColors)
         .environment(\.currentTheme, viewModel.currentTheme)
+        .environment(\.appearance, appearance)
+        .preferredColorScheme(appearance.appearanceMode.colorScheme)
         .frame(minWidth: 900, minHeight: 600)
+        // Mirror the resolved settings into the main-actor holder that backs
+        // DesignTokens, and repaint the window chrome for the new transparency.
+        .onAppear { applyAppearance() }
+        .onChange(of: appearance) { _, _ in applyAppearance() }
         .onDrop(of: [.fileURL, .text], isTargeted: $isDropTargeted) { providers in
             handleDrop(providers: providers)
         }
@@ -76,6 +93,14 @@ struct ContentView: View {
         } message: {
             Text("The imported file contains validation errors:\n\n\(importInvalidServerDetails)\n\nDo you want to force import anyway?")
         }
+    }
+
+    /// Publish the resolved appearance to `DesignTokens` and the window chrome.
+    private func applyAppearance() {
+        let resolved = appearance
+        AppearanceRuntime.update(resolved)
+        viewModel.resolvedAppearance = resolved
+        appDelegate.applyWindowAppearance(resolved, themeColors: viewModel.themeColors)
     }
 
     // MARK: - Keyboard Shortcuts
@@ -148,7 +173,7 @@ struct ContentView: View {
                 insertion: .move(edge: .trailing).combined(with: .opacity),
                 removal: .move(edge: .trailing).combined(with: .opacity)
             ))
-            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.showToast)
+            .animation(appearance.motion(.spring(response: 0.5, dampingFraction: 0.8)), value: viewModel.showToast)
             .allowsHitTesting(false)
         }
     }
@@ -179,7 +204,7 @@ struct ContentView: View {
                 .background(
                     RoundedRectangle(cornerRadius: 20)
                         .fill(Color(nsColor: .windowBackgroundColor))
-                        .shadow(radius: 30)
+                        .themedShadow(radius: 30)
                 )
             }
             .transition(.opacity)
@@ -203,7 +228,7 @@ struct ContentView: View {
                 )
                 .ignoresSafeArea()
                 .onTapGesture {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    withAnimation(appearance.motion(.spring(response: 0.3, dampingFraction: 0.7))) {
                         showQuickActions = false
                     }
                 }
@@ -238,7 +263,7 @@ struct ContentView: View {
                 .background(
                     RoundedRectangle(cornerRadius: 20)
                         .fill(Color(nsColor: .windowBackgroundColor))
-                        .shadow(radius: 30)
+                        .themedShadow(radius: 30)
                 )
             }
             .overlay(

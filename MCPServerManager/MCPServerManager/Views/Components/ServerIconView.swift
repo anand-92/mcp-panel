@@ -75,7 +75,7 @@ struct ServerIconView: View {
             }
         }
         .frame(width: size, height: size)
-        .shadow(color: themeColors.primaryAccent.opacity(0.2), radius: 4, x: 0, y: 2)
+        .themedShadow(color: themeColors.primaryAccent.opacity(0.2), radius: 4, y: 2)
         .onTapGesture {
             if isCustomIconSelectable {
                 openFilePicker()

@@ -23,7 +23,11 @@ struct ServerCardView: View {
     @State private var pendingConfig: ServerConfig?
     @Environment(\.themeColors) private var themeColors
     @Environment(\.currentTheme) private var currentTheme
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.appearance) private var appearance
+
+    /// `appearance` already folds in Reduce Transparency, so glass being off is the
+    /// single condition for using solid surfaces.
+    private var reduceTransparency: Bool { !appearance.isGlassEnabled }
 
     let onToggle: () -> Void
     let onTagToggle: (ServerTag) -> Void
@@ -180,7 +184,7 @@ struct ServerCardView: View {
             JSONCodeEditor(
                 text: $editedConfigText,
                 themeColors: themeColors,
-                reduceTransparency: reduceTransparency
+                appearance: appearance
             )
             .frame(height: 220)
             .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -229,12 +233,12 @@ struct ServerCardView: View {
                 themeName: currentTheme.rawValue
             )
             .padding(8)
-            .modifier(PreviewBlur(active: blurJSONPreviews))
+            .modifier(PreviewBlur(active: blurJSONPreviews, radius: appearance.jsonBlurStrength))
             .frame(maxWidth: .infinity, minHeight: 200, maxHeight: 200, alignment: .topLeading)
             .background(jsonSurface)
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
-            if isHovering {
+            if isHovering || !appearance.hoverEffects {
                 Button(action: startEditing) {
                     Image(systemName: "pencil")
                         .font(DesignTokens.Typography.labelSmall)
@@ -260,7 +264,7 @@ struct ServerCardView: View {
                 .fill(themeColors.panelBackground)
         } else {
             RoundedRectangle(cornerRadius: 8)
-                .fill(themeColors.mainBackground.opacity(0.55))
+                .fill(appearance.surface(themeColors.mainBackground))
         }
     }
 
@@ -363,10 +367,11 @@ struct ServerCardView: View {
 /// untouched to keep grid scrolling smooth.
 private struct PreviewBlur: ViewModifier {
     let active: Bool
+    let radius: CGFloat
 
     func body(content: Content) -> some View {
         if active {
-            content.blur(radius: DesignTokens.jsonPreviewBlurRadius)
+            content.blur(radius: radius)
         } else {
             content
         }

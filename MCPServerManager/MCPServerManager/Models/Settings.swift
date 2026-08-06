@@ -14,6 +14,9 @@ struct AppSettings: Codable, Equatable {
     var hideDockIconInMenuBarMode: Bool
     var launchAtLogin: Bool
 
+    /// Look-and-feel preferences (glass, transparency, layout, text, motion).
+    var appearance: AppearanceSettings
+
     static let `default` = AppSettings(
         confirmDelete: true,
         configPath: defaultConfigPath,
@@ -22,7 +25,8 @@ struct AppSettings: Codable, Equatable {
         overrideTheme: nil,
         menuBarModeEnabled: false,
         hideDockIconInMenuBarMode: false,
-        launchAtLogin: false
+        launchAtLogin: false,
+        appearance: .default
     )
 
     init(confirmDelete: Bool = true,
@@ -32,7 +36,8 @@ struct AppSettings: Codable, Equatable {
          overrideTheme: String? = nil,
          menuBarModeEnabled: Bool = false,
          hideDockIconInMenuBarMode: Bool = false,
-         launchAtLogin: Bool = false) {
+         launchAtLogin: Bool = false,
+         appearance: AppearanceSettings = .default) {
         self.confirmDelete = confirmDelete
         self.configPath = Self.normalizedConfigPath(configPath)
         self.droidConfigPath = droidConfigPath
@@ -41,12 +46,13 @@ struct AppSettings: Codable, Equatable {
         self.menuBarModeEnabled = menuBarModeEnabled
         self.hideDockIconInMenuBarMode = hideDockIconInMenuBarMode
         self.launchAtLogin = launchAtLogin
+        self.appearance = appearance
     }
 
     // Custom Codable for backward compatibility with old settings
     enum CodingKeys: String, CodingKey {
         case confirmDelete, configPath, configPaths, droidConfigPath, blurJSONPreviews, overrideTheme
-        case menuBarModeEnabled, hideDockIconInMenuBarMode, launchAtLogin
+        case menuBarModeEnabled, hideDockIconInMenuBarMode, launchAtLogin, appearance
     }
 
     init(from decoder: Decoder) throws {
@@ -68,6 +74,7 @@ struct AppSettings: Codable, Equatable {
         menuBarModeEnabled = try container.decodeIfPresent(Bool.self, forKey: .menuBarModeEnabled) ?? false
         hideDockIconInMenuBarMode = try container.decodeIfPresent(Bool.self, forKey: .hideDockIconInMenuBarMode) ?? false
         launchAtLogin = try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
+        appearance = try container.decodeIfPresent(AppearanceSettings.self, forKey: .appearance) ?? .default
     }
 
     func encode(to encoder: Encoder) throws {
@@ -80,6 +87,7 @@ struct AppSettings: Codable, Equatable {
         try container.encode(menuBarModeEnabled, forKey: .menuBarModeEnabled)
         try container.encode(hideDockIconInMenuBarMode, forKey: .hideDockIconInMenuBarMode)
         try container.encode(launchAtLogin, forKey: .launchAtLogin)
+        try container.encode(appearance, forKey: .appearance)
     }
 
     private static func normalizedConfigPath(_ path: String) -> String {

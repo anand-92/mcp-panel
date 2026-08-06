@@ -10,14 +10,14 @@ struct InspectorJSONTab: View {
     let onRevert: () -> Void
 
     @Environment(\.themeColors) private var themeColors
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.appearance) private var appearance
 
     var body: some View {
         VStack(spacing: 0) {
             JSONCodeEditor(
                 text: $text,
                 themeColors: themeColors,
-                reduceTransparency: reduceTransparency
+                appearance: appearance
             )
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(
