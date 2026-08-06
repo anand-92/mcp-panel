@@ -38,10 +38,13 @@ jobs:
       if: runner.environment == 'self-hosted'
       run: |
         set -euo pipefail
-        # Package.swift requires swift-tools-version 6.4, which only ships with
-        # Xcode 27. Prefer it and fall back to the stable install.
+        # Prefer the stable Xcode: App Store Connect rejects uploads built with a
+        # beta Xcode ("Apple is not currently accepting applications built with
+        # this version of Xcode", 90301). This job drives xcodebuild through the
+        # generated project and never parses Package.swift, so it does not need
+        # the 6.4 toolchain that the DMG job selects.
         XCODE_APP=""
-        for candidate in /Volumes/NVMe/Xcode-beta.app /Volumes/NVMe/Xcode.app; do
+        for candidate in /Volumes/NVMe/Xcode.app /Volumes/NVMe/Xcode-beta.app; do
           if [ -d "$candidate/Contents/Developer" ]; then
             XCODE_APP="$candidate"
             break
