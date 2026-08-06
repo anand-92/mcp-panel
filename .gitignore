@@ -85,3 +85,6 @@ release-notes.md
 
 # Local agent skills cache
 .agents/
+
+# Lavish HTML artifacts
+/.lavish/
