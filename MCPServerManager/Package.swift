@@ -10,12 +10,6 @@ let package = Package(
         .executable(
             name: "MCPServerManager",
             targets: ["MCPServerManager"]
-        ),
-        // Agent-first command-line interface. Built by `swift build`; not part
-        // of the Mac App Store target (see Package.swift.appstore).
-        .executable(
-            name: "mcp-panel",
-            targets: ["MCPPanelCLI"]
         )
     ],
     dependencies: [
@@ -33,12 +27,6 @@ let package = Package(
                 .process("Resources"),
                 .process("Assets.xcassets")
             ]
-        ),
-        // Self-contained CLI target (pure Foundation, no SwiftUI/Sparkle) that
-        // shares MCP Panel's on-disk format and UserDefaults cache.
-        .executableTarget(
-            name: "MCPPanelCLI",
-            path: "CLI"
         )
     ]
 )

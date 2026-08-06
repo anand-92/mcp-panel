@@ -12,19 +12,17 @@ MCP Panel is a native macOS app (SwiftUI + Swift Package Manager, macOS 13.0+) f
     - `Views/` — SwiftUI views; `Views/Modals/`, `Views/Components/` (e.g. `JSONCodeEditor`).
     - `Utilities/` — `Constants` (`appName = "MCP Panel"`), `JSONSyntaxHighlighter`, extensions.
     - `Resources/`, `Assets.xcassets/` — fonts and icons.
-  - `CLI/` — sources for the `mcp-panel` agent CLI: a separate SwiftPM executable target (pure Foundation, no SwiftUI/Sparkle) that shares the app's on-disk format and UserDefaults cache. Built by `swift build`; excluded from the App Store package (`Package.swift.appstore`).
 - Root scripts: `build-local-dev.sh`, `build-appstore.sh`, `create-dmg.sh`, `extract-changelog.sh`. `project.yml` drives `xcodegen`.
 
 ## Build, Test, and Development Commands
 
 ```bash
 cd MCPServerManager && swift run MCPServerManager   # Build & run the app
-cd MCPServerManager && swift run mcp-panel list      # Run the agent CLI (see CLI/)
 cd MCPServerManager && swift build -c release        # Release binaries (.build only)
 ./build-local-dev.sh --launch                        # Bundle, sign, embed Sparkle, launch
 ```
 
-The package now has two executable products (`MCPServerManager` and `mcp-panel`), so pass the product name to `swift run` — bare `swift run` is ambiguous. Full Xcode is not required for day-to-day development: `swift build` compiles the package, while `xcodegen` + `xcodebuild` are only needed to produce signed `.app` / App Store builds. There is no automated test suite — verify changes by building and launching.
+Full Xcode is not required for day-to-day development: `swift build` compiles the package, while `xcodegen` + `xcodebuild` are only needed to produce signed `.app` / App Store builds. There is no automated test suite — verify changes by building and launching.
 
 ### Linting
 

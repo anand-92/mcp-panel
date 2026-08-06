@@ -53,8 +53,6 @@ swift run MCPServerManager      # Build & run the app in development mode
 swift build -c release          # Release binaries only
 ```
 
-> The package has two executables (`MCPServerManager` and `mcp-panel`), so pass the product name to `swift run`.
-
 Linting (SwiftLint):
 
 ```bash
@@ -111,32 +109,6 @@ Open via the gear icon. Tabs:
 - **Appearance**: Theme picker (13 themes), window opacity, font scale
 - **Privacy**: Blur JSON previews, fetch server logos toggle
 - **Advanced**: Network and debug options
-
-## Command-Line Interface
-
-MCP Panel ships with **`mcp-panel`**, an agent-first CLI for scripting the same configuration the app manages.
-
-### Install it from the app (DMG builds)
-
-The CLI is bundled inside the app. In the menu bar, choose **MCP Panel → Install Command-Line Tool…** — this symlinks `mcp-panel` into `~/.local/bin` (make sure that's on your `PATH`). Because it's a symlink into the app bundle, Sparkle updates keep the CLI current. (The Mac App Store build is sandboxed and doesn't include the CLI.)
-
-### Build it from source
-
-```bash
-cd MCPServerManager
-swift build -c release --product mcp-panel
-.build/release/mcp-panel --help          # or copy it onto your PATH
-```
-
-```bash
-mcp-panel list                       # List servers + enabled/disabled status (JSON)
-mcp-panel add <name> '<mcp-json>'    # Add/update a server from raw MCP JSON (arg or stdin)
-mcp-panel toggle <name> [on|off]     # Enable/disable a server (no arg flips state)
-```
-
-Enabled servers are written to `~/.claude.json`; disabled servers are remembered in MCP Panel's shared cache, so the CLI and the app always agree. Output is JSON on stdout and errors are JSON on stderr with non-zero exit codes — designed for coding agents. A ready-to-use agent skill lives in [`skills/mcp-panel-cli/`](skills/mcp-panel-cli/SKILL.md). The CLI is not part of the sandboxed Mac App Store build.
-
-**Factory (Droid) sync.** If you've set a Factory config path in the app (Settings → **Droid**, e.g. `~/.factory/mcp.json`), the CLI mirrors the enabled set there too — normalized exactly as the GUI does (`syncClaudeServersToDroid`) — so `add`/`toggle` stay 1:1 with the app across both `~/.claude.json` and `~/.factory/mcp.json`. `list` reports `factoryConfigPath` and `factoryInSync`. Override the path with `--factory <path>` or `MCP_PANEL_FACTORY_CONFIG`; leave it unset to keep Droid sync disabled (matching the GUI).
 
 ## Configuration Format
 
