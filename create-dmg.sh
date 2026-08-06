@@ -23,8 +23,18 @@ echo "📀 Creating installer DMG using create-dmg..."
 # Remove existing DMG if it exists
 rm -f "$OUTPUT_NAME"
 
+# The Finder-prettifying AppleScript needs an interactive GUI session. Under CI
+# it hangs until "AppleEvent timed out (-1712)" and fails the build, so skip it
+# there; the DMG contents are identical, only the window layout is unstyled.
+SKIP_FINDER=()
+if [ -n "${CI:-}" ] || [ -n "${SKIP_DMG_FINDER_STYLING:-}" ]; then
+    echo "ℹ️  CI detected — skipping Finder window styling (AppleScript)"
+    SKIP_FINDER=(--skip-jenkins)
+fi
+
 # Use create-dmg tool (battle-tested, used by thousands of apps)
 create-dmg \
+  "${SKIP_FINDER[@]}" \
   --volname "$VOLUME_NAME" \
   --window-pos 200 120 \
   --window-size 600 400 \
